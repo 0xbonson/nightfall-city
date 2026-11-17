@@ -1,9 +1,12 @@
-// Arcade Driving Physics and Character Collision for Nightfall City
+// Arcade Driving Physics and Character Collision for Nightfall City: Vela Bay
+// Provides responsive wheel traction, drift dynamics, collision resolution, and tire smoke emission.
 
 import { world } from './world.js';
 import { audio } from './audio.js';
 import { particles, screenEffects } from './effects.js';
 import { CONFIG } from './config.js';
+
+export const HANDBRAKE_SLIP_FACTOR = 0.45; // Friction multiplier during handbrake drift
 
 export class VehiclePhysics {
   static createVehicle(x, z, angle = 0, type = 'sedan') {
@@ -94,8 +97,8 @@ export class VehiclePhysics {
       const cos = Math.cos(car.angle);
       const rearX = car.x - sin * 1.8;
       const rearZ = car.z - cos * 1.8;
-      particles.emit('smoke', rearX, 0.2, rearZ, 2, { size: 0.4, up: 0.5 });
       if (inputs.isPlayer) {
+        particles.emit('smoke', rearX, 0.2, rearZ, 1, { size: 0.35, up: 0.5 });
         audio.playTireScreech();
       }
     } else {

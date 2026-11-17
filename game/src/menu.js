@@ -14,7 +14,7 @@ export class MenuManager {
     this.hasSave = SaveManager.hasSave();
   }
 
-  render(ctx, width, height) {
+  render(ctx, width, height, player, world, missions) {
     this.buttons = [];
 
     if (this.state === 'title') {
@@ -22,7 +22,7 @@ export class MenuManager {
     } else if (this.state === 'controls') {
       this.renderControlsScreen(ctx, width, height);
     } else if (this.state === 'paused') {
-      this.renderPauseScreen(ctx, width, height);
+      this.renderPauseScreen(ctx, width, height, player, world, missions);
     } else if (this.state === 'ending') {
       this.renderEndingScreen(ctx, width, height);
     }
@@ -134,27 +134,223 @@ export class MenuManager {
     ctx.restore();
   }
 
-  renderPauseScreen(ctx, width, height) {
-    ctx.fillStyle = 'rgba(5, 8, 16, 0.75)';
+  renderPauseScreen(ctx, width, height, player, world, missions) {
+    // Backdrop overlay
+    ctx.fillStyle = 'rgba(8, 12, 20, 0.88)';
     ctx.fillRect(0, 0, width, height);
 
     ctx.save();
+
+    // Header Banner
+    ctx.textAlign = 'left';
+    ctx.font = '900 28px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = '#00f0ff';
+    ctx.shadowColor = '#00f0ff';
+    ctx.shadowBlur = 10;
+    ctx.fillText('VELA BAY · TACTICAL PAUSE MAP', 40, 48);
+    ctx.shadowBlur = 0;
+
+    // Layout dimensions
+    const mapX = 40;
+    const mapY = 70;
+    const mapW = Math.max(340, Math.min(680, width * 0.58));
+    const mapH = height - 110;
+
+    // Draw Map Frame
+    ctx.fillStyle = 'rgba(12, 18, 28, 0.95)';
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(mapX, mapY, mapW, mapH);
+    ctx.strokeRect(mapX, mapY, mapW, mapH);
+
+    // Map Clipping Region
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(mapX + 2, mapY + 2, mapW - 4, mapH - 4);
+    ctx.clip();
+
+    const scale = Math.min((mapW - 30) / 600, (mapH - 30) / 600);
+    const cx = mapX + mapW / 2;
+    const cy = mapY + mapH / 2;
+
+    // Coordinate conversion
+    const toScreenX = (wx) => cx + wx * scale;
+    const toScreenY = (wz) => cy + wz * scale;
+
+    // 1. Water areas (Ocean at west, Bay at south)
+    ctx.fillStyle = 'rgba(18, 55, 95, 0.85)';
+    // West ocean
+    ctx.fillRect(mapX, mapY, toScreenX(-125) - mapX, mapH);
+    // South harbour water
+    ctx.fillRect(toScreenX(50), toScreenY(130), mapW, mapH);
+
+    // 2. City land mass
+    ctx.fillStyle = 'rgba(24, 32, 44, 0.9)';
+    ctx.fillRect(toScreenX(-125), toScreenY(-260), toScreenX(260) - toScreenX(-125), toScreenY(260) - toScreenY(-260));
+
+    // 3. Roads
+    if (world && world.roads) {
+      ctx.lineWidth = 7 * scale * 2.2;
+      ctx.strokeStyle = 'rgba(48, 58, 72, 0.9)';
+      ctx.beginPath();
+      for (const road of world.roads) {
+        ctx.moveTo(toScreenX(road.x1), toScreenY(road.z1));
+        ctx.lineTo(toScreenX(road.x2), toScreenY(road.z2));
+      }
+      ctx.stroke();
+
+      // Road yellow centerlines
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(255, 204, 0, 0.4)';
+      ctx.beginPath();
+      for (const road of world.roads) {
+        ctx.moveTo(toScreenX(road.x1), toScreenY(road.z1));
+        ctx.lineTo(toScreenX(road.x2), toScreenY(road.z2));
+      }
+      ctx.stroke();
+    }
+
+    // 4. District Labels on Map
+    const districts = [
+      { name: 'OCEAN PROMENADE', wx: -85, wz: -80, color: 'rgba(56, 189, 248, 0.8)' },
+      { name: 'DOWNTOWN SKYLINE', wx: 0, wz: -140, color: 'rgba(251, 191, 36, 0.8)' },
+      { name: 'FINANCIAL QUARTER', wx: 120, wz: -60, color: 'rgba(167, 139, 250, 0.8)' },
+      { name: 'OLD MARKET', wx: -30, wz: 60, color: 'rgba(248, 113, 113, 0.8)' },
+      { name: 'MERIDIAN DOCKS', wx: 130, wz: 180, color: 'rgba(52, 211, 153, 0.8)' }
+    ];
+
     ctx.textAlign = 'center';
+    ctx.font = 'bold 10px system-ui, sans-serif';
+    for (const dist of districts) {
+      ctx.fillStyle = dist.color;
+      ctx.fillText(dist.name, toScreenX(dist.wx), toScreenY(dist.wz));
+    }
 
-    ctx.font = 'bold 44px system-ui, sans-serif';
+    // 5. Mission Objective Marker
+    if (missions) {
+      let markerPos = null;
+      let label = 'MISSION';
+      if (missions.activeMission && missions.currentStep?.target) {
+        markerPos = missions.currentStep.target;
+        label = 'OBJECTIVE';
+      } else if (missions.currentMission?.startMarker) {
+        markerPos = missions.currentMission.startMarker;
+        label = missions.currentMission.title;
+      }
+
+      if (markerPos) {
+        const mx = toScreenX(markerPos.x);
+        const my = toScreenY(markerPos.z);
+        ctx.fillStyle = '#ffcc00';
+        ctx.shadowColor = '#ffcc00';
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.arc(mx, my, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.font = 'bold 9px system-ui, sans-serif';
+        ctx.fillStyle = '#ffcc00';
+        ctx.fillText(label, mx, my - 10);
+      }
+    }
+
+    // 6. Player Position Pin
+    if (player) {
+      const px = toScreenX(player.x);
+      const py = toScreenY(player.z);
+
+      // Pulse ring
+      const pulse = (Math.sin(Date.now() / 200) + 1) * 3 + 6;
+      ctx.strokeStyle = 'rgba(0, 240, 255, 0.6)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(px, py, pulse, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Heading arrow
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(player.heading || 0);
+
+      ctx.fillStyle = '#00f0ff';
+      ctx.shadowColor = '#00f0ff';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.moveTo(0, 8);
+      ctx.lineTo(-5, -6);
+      ctx.lineTo(0, -3);
+      ctx.lineTo(5, -6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.restore();
+
+      ctx.font = 'bold 10px system-ui, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText('YOU', px, py + 18);
+    }
+
+    // North Compass Indicator
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 12px system-ui, sans-serif';
+    ctx.fillStyle = '#ff4444';
+    ctx.fillText('▲ N', mapX + 24, mapY + 28);
+
+    ctx.restore(); // End map clip
+
+    // Right Side: Pause Controls and Mission Dossier
+    const panelX = mapX + mapW + 28;
+    const panelW = width - panelX - 40;
+    let py = mapY + 12;
+
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 22px system-ui, sans-serif';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText('GAME PAUSED', width / 2, height * 0.32);
+    ctx.fillText('TACTICAL DOSSIER', panelX, py);
 
-    const btnW = 240;
-    const btnH = 46;
-    const btnX = width / 2 - btnW / 2;
-    let btnY = height * 0.44;
+    py += 24;
+    ctx.font = '13px system-ui, sans-serif';
+    ctx.fillStyle = '#94a3b8';
+    if (missions?.activeMission) {
+      ctx.fillText(`Active: ${missions.activeMission.title}`, panelX, py);
+      py += 18;
+      ctx.fillStyle = '#ffcc00';
+      ctx.fillText(`Task: ${missions.currentStep?.desc || 'Proceed to target'}`, panelX, py);
+    } else if (missions?.currentMission) {
+      ctx.fillText(`Next: ${missions.currentMission.title}`, panelX, py);
+      py += 18;
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillText('Go to mission marker to begin.', panelX, py);
+    } else {
+      ctx.fillText('Free roam active. Vela Bay under control.', panelX, py);
+    }
 
-    this.drawButton(ctx, btnX, btnY, btnW, btnH, 'RESUME', 'resume');
-    btnY += 60;
-    this.drawButton(ctx, btnX, btnY, btnW, btnH, 'SAVE GAME', 'save');
-    btnY += 60;
-    this.drawButton(ctx, btnX, btnY, btnW, btnH, 'QUIT TO TITLE', 'quit_title');
+    py += 34;
+
+    // Career Quick Stats
+    if (player) {
+      ctx.font = 'bold 14px system-ui, monospace';
+      ctx.fillStyle = '#39e75f';
+      ctx.fillText(`CASH: $${player.cash.toLocaleString()}`, panelX, py);
+      py += 20;
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillText(`HEALTH: ${Math.round(player.health)}%  ARMOR: ${Math.round(player.armor)}%`, panelX, py);
+      py += 20;
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillText(`WANTED: ${'★'.repeat(player.wantedLevel || 0)}${'☆'.repeat(5 - (player.wantedLevel || 0))}`, panelX, py);
+    }
+
+    // Action Buttons
+    const btnW = Math.min(260, panelW);
+    const btnH = 44;
+    let btnY = height - 170;
+
+    this.drawButton(ctx, panelX, btnY, btnW, btnH, 'RESUME CAREER', 'resume');
+    btnY += 54;
+    this.drawButton(ctx, panelX, btnY, btnW, btnH, 'SAVE GAME', 'save');
+    btnY += 54;
+    this.drawButton(ctx, panelX, btnY, btnW, btnH, 'QUIT TO TITLE', 'quit_title');
 
     ctx.restore();
   }

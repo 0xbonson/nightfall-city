@@ -1,7 +1,12 @@
-// WebAudio API synthesis for Nightfall City - 100% procedurally generated audio
-// No external sound files, zero network requests.
+// WebAudio API synthesis for Nightfall City: Vela Bay
+// 100% procedurally generated audio: synthwave radio, vehicle engines, sirens, and gunshots.
+// Zero external sound files, 100% offline static synthesis.
 
 import { CONFIG } from './config.js';
+
+export const RADIO_STATION_OFF = 0;
+export const RADIO_STATION_VELA_WAVE = 1;
+export const RADIO_STATION_NIGHTFALL = 2;
 
 class SoundManager {
   constructor() {
@@ -18,7 +23,7 @@ class SoundManager {
     this.radioPlaying = false;
     this.radioInterval = null;
     this.radioStep = 0;
-    this.radioStation = 1; // 1: Vela Wave, 2: Nightfall Beats, 0: Off
+    this.radioStation = RADIO_STATION_VELA_WAVE; // 1: Vela Wave, 2: Nightfall Beats, 0: Off
     this.initialized = false;
   }
 

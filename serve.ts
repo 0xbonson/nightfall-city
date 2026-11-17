@@ -70,12 +70,13 @@ const server = createServer((request, response) => {
     'content-type': MIME[extname(file).toLowerCase()] ?? 'application/octet-stream',
     'content-length': size,
     'cache-control': 'no-store',
+    'access-control-allow-origin': '*',
   });
   createReadStream(file).pipe(response);
 });
 
 server.listen(port, '127.0.0.1', () => {
-  console.log(`[Nightfall City] Static server active on http://127.0.0.1:${port}`);
+  console.log(`[Nightfall City: Vela Bay] Static WebGL game server running at http://127.0.0.1:${port}`);
 });
 
 process.on('SIGINT', () => {

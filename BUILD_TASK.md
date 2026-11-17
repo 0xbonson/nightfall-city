@@ -137,22 +137,22 @@ nightfall-city/
 
 | File | Primary Job |
 |---|---|
-| `world.js` | Defines the 4 districts, building coordinates, road networks, ocean boundaries, and collision raycasts. |
-| `render.js` | Custom WebGL 3D rendering pipeline with Gouraud/Phong lighting, distance fog, building meshes, vehicles, characters, helicopter, and particles. |
-| `physics.js` | Vehicle handling (throttle, drift, braking, collisions) and player foot movement physics. |
+| `world.js` | Defines the 5 districts, building coordinates with setbacks and crowns, distant skyline landmarks, road networks, ocean boundaries, port gantry cranes, street furniture, and collision raycasts. |
+| `render.js` | Custom WebGL 3D rendering pipeline with late-afternoon warm sunlight, sky gradient dome with sun disc and glare, distance fog, building meshes, vehicles, characters, helicopter, gantry cranes, street furniture, and particles. |
+| `physics.js` | Vehicle handling (throttle, drift, braking, collisions), tire smoke emission, and player foot movement physics. |
 | `player.js` | Protagonist state (health, armor, cash, weapon arsenal, car entry/exit, death/respawn). |
-| `camera.js` | Third-person camera with mouse-look yaw/pitch, vehicle chase smoothing, FOV scaling, and screen shake. |
+| `camera.js` | Elevated third-person camera with mouse-look yaw/pitch, building collision avoidance clamp, vehicle chase smoothing, and screen shake. |
 | `weapons.js` | Pistol and assault rifle ballistics, reload cycles, ammo counters, and raycast hit detection. |
-| `traffic.js` | Autonomous road traffic AI, parked vehicles, vehicle collision, and theft mechanics. |
+| `traffic.js` | Autonomous road traffic AI, curbside parked vehicles, vehicle collision, and theft mechanics. |
 | `pedestrians.js` | Civilian pedestrian behavior, wandering, fleeing danger, and dropped cash pickups. |
 | `police.js` | Vela Bay Metro wanted levels (0–5 stars), pursuit cruisers, foot officers, roadblocks, and searchlight helicopter. |
 | `missions.js` | 6 complete narrative missions with objectives, dialogue, enemy spawns, timers, and boss encounters. |
-| `hud.js` | 2D HUD overlay drawing cash, health/armor gauges, wanted stars, speedometer, and dialogue subtitles. |
-| `minimap.js` | Rotating circular radar minimap displaying streets, player arrow, mission markers, and police blips. |
+| `hud.js` | 2D HUD overlay drawing cash, health/armor gauges, wanted stars, speedometer, dialogue subtitles, screen vignette, and sunlit bloom. |
+| `minimap.js` | Rotating circular radar minimap displaying streets, ocean and harbour water, player arrow, mission markers, and police blips. |
 | `audio.js` | Procedural WebAudio sound generator for engine pitch, sirens, gunfire, crashes, and synthwave radio. |
-| `effects.js` | Particle manager (burnout smoke, sparks, blood, explosions) and screen trauma effects. |
+| `effects.js` | Particle manager (burnout smoke, heat haze/dust, sparks, blood, explosions) and screen trauma effects. |
 | `input.js` | Event listeners for keyboard, mouse look, and Pointer Lock API. |
-| `menu.js` | Title start screen, pause menu, control legend, and story victory screen. |
+| `menu.js` | Title start screen, tactical pause map of Vela Bay with district borders, control legend, and story victory screen. |
 | `save.js` | localStorage manager for saving and loading player career data. |
 | `main.js` | Main entry point orchestrating game loop, updates, rendering, and deterministic query hooks. |
 

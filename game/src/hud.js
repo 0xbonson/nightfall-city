@@ -8,6 +8,21 @@ export class HUD {
   render(ctx, player, world, police, traffic, pedestrians, missions, width, height) {
     ctx.clearRect(0, 0, width, height);
 
+    // 0. Screen-wide cinematic vignette & warm sunlit bloom
+    const vigGrad = ctx.createRadialGradient(width / 2, height / 2, width * 0.38, width / 2, height / 2, width * 0.75);
+    vigGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    vigGrad.addColorStop(1, 'rgba(18, 12, 8, 0.28)');
+    ctx.fillStyle = vigGrad;
+    ctx.fillRect(0, 0, width, height);
+
+    // Warm golden hour bloom over the late-afternoon sunlit upper frame
+    const bloomGrad = ctx.createRadialGradient(width * 0.76, height * 0.18, 0, width * 0.76, height * 0.18, width * 0.42);
+    bloomGrad.addColorStop(0, 'rgba(255, 238, 195, 0.13)');
+    bloomGrad.addColorStop(0.4, 'rgba(255, 205, 145, 0.06)');
+    bloomGrad.addColorStop(1, 'rgba(255, 190, 110, 0)');
+    ctx.fillStyle = bloomGrad;
+    ctx.fillRect(0, 0, width, height);
+
     // 1. Damage Hit Vignette / Red Flash
     if (screenEffects.hitFlash > 0.01) {
       const grad = ctx.createRadialGradient(width / 2, height / 2, width * 0.25, width / 2, height / 2, width * 0.7);

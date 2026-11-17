@@ -1,3 +1,4 @@
 # Build and distribution artifacts
 out/
+dist/
 .DS_Store

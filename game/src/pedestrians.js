@@ -1,9 +1,12 @@
-// Pedestrians and Bystander AI System for Nightfall City
+// Pedestrians and Bystander AI System for Nightfall City: Vela Bay
+// Manages sidewalk strolls, fleeing behaviors during gunfire or vehicle impacts, and cash drops.
 
 import { world } from './world.js';
 import { audio } from './audio.js';
 import { particles } from './effects.js';
 import { CONFIG } from './config.js';
+
+const PEDESTRIAN_COLLISION_RADIUS = 0.65;
 
 export class PedestrianManager {
   constructor() {
@@ -11,14 +14,15 @@ export class PedestrianManager {
     this.maxPeds = CONFIG.gameplay.pedestrianMaxCount;
     this.cashPickups = [];
 
+    // Warm coastal casual summer attire palette
     this.outfits = [
-      { shirt: [0.9, 0.2, 0.2], pants: [0.15, 0.2, 0.35] },
-      { shirt: [0.2, 0.6, 0.85], pants: [0.85, 0.85, 0.8] },
-      { shirt: [0.95, 0.85, 0.2], pants: [0.2, 0.2, 0.2] },
-      { shirt: [0.2, 0.8, 0.4], pants: [0.3, 0.25, 0.2] },
-      { shirt: [0.85, 0.85, 0.9], pants: [0.1, 0.1, 0.15] },
-      { shirt: [0.95, 0.45, 0.7], pants: [0.2, 0.4, 0.7] },
-      { shirt: [0.3, 0.3, 0.35], pants: [0.15, 0.15, 0.18] },
+      { shirt: [0.92, 0.28, 0.24], pants: [0.18, 0.22, 0.36] }, // Coral polo & navy chinos
+      { shirt: [0.22, 0.65, 0.88], pants: [0.88, 0.86, 0.82] }, // Cyan coastal linen & beige shorts
+      { shirt: [0.96, 0.82, 0.18], pants: [0.22, 0.22, 0.24] }, // Golden tee & dark slacks
+      { shirt: [0.24, 0.82, 0.48], pants: [0.32, 0.28, 0.22] }, // Palm green shirt & khaki
+      { shirt: [0.94, 0.94, 0.96], pants: [0.12, 0.14, 0.18] }, // Crisp white linen & trousers
+      { shirt: [0.96, 0.48, 0.72], pants: [0.22, 0.42, 0.72] }, // Pastel magenta & denim
+      { shirt: [0.32, 0.35, 0.40], pants: [0.18, 0.18, 0.20] }, // Slate jacket & dark denim
     ];
   }
 

@@ -6,9 +6,12 @@ import { SaveManager } from './save.js';
 import { police } from './police.js';
 import { CONFIG } from './config.js';
 
+export const MISSION_MARKER_TRIGGER_RADIUS = 5.0; // Distance in meters to activate mission beacon
+export const TOTAL_STORY_CAMPAIGN_MISSIONS = 6;
+
 export class MissionManager {
   constructor() {
-    this.totalStoryMissions = 6;
+    this.totalStoryMissions = TOTAL_STORY_CAMPAIGN_MISSIONS;
     this.missions = [
       {
         id: 1,

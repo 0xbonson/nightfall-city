@@ -59,6 +59,13 @@ export class ParticleSystem {
         p.size = 0.25;
         p.color = [0.5, 0.85, 1.0, 0.8];
         p.decay = 2.0;
+      } else if (type === 'haze' || type === 'dust') {
+        p.vx = (Math.random() - 0.5) * 0.5;
+        p.vy = Math.random() * 0.35 + 0.15;
+        p.vz = (Math.random() - 0.5) * 0.5;
+        p.size = options.size || (0.55 + Math.random() * 0.45);
+        p.color = options.color || [1.0, 0.94, 0.80, 0.25];
+        p.decay = 0.6;
       }
 
       this.particles.push(p);
@@ -82,9 +89,9 @@ export class ParticleSystem {
       p.y += p.vy * dt;
       p.z += p.vz * dt;
 
-      if (p.type === 'smoke' || p.type === 'fire') {
-        p.size += dt * 0.8;
-        p.vy *= 0.96;
+      if (p.type === 'smoke' || p.type === 'fire' || p.type === 'haze' || p.type === 'dust') {
+        p.size += dt * 0.6;
+        p.vy *= 0.97;
       } else {
         // Gravity
         p.vy -= 14 * dt;

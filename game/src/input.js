@@ -1,5 +1,7 @@
-// Input handling for Nightfall City
+// Input handling for Nightfall City: Vela Bay
 // Keyboard, mouse look with Pointer Lock support, and weapon controls.
+
+export const MOUSE_LOOK_SENSITIVITY = 0.0022;
 
 class InputManager {
   constructor() {

@@ -1,11 +1,12 @@
-// Game save/load system using localStorage for Nightfall City
+// Game save/load system using browser localStorage for Nightfall City: Vela Bay
+// Persists player career progression, cash reserves, weapons inventory, and story milestones.
 
-const SAVE_KEY = 'nightfall_city_save_v1';
+export const SAVE_STORAGE_KEY = 'nightfall_city_save_v1';
 
 export class SaveManager {
   static hasSave() {
     try {
-      return !!localStorage.getItem(SAVE_KEY);
+      return !!localStorage.getItem(SAVE_STORAGE_KEY);
     } catch {
       return false;
     }
@@ -26,7 +27,7 @@ export class SaveManager {
         rifleAmmo: data.rifleAmmo ?? 120,
         wantedLevel: data.wantedLevel ?? 0,
       };
-      localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
+      localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(payload));
       return true;
     } catch {
       return false;
@@ -35,7 +36,7 @@ export class SaveManager {
 
   static load() {
     try {
-      const raw = localStorage.getItem(SAVE_KEY);
+      const raw = localStorage.getItem(SAVE_STORAGE_KEY);
       if (!raw) return null;
       return JSON.parse(raw);
     } catch {
@@ -45,7 +46,7 @@ export class SaveManager {
 
   static clear() {
     try {
-      localStorage.removeItem(SAVE_KEY);
+      localStorage.removeItem(SAVE_STORAGE_KEY);
       return true;
     } catch {
       return false;

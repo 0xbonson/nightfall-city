@@ -1,8 +1,11 @@
-// Weapons and Combat System for Nightfall City
+// Weapons and Ballistic Combat System for Nightfall City: Vela Bay
+// Manages hitscan firearms, magazine reloads, bullet spread cones, and impact feedback.
 
 import { audio } from './audio.js';
 import { particles, screenEffects } from './effects.js';
 import { world } from './world.js';
+
+export const WEAPON_MAX_EFFECTIVE_RANGE = 120.0; // Hitscan maximum raycast range in meters
 
 export class Weapon {
   constructor(name, type, damage, magSize, maxReserve, fireRate, reloadTime, spread) {

@@ -1,10 +1,14 @@
-// Rotating Radar Minimap System for Nightfall City
+// Rotating Radar Minimap System for Nightfall City: Vela Bay
+// Displays dynamic roads, district water lines, active traffic, syndicate targets, and GPS route markers.
+
+export const MINIMAP_DEFAULT_SIZE = 175; // Diameter in pixels
+export const MINIMAP_RADAR_ZOOM = 1.35;  // Pixels per world meter
 
 export class Minimap {
   constructor() {
-    this.size = 175; // Diameter in pixels
+    this.size = MINIMAP_DEFAULT_SIZE;
     this.radius = this.size / 2;
-    this.zoom = 1.35; // Pixels per world meter
+    this.zoom = MINIMAP_RADAR_ZOOM;
   }
 
   render(ctx, player, world, police, traffic, pedestrians, missions, screenWidth, screenHeight) {
@@ -35,9 +39,10 @@ export class Minimap {
     const px = player.x;
     const pz = player.z;
 
-    // Draw Water (Ocean at West & South)
+    // Draw Water (Ocean at West: x < -125, Harbour bay at South: z > 130)
     ctx.fillStyle = 'rgba(20, 110, 180, 0.45)';
-    ctx.fillRect((-300 - px) * this.zoom, (220 - pz) * this.zoom, 600 * this.zoom, 100 * this.zoom);
+    ctx.fillRect((-400 - px) * this.zoom, (-400 - pz) * this.zoom, 275 * this.zoom, 800 * this.zoom);
+    ctx.fillRect((50 - px) * this.zoom, (130 - pz) * this.zoom, 350 * this.zoom, 300 * this.zoom);
 
     // Draw Roads Grid
     ctx.lineWidth = 14 * this.zoom;

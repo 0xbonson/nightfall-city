@@ -61,7 +61,7 @@ function bundleNightfallCity(): void {
   writeFileSync(dossierPath, dossierPayload);
 
   const durationMs = Date.now() - startTime;
-  console.log(`[Nightfall City] Successfully bundled in ${durationMs}ms: ${dossierPath}`);
+  console.log(`[Nightfall City: Vela Bay] Distribution bundle verified in ${durationMs}ms: ${dossierPath}`);
 }
 
 bundleNightfallCity();

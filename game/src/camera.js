@@ -1,29 +1,78 @@
-// Third-person camera system with dynamic chase and screenshake for Nightfall City
+// Third-Person Cinematic Camera System for Nightfall City (Vela Bay)
+// Features dynamic chase tracking, elevation looking down at street, building collision avoidance,
+// on-foot player framing, and instant camera snapping.
 
 import { screenEffects } from './effects.js';
+import { world } from './world.js';
 
 const NEAR_CLIP_PLANE = 0.4;
-const FAR_CLIP_PLANE = 650.0;
+const FAR_CLIP_PLANE = 750.0;
 
 export class Camera {
   constructor() {
     this.x = 0;
-    this.y = 3;
+    this.y = 3.5;
     this.z = -5;
     this.targetX = 0;
-    this.targetY = 1.2;
+    this.targetY = 1.4;
     this.targetZ = 0;
 
-    this.yaw = 0; // Horizontal angle (0 = looking North/+Z)
-    this.pitch = 0.22; // Vertical angle (radians)
-    this.distance = 5.2;
+    this.yaw = 0; // Horizontal angle in radians
+    this.pitch = 0.18; // Vertical angle in radians (looking down)
+    this.distance = 5.0;
     this.fov = 68; // Degrees
     this.aspect = 16 / 9;
 
     this.lookSensitivity = 0.0024;
+    this.lockedYaw = false;
     this.viewMatrix = new Float32Array(16);
     this.projMatrix = new Float32Array(16);
     this.viewProjMatrix = new Float32Array(16);
+  }
+
+  // Instantly place camera at ideal position without lerp lag (used for shot setups and teleports)
+  snap(player) {
+    if (!player) return;
+    this.targetX = player.x;
+    this.targetY = player.y + (player.inVehicle ? 1.2 : 1.4);
+    this.targetZ = player.z;
+
+    const inVehicle = player.inVehicle && player.vehicle;
+    const targetDist = inVehicle ? 7.8 : 5.0;
+    const targetHeight = inVehicle ? 2.8 : 1.4;
+    const hDist = targetDist * Math.cos(this.pitch);
+    const vDist = targetDist * Math.sin(this.pitch) + targetHeight;
+
+    this.x = this.targetX - Math.sin(this.yaw) * hDist;
+    this.y = Math.max(1.8, this.targetY + vDist);
+    this.z = this.targetZ - Math.cos(this.yaw) * hDist;
+
+    this.avoidBuildingCollision();
+    this.computeMatrices();
+  }
+
+  // Prevent camera from clipping through or ending up inside buildings
+  avoidBuildingCollision() {
+    const dx = this.x - this.targetX;
+    const dz = this.z - this.targetZ;
+    const totalDist = Math.hypot(dx, dz) || 0.001;
+    const steps = 8;
+
+    for (let i = steps; i >= 1; i--) {
+      const frac = i / steps;
+      const testX = this.targetX + (dx / totalDist) * (totalDist * frac);
+      const testZ = this.targetZ + (dz / totalDist) * (totalDist * frac);
+
+      const col = world.checkCollision(testX, testZ, 1.0);
+      if (col.collided) {
+        // Bring camera closer along view vector so it stays outside the wall
+        const safeDist = Math.max(2.2, totalDist * (frac - 0.15));
+        this.x = this.targetX + (dx / totalDist) * safeDist;
+        this.z = this.targetZ + (dz / totalDist) * safeDist;
+        this.y = Math.max(2.2, this.y + 0.4); // Lift slightly when near wall
+        break;
+      }
+    }
   }
 
   update(player, dt, mouseDelta = { dx: 0, dy: 0 }) {
@@ -34,30 +83,37 @@ export class Camera {
     this.pitch = Math.max(-0.15, Math.min(1.1, this.pitch));
 
     let targetDist = 5.0;
-    let targetHeight = 1.8;
+    let targetHeight = 1.4;
 
     if (player.inVehicle && player.vehicle) {
-      targetDist = 7.5;
-      targetHeight = 2.6;
-      // Auto-align camera yaw behind vehicle gently
-      const carAngle = player.vehicle.angle;
-      let angleDiff = carAngle - this.yaw;
-      while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-      while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-      this.yaw += angleDiff * Math.min(1.0, 3.5 * dt);
+      // Chase camera sits above car and looks down slightly at the street
+      targetDist = 7.8;
+      targetHeight = 2.8;
+
+      // Auto-align camera yaw behind vehicle gently (unless explicitly locked by cinematic shot)
+      if (!this.lockedYaw) {
+        const carAngle = player.vehicle.angle;
+        let angleDiff = carAngle - this.yaw;
+        while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+        while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+        this.yaw += angleDiff * Math.min(1.0, 3.5 * dt);
+      }
 
       // Speed-based dynamic FOV
       const speedRatio = Math.abs(player.vehicle.speed) / player.vehicle.maxSpeed;
-      this.fov = 68 + speedRatio * 18;
+      this.fov = 68 + speedRatio * 16;
     } else {
+      // On-foot camera shows player and street around them
+      targetDist = 5.0;
+      targetHeight = 1.4;
       this.fov = 68;
     }
 
     this.distance += (targetDist - this.distance) * Math.min(1.0, 6 * dt);
 
-    // Camera target point is player's center/chest
+    // Target point is character/vehicle center
     this.targetX = player.x;
-    this.targetY = player.y + (player.inVehicle ? 1.0 : 1.4);
+    this.targetY = player.y + (player.inVehicle ? 1.0 : 1.3);
     this.targetZ = player.z;
 
     // Calculate ideal eye position
@@ -65,14 +121,25 @@ export class Camera {
     const vDist = this.distance * Math.sin(this.pitch) + targetHeight;
 
     const idealX = this.targetX - Math.sin(this.yaw) * hDist + screenEffects.shakeX;
-    const idealY = this.targetY + vDist + screenEffects.shakeY;
+    const idealY = Math.max(1.8, this.targetY + vDist + screenEffects.shakeY);
     const idealZ = this.targetZ - Math.cos(this.yaw) * hDist;
 
-    // Smooth camera lag
-    const lerpSpeed = player.inVehicle ? 8 : 12;
-    this.x += (idealX - this.x) * Math.min(1.0, lerpSpeed * dt);
-    this.y += (idealY - this.y) * Math.min(1.0, lerpSpeed * dt);
-    this.z += (idealZ - this.z) * Math.min(1.0, lerpSpeed * dt);
+    // Detect large distance jumps (teleport, shot change, respawn) and snap immediately
+    const distToIdeal = Math.hypot(this.x - idealX, this.z - idealZ);
+    if (distToIdeal > 20.0) {
+      this.x = idealX;
+      this.y = idealY;
+      this.z = idealZ;
+    } else {
+      // Smooth camera lag
+      const lerpSpeed = player.inVehicle ? 8.5 : 12.0;
+      this.x += (idealX - this.x) * Math.min(1.0, lerpSpeed * dt);
+      this.y += (idealY - this.y) * Math.min(1.0, lerpSpeed * dt);
+      this.z += (idealZ - this.z) * Math.min(1.0, lerpSpeed * dt);
+    }
+
+    // Keep camera out of building interiors
+    this.avoidBuildingCollision();
 
     this.computeMatrices();
   }

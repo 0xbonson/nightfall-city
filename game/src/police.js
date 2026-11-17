@@ -1,11 +1,14 @@
 // Vela Bay Metro Police Department System for Nightfall City
-// Manages 0-5 Star wanted level, police cruiser pursuit, foot officers, roadblocks, and helicopter.
+// Manages 0-5 Star wanted level, police cruiser pursuit, foot officers, roadblocks, and tactical air support.
 
 import { VehiclePhysics } from './physics.js';
 import { world } from './world.js';
 import { audio } from './audio.js';
 import { particles } from './effects.js';
 import { CONFIG } from './config.js';
+
+const POLICE_EVASION_DURATION = 12.0; // Seconds required outside detection cone to cool heat
+const POLICE_SIGHT_RANGE = 72.0;     // Optical detection distance in meters
 
 export class PoliceManager {
   constructor() {
@@ -14,14 +17,14 @@ export class PoliceManager {
     this.heat = 0; // Raw points
     this.isEvading = false;
     this.evasionTimer = 0;
-    this.evasionMax = 12; // Seconds to lose a star
+    this.evasionMax = POLICE_EVASION_DURATION;
 
     this.cruisers = [];
     this.officers = [];
     this.roadblocks = [];
     this.helicopter = null;
 
-    this.copSightRadius = 70;
+    this.copSightRadius = POLICE_SIGHT_RANGE;
   }
 
   reportCrime(crimeType) {

@@ -1,10 +1,14 @@
-// Player character Rhea "Rook" Solano for Nightfall City
+// Player character Rhea "Rook" Solano for Nightfall City: Vela Bay
+// Controls on-foot movement, vehicle boarding, weapons handling, and respawn mechanics.
 
 import { CharacterPhysics, VehiclePhysics } from './physics.js';
 import { WeaponManager } from './weapons.js';
 import { audio } from './audio.js';
 import { screenEffects, particles } from './effects.js';
 import { CONFIG } from './config.js';
+
+export const PLAYER_INITIAL_HEALTH = 100;
+export const PLAYER_INITIAL_ARMOR = 50;
 
 export class Player {
   constructor() {

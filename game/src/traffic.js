@@ -1,4 +1,5 @@
-// Traffic and Vehicle Population System for Nightfall City
+// Traffic and Vehicle Population System for Nightfall City: Vela Bay
+// Simulates dynamic road cruising, civilian lane navigation, and curbside parked vehicles.
 
 import { VehiclePhysics } from './physics.js';
 import { audio } from './audio.js';
@@ -11,13 +12,14 @@ export class TrafficManager {
     this.maxActive = CONFIG.gameplay.trafficMaxCount;
     this.parkedVehicles = [];
 
+    // Vivid sun-soaked coastal vehicular palette
     this.carColors = [
       [0.85, 0.15, 0.15], // Cherry red
       [0.15, 0.35, 0.85], // Cobalt blue
       [0.92, 0.75, 0.12], // Sunset gold
       [0.15, 0.75, 0.55], // Emerald teal
       [0.92, 0.92, 0.92], // Alpine white
-      [0.15, 0.15, 0.18], // Shadow black
+      [0.18, 0.18, 0.22], // Shadow graphite
       [0.72, 0.35, 0.85], // Syndicate violet
       [0.88, 0.45, 0.12], // Tangelo orange
     ];
