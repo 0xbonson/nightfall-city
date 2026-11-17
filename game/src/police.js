@@ -5,10 +5,12 @@ import { VehiclePhysics } from './physics.js';
 import { world } from './world.js';
 import { audio } from './audio.js';
 import { particles } from './effects.js';
+import { CONFIG } from './config.js';
 
 export class PoliceManager {
   constructor() {
-    this.wantedLevel = 0; // 0 to 5
+    this.wantedLevel = 0; // 0 to CONFIG.gameplay.maxWantedLevel
+    this.maxCruisers = CONFIG.gameplay.policeMaxCruisers;
     this.heat = 0; // Raw points
     this.isEvading = false;
     this.evasionTimer = 0;

@@ -84,6 +84,12 @@ class InputManager {
     }
   }
 
+  resetKeys() {
+    this.keys = {};
+    this.mouse.left = false;
+    this.mouse.right = false;
+  }
+
   isDown(code) {
     return !!this.keys[code];
   }

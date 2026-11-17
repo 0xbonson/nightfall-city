@@ -1,5 +1,8 @@
 // City Map and World Definition for Nightfall City (Vela Bay)
-// Features 4 distinct districts, road network with AI waypoints, collision meshes and props.
+// Features 4 distinct districts, multi-tiered architecture, road network,
+// street furniture props (lamps, benches, bins, traffic lights), and collision geometry.
+
+import { CONFIG } from './config.js';
 
 export class CityWorld {
   constructor() {
@@ -9,7 +12,7 @@ export class CityWorld {
     this.roadNodes = [];
     this.containerStacks = [];
     this.palmTrees = [];
-    this.bounds = { minX: -280, maxX: 280, minZ: -280, maxZ: 280 };
+    this.bounds = { ...CONFIG.world };
 
     this.initWorld();
   }
@@ -22,118 +25,145 @@ export class CityWorld {
   }
 
   generateRoadGrid() {
-    // Main Avenues (width 16 units)
-    // Vertical Avenues
-    const xRoads = [-220, -140, -60, 0, 60, 140, 220];
-    const zRoads = [-220, -140, -60, 0, 60, 140, 220];
+    const coords = CONFIG.world.roadGrid;
 
-    // Roads layout
-    for (const x of xRoads) {
+    // Vertical (North-South) Avenues
+    for (const x of coords) {
       this.roads.push({
-        x1: x, z1: -260, x2: x, z2: 260, width: x === 0 ? 18 : 14, isMajor: x === 0
+        x1: x, z1: -260, x2: x, z2: 260,
+        width: x === 0 ? 18 : 14,
+        isMajor: x === 0
       });
     }
-    for (const z of zRoads) {
+
+    // Horizontal (East-West) Boulevards
+    for (const z of coords) {
       this.roads.push({
-        x1: -260, z1: z, x2: 260, z2: z, width: z === 0 ? 18 : 14, isMajor: z === 0
+        x1: -260, z1: z, x2: 260, z2: z,
+        width: z === 0 ? 18 : 14,
+        isMajor: z === 0
       });
     }
   }
 
   generateDistricts() {
-    // Helper to add building with bounds check
-    const addBuilding = (x, z, w, d, h, type, color, roofColor, district) => {
-      // Avoid placing on road axes
+    // Helper to register a building with collision bounds and architectural details
+    const addBuilding = (spec) => {
+      const { x, z, w, d, h, type, color, roofColor, district, details = {} } = spec;
       this.buildings.push({
         x, z, w, d, h,
         minX: x - w / 2, maxX: x + w / 2,
         minZ: z - d / 2, maxZ: z + d / 2,
-        type, color, roofColor, district
+        type, color, roofColor, district,
+        details: {
+          setback: details.setback ?? false,
+          setbackHeight: details.setbackHeight ?? h * 0.6,
+          antenna: details.antenna ?? false,
+          hvacCount: details.hvacCount ?? (h > 25 ? 2 : 1),
+          storefront: details.storefront ?? true,
+          ...details,
+        }
       });
     };
 
+    // =========================================================================
     // 1. DOWNTOWN VELA (North-East: X > 10, Z < -10)
-    // High-rise glass towers, corporate skyscrapers, sleek plazas
-    const downtownColors = [
-      [0.22, 0.32, 0.45], // Steel blue
-      [0.18, 0.25, 0.38], // Deep navy glass
-      [0.35, 0.42, 0.52], // Reflective cyan
-      [0.28, 0.30, 0.35], // Dark granite
-      [0.85, 0.88, 0.92], // White concrete / glass
+    // High-rise curtain glass skyscrapers, corporate plazas, modern towers
+    // =========================================================================
+    const downtownTowers = [
+      // Block (30, -30) — Obsidian Financial Center
+      { x: 30, z: -30, w: 42, d: 42, h: 96, color: [0.22, 0.34, 0.48], roof: [0.18, 0.22, 0.28], setback: true, antenna: true },
+      // Block (100, -30) — Vela Bay Horizon Tower
+      { x: 100, z: -30, w: 46, d: 42, h: 122, color: [0.84, 0.88, 0.92], roof: [0.20, 0.24, 0.30], setback: true, antenna: true },
+      // Block (180, -30) — Marina Grand Exchange
+      { x: 180, z: -30, w: 44, d: 44, h: 84, color: [0.28, 0.42, 0.54], roof: [0.22, 0.26, 0.32], setback: false },
+      // Block (30, -100) — Port Meridian Corporate Center
+      { x: 30, z: -100, w: 42, d: 46, h: 108, color: [0.19, 0.26, 0.38], roof: [0.16, 0.20, 0.25], setback: true },
+      // Block (100, -100) — Central Bank & Solano Plaza Tower (Prestige Tower with Rooftop Helipad)
+      { x: 100, z: -100, w: 48, d: 48, h: 140, color: [0.32, 0.48, 0.62], roof: [0.15, 0.18, 0.24], setback: true, antenna: true, helipad: true },
+      // Block (180, -100) — Lumina Plaza
+      { x: 180, z: -100, w: 44, d: 46, h: 78, color: [0.80, 0.84, 0.90], roof: [0.24, 0.26, 0.30], setback: false },
+      // Block (30, -180) — North Point Highrise
+      { x: 30, z: -180, w: 44, d: 44, h: 90, color: [0.26, 0.36, 0.46], roof: [0.20, 0.22, 0.26], setback: true },
+      // Block (100, -180) — Zenith Telecom Spire
+      { x: 100, z: -180, w: 46, d: 46, h: 115, color: [0.20, 0.30, 0.44], roof: [0.18, 0.20, 0.26], setback: true, antenna: true },
+      // Block (180, -180) — Apex Heights
+      { x: 180, z: -180, w: 42, d: 44, h: 72, color: [0.86, 0.89, 0.94], roof: [0.22, 0.24, 0.28], setback: false },
     ];
 
-    const dtBlocks = [
-      { bx: 30, bz: -30, bw: 42, bd: 42 },
-      { bx: 100, bz: -30, bw: 46, bd: 42 },
-      { bx: 180, bz: -30, bw: 44, bd: 44 },
-      { bx: 30, bz: -100, bw: 42, bd: 46 },
-      { bx: 100, bz: -100, bw: 48, bd: 48 },
-      { bx: 180, bz: -100, bw: 44, bd: 46 },
-      { bx: 30, bz: -180, bw: 44, bd: 44 },
-      { bx: 100, bz: -180, bw: 46, bd: 46 },
-      { bx: 180, bz: -180, bw: 42, bd: 44 },
-    ];
-
-    for (const b of dtBlocks) {
-      // Each block can have 1-2 major towers
-      const h = 45 + ((Math.abs(b.bx * 13 + b.bz * 7)) % 75); // 45m to 120m skyscraper
-      const col = downtownColors[(Math.abs(b.bx + b.bz)) % downtownColors.length];
-      addBuilding(b.bx, b.bz, b.bw, b.bd, h, 'skyscraper', col, [0.15, 0.18, 0.22], 'downtown');
+    for (const t of downtownTowers) {
+      addBuilding({
+        x: t.x, z: t.z, w: t.w, d: t.d, h: t.h,
+        type: 'skyscraper',
+        color: t.color,
+        roofColor: t.roof,
+        district: 'downtown',
+        details: { setback: t.setback, antenna: t.antenna, helipad: t.helipad, hvacCount: 3 }
+      });
     }
 
+    // =========================================================================
     // 2. OLD MARKET QUARTER (North-West: X < -10, Z < -10)
-    // Brick, terracotta roofs, medium height (12m - 26m), vibrant artisan stalls
-    const marketColors = [
-      [0.68, 0.38, 0.28], // Terracotta
-      [0.55, 0.32, 0.24], // Red brick
-      [0.72, 0.62, 0.48], // Sandstone
-      [0.62, 0.52, 0.42], // Aged stucco
-      [0.78, 0.70, 0.58], // Warm cream
+    // Red brick, terracotta tile roofs, historic stone archways, merchant alleys
+    // =========================================================================
+    const marketBuildings = [
+      { x: -30, z: -30, w: 40, d: 40, h: 22, color: [0.72, 0.36, 0.24], roof: [0.55, 0.22, 0.16] },
+      { x: -100, z: -30, w: 44, d: 42, h: 26, color: [0.60, 0.30, 0.22], roof: [0.50, 0.20, 0.14] },
+      { x: -180, z: -30, w: 42, d: 44, h: 18, color: [0.76, 0.65, 0.48], roof: [0.52, 0.24, 0.18] },
+      { x: -30, z: -100, w: 42, d: 44, h: 24, color: [0.66, 0.32, 0.22], roof: [0.58, 0.24, 0.16] },
+      { x: -100, z: -100, w: 44, d: 44, h: 30, color: [0.78, 0.70, 0.56], roof: [0.54, 0.22, 0.15] },
+      { x: -180, z: -100, w: 42, d: 42, h: 20, color: [0.68, 0.34, 0.25], roof: [0.52, 0.20, 0.14] },
+      { x: -30, z: -180, w: 40, d: 42, h: 19, color: [0.64, 0.31, 0.20], roof: [0.50, 0.22, 0.15] },
+      { x: -100, z: -180, w: 44, d: 44, h: 25, color: [0.74, 0.64, 0.50], roof: [0.56, 0.25, 0.18] },
+      { x: -180, z: -180, w: 42, d: 40, h: 17, color: [0.68, 0.35, 0.24], roof: [0.52, 0.21, 0.15] },
     ];
 
-    const mqBlocks = [
-      { bx: -30, bz: -30, bw: 40, bd: 40 },
-      { bx: -100, bz: -30, bw: 44, bd: 42 },
-      { bx: -180, bz: -30, bw: 42, bd: 44 },
-      { bx: -30, bz: -100, bw: 42, bd: 44 },
-      { bx: -100, bz: -100, bw: 44, bd: 44 },
-      { bx: -180, bz: -100, bw: 42, bd: 42 },
-      { bx: -30, bz: -180, bw: 40, bd: 42 },
-      { bx: -100, bz: -180, bw: 44, bd: 44 },
-      { bx: -180, bz: -180, bw: 42, bd: 40 },
-    ];
-
-    for (const b of mqBlocks) {
-      const h = 14 + ((Math.abs(b.bx * 7 + b.bz * 11)) % 16); // 14m to 30m
-      const col = marketColors[(Math.abs(b.bx * 3 + b.bz)) % marketColors.length];
-      addBuilding(b.bx, b.bz, b.bw, b.bd, h, 'market', col, [0.45, 0.22, 0.15], 'market');
+    for (const m of marketBuildings) {
+      addBuilding({
+        x: m.x, z: m.z, w: m.w, d: m.d, h: m.h,
+        type: 'market',
+        color: m.color,
+        roofColor: m.roof,
+        district: 'market',
+        details: { awnings: true, hvacCount: 1, stonePlinth: true }
+      });
     }
 
+    // =========================================================================
     // 3. MERIDIAN SHIPPING DOCKS (South-East: X > 10, Z > 10)
-    // Industrial warehouses, shipping container stacks, gantry crane, oil tanks
-    const dockBlocks = [
-      { bx: 30, bz: 30, bw: 42, bd: 42, type: 'warehouse', h: 16 },
-      { bx: 100, bz: 30, bw: 46, bd: 44, type: 'warehouse', h: 18 },
-      { bx: 180, bz: 30, bw: 44, bd: 44, type: 'depot', h: 15 },
-      { bx: 30, bz: 100, bw: 44, bd: 44, type: 'warehouse', h: 18 },
-      { bx: 100, bz: 100, bw: 46, bd: 44, type: 'compound', h: 22 },
-      { bx: 180, bz: 100, bw: 44, bd: 46, type: 'hangar', h: 18 },
-      { bx: 30, bz: 180, bw: 42, bd: 42, type: 'storage', h: 16 },
-      { bx: 100, bz: 180, bw: 46, bd: 46, type: 'pier_wharf', h: 14 },
-      { bx: 180, bz: 180, bw: 44, bd: 44, type: 'terminal', h: 20 },
+    // Heavy industrial hangars, logistics depots, port crane facilities
+    // =========================================================================
+    const dockBuildings = [
+      { x: 30, z: 30, w: 42, d: 42, h: 18, type: 'warehouse', col: [0.42, 0.45, 0.48], roof: [0.28, 0.30, 0.32] },
+      { x: 100, z: 30, w: 46, d: 44, h: 22, type: 'warehouse', col: [0.38, 0.40, 0.44], roof: [0.26, 0.28, 0.30] },
+      { x: 180, z: 30, w: 44, d: 44, h: 16, type: 'depot', col: [0.45, 0.48, 0.52], roof: [0.30, 0.32, 0.36] },
+      { x: 30, z: 100, w: 44, d: 44, h: 20, type: 'warehouse', col: [0.36, 0.38, 0.42], roof: [0.25, 0.27, 0.30] },
+      { x: 100, z: 100, w: 46, d: 44, h: 25, type: 'compound', col: [0.40, 0.42, 0.46], roof: [0.28, 0.30, 0.34] },
+      { x: 180, z: 100, w: 44, d: 46, h: 20, type: 'hangar', col: [0.44, 0.46, 0.50], roof: [0.30, 0.32, 0.35] },
+      { x: 30, z: 180, w: 42, d: 42, h: 18, type: 'storage', col: [0.39, 0.41, 0.45], roof: [0.27, 0.29, 0.32] },
+      { x: 100, z: 180, w: 46, d: 46, h: 16, type: 'pier_wharf', col: [0.42, 0.44, 0.48], roof: [0.28, 0.30, 0.33] },
+      { x: 180, z: 180, w: 44, d: 44, h: 24, type: 'terminal', col: [0.35, 0.38, 0.42], roof: [0.24, 0.26, 0.30] },
     ];
 
-    for (const b of dockBlocks) {
-      addBuilding(b.bx, b.bz, b.bw, b.bd, b.h, b.type, [0.38, 0.40, 0.44], [0.25, 0.27, 0.30], 'docks');
+    for (const d of dockBuildings) {
+      addBuilding({
+        x: d.x, z: d.z, w: d.w, d: d.d, h: d.h,
+        type: d.type,
+        color: d.col,
+        roofColor: d.roof,
+        district: 'docks',
+        details: { rollUpDoors: true, corrugated: true, hvacCount: 2 }
+      });
     }
 
-    // Add shipping container stacks in Docks
+    // Shipping Container Stacks in Docks
     const containerColors = [
-      [0.82, 0.18, 0.15], // Crimson red
-      [0.15, 0.45, 0.85], // Ocean blue
-      [0.88, 0.72, 0.12], // Gold yellow
-      [0.18, 0.65, 0.42], // Teal / emerald
-      [0.85, 0.45, 0.15], // Orange
+      [0.85, 0.20, 0.16], // Port Crimson Red
+      [0.16, 0.48, 0.88], // Ocean Blue
+      [0.92, 0.76, 0.14], // Freight Yellow
+      [0.18, 0.68, 0.44], // Marine Green
+      [0.88, 0.46, 0.14], // Cargo Orange
+      [0.32, 0.34, 0.38], // Steel Grey
     ];
 
     const cCoords = [
@@ -142,11 +172,12 @@ export class CityWorld {
       { x: 75, z: 145 }, { x: 85, z: 145 }, { x: 75, z: 155 },
       { x: 145, z: 75 }, { x: 155, z: 75 }, { x: 145, z: 85 },
       { x: 205, z: 145 }, { x: 215, z: 145 }, { x: 205, z: 155 },
+      { x: 85, z: 75 }, { x: 75, z: 85 }, { x: 215, z: 155 },
     ];
 
     for (let i = 0; i < cCoords.length; i++) {
       const c = cCoords[i];
-      const stackH = 1 + (i % 3); // 1 to 3 containers high
+      const stackH = 1 + (i % 3);
       for (let layer = 0; layer < stackH; layer++) {
         const col = containerColors[(i + layer) % containerColors.length];
         this.containerStacks.push({
@@ -157,43 +188,105 @@ export class CityWorld {
       }
     }
 
+    // =========================================================================
     // 4. OCEAN PROMENADE & BEACH (South-West: X < -10, Z > 10)
-    // Low-rise beach villas, luxury hotels, palm trees, golden beach
-    const beachBlocks = [
-      { bx: -30, bz: 30, bw: 42, bd: 40, h: 20, col: [0.92, 0.88, 0.80] },
-      { bx: -100, bz: 30, bw: 44, bd: 42, h: 24, col: [0.85, 0.82, 0.78] },
-      { bx: -180, bz: 30, bw: 42, bd: 42, h: 18, col: [0.88, 0.85, 0.82] },
-      { bx: -30, bz: 100, bw: 40, bd: 44, h: 22, col: [0.90, 0.86, 0.80] },
-      { bx: -100, bz: 100, bw: 44, bd: 44, h: 26, col: [0.86, 0.84, 0.80] },
-      { bx: -180, bz: 100, bw: 42, bd: 42, h: 16, col: [0.92, 0.89, 0.84] },
-      // The outer edge (-220 to -260 and 220 to 260) is the open beachfront & boardwalk!
+    // Art-deco beachfront luxury hotels, pastel resorts, coastal boulevards
+    // =========================================================================
+    const beachBuildings = [
+      { x: -30, z: 30, w: 42, d: 40, h: 24, col: [0.94, 0.90, 0.82], roof: [0.46, 0.50, 0.56] },
+      { x: -100, z: 30, w: 44, d: 42, h: 28, col: [0.88, 0.85, 0.80], roof: [0.42, 0.46, 0.52] },
+      { x: -180, z: 30, w: 42, d: 42, h: 20, col: [0.92, 0.87, 0.84], roof: [0.48, 0.52, 0.58] },
+      { x: -30, z: 100, w: 40, d: 44, h: 26, col: [0.95, 0.91, 0.85], roof: [0.44, 0.48, 0.54] },
+      { x: -100, z: 100, w: 44, d: 44, h: 32, col: [0.89, 0.86, 0.82], roof: [0.40, 0.44, 0.50] },
+      { x: -180, z: 100, w: 42, d: 42, h: 18, col: [0.94, 0.90, 0.86], roof: [0.46, 0.50, 0.55] },
     ];
 
-    for (const b of beachBlocks) {
-      addBuilding(b.bx, b.bz, b.bw, b.bd, b.h, 'resort', b.col, [0.45, 0.48, 0.52], 'promenade');
+    for (const b of beachBuildings) {
+      addBuilding({
+        x: b.x, z: b.z, w: b.w, d: b.d, h: b.h,
+        type: 'resort',
+        color: b.col,
+        roofColor: b.roof,
+        district: 'promenade',
+        details: { balconies: true, resortTrim: true, hvacCount: 1 }
+      });
     }
   }
 
   generateProps() {
-    // Palm trees along Ocean Promenade and central avenues
+    // 1. Palm trees along Ocean Promenade and coastal avenues
     for (let x = -240; x <= -20; x += 18) {
-      this.palmTrees.push({ x: x, z: 18, scale: 1.0 + Math.random() * 0.2 });
-      this.palmTrees.push({ x: x, z: 240, scale: 1.1 + Math.random() * 0.2 });
+      this.palmTrees.push({ x, z: 18, scale: 1.0 + (Math.abs(x) % 5) * 0.05 });
+      this.palmTrees.push({ x, z: 236, scale: 1.1 + (Math.abs(x) % 4) * 0.05 });
     }
     for (let z = 20; z <= 240; z += 18) {
-      this.palmTrees.push({ x: -18, z: z, scale: 1.0 + Math.random() * 0.2 });
-      this.palmTrees.push({ x: -245, z: z, scale: 1.2 + Math.random() * 0.3 });
+      this.palmTrees.push({ x: -18, z, scale: 1.05 });
+      this.palmTrees.push({ x: -245, z, scale: 1.2 });
+    }
+    // Downtown avenue palm islands
+    for (let x = 20; x <= 220; x += 28) {
+      this.palmTrees.push({ x, z: -18, scale: 1.0 });
     }
 
-    // Downtown palm plazas
-    for (let x = 20; x <= 220; x += 30) {
-      this.palmTrees.push({ x: x, z: -18, scale: 1.0 });
+    // 2. Street Furniture (Lamps, Benches, Bins, Traffic Lights)
+    const grid = CONFIG.world.roadGrid;
+
+    // Street Lamps along North-South and East-West sidewalks
+    for (const rx of grid) {
+      const halfW = (rx === 0 ? 18 : 14) / 2 + 1.8;
+      for (let z = -250; z <= 250; z += 35) {
+        // Avoid placing right inside intersections
+        const inIntersection = grid.some(gz => Math.abs(z - gz) < 14);
+        if (!inIntersection) {
+          this.props.push({ type: 'lamp', x: rx - halfW, z, rotation: 0 });
+          this.props.push({ type: 'lamp', x: rx + halfW, z, rotation: Math.PI });
+        }
+      }
+    }
+
+    // Traffic Lights at Intersections
+    for (const rx of grid) {
+      for (const rz of grid) {
+        const hwX = (rx === 0 ? 18 : 14) / 2 + 2.0;
+        const hwZ = (rz === 0 ? 18 : 14) / 2 + 2.0;
+        // 4 corner traffic lights per major intersection
+        this.props.push({ type: 'traffic_light', x: rx - hwX, z: rz - hwZ, angle: 0 });
+        this.props.push({ type: 'traffic_light', x: rx + hwX, z: rz + hwZ, angle: Math.PI });
+      }
+    }
+
+    // Benches and Trash Bins along sidewalks
+    for (let z = 25; z <= 220; z += 40) {
+      // Promenade oceanfront benches
+      this.props.push({ type: 'bench', x: -22, z, rotation: Math.PI / 2 });
+      this.props.push({ type: 'bin', x: -22, z: z + 6, rotation: 0 });
+    }
+    for (let z = -220; z <= -25; z += 45) {
+      // Downtown plaza benches and bins
+      this.props.push({ type: 'bench', x: 22, z, rotation: -Math.PI / 2 });
+      this.props.push({ type: 'bin', x: 22, z: z + 6, rotation: 0 });
+      // Market quarter bins
+      this.props.push({ type: 'bin', x: -22, z, rotation: 0 });
+      // Downtown newsstands
+      this.props.push({ type: 'newsstand', x: 23, z: z + 18, rotation: 0 });
+    }
+
+    // Fire hydrants near avenue corners
+    for (const rx of [-140, 0, 140]) {
+      for (const rz of [-140, 0, 140]) {
+        this.props.push({ type: 'hydrant', x: rx + 8.5, z: rz + 8.5 });
+        this.props.push({ type: 'hydrant', x: rx - 8.5, z: rz - 8.5 });
+      }
+    }
+
+    // Harbor mooring bollards along Docks waterline
+    for (let x = 30; x <= 220; x += 18) {
+      this.props.push({ type: 'bollard', x, z: 224 });
     }
   }
 
   buildTrafficWaypoints() {
-    // Generate navigation nodes along road lines
-    const coords = [-220, -140, -60, 0, 60, 140, 220];
+    const coords = CONFIG.world.roadGrid;
     for (const x of coords) {
       for (const z of coords) {
         this.roadNodes.push({ x, z });
@@ -205,7 +298,6 @@ export class CityWorld {
     // Check against all buildings
     for (let i = 0; i < this.buildings.length; i++) {
       const b = this.buildings[i];
-      // Closest point on AABB
       const closestX = Math.max(b.minX, Math.min(x, b.maxX));
       const closestZ = Math.max(b.minZ, Math.min(z, b.maxZ));
       const dx = x - closestX;
@@ -252,31 +344,7 @@ export class CityWorld {
       }
     }
 
-    // World boundary
-    if (x < this.bounds.minX + radius) return { collided: true, pushX: this.bounds.minX + radius - x, pushZ: 0 };
-    if (x > this.bounds.maxX - radius) return { collided: true, pushX: this.bounds.maxX - radius - x, pushZ: 0 };
-    if (z < this.bounds.minZ + radius) return { collided: true, pushX: 0, pushZ: this.bounds.minZ + radius - z };
-    if (z > this.bounds.maxZ - radius) return { collided: true, pushX: 0, pushZ: this.bounds.maxZ - radius - z };
-
-    return { collided: false, pushX: 0, pushZ: 0 };
-  }
-
-  raycast(x0, z0, x1, z1) {
-    // Simple line intersection test vs building boxes
-    const dx = x1 - x0;
-    const dz = z1 - z0;
-    const dist = Math.sqrt(dx * dx + dz * dz);
-    const steps = Math.ceil(dist / 1.5);
-    for (let i = 1; i <= steps; i++) {
-      const t = i / steps;
-      const px = x0 + dx * t;
-      const pz = z0 + dz * t;
-      const col = this.checkCollision(px, pz, 0.4);
-      if (col.collided) {
-        return { hit: true, x: px, z: pz, dist: dist * t };
-      }
-    }
-    return { hit: false, x: x1, z: z1, dist };
+    return { collided: false, pushX: 0, pushZ: 0, normalX: 0, normalZ: 0 };
   }
 }
 

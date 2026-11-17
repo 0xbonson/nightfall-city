@@ -1,6 +1,7 @@
 // Main Game Loop, State Machine, and Bootstrap for Nightfall City
 // Orchestrates 3D rendering, simulation systems, HUD, audio, and deterministic query hooks.
 
+import { CONFIG } from './config.js';
 import { world } from './world.js';
 import { player } from './player.js';
 import { camera } from './camera.js';

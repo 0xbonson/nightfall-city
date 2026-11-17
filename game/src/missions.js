@@ -4,9 +4,11 @@
 import { audio } from './audio.js';
 import { SaveManager } from './save.js';
 import { police } from './police.js';
+import { CONFIG } from './config.js';
 
 export class MissionManager {
   constructor() {
+    this.totalStoryMissions = 6;
     this.missions = [
       {
         id: 1,

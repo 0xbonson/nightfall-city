@@ -1,41 +1,67 @@
-// A working gta6-01 entry (Node 22, standard library only): the game is this directory's
-// game/ folder, plain static files a desktop browser loads offline (game/index.html and its ES
-// modules, no library and no network request), and the program hands it in. It copies game/ and
-// screenshots/ from beside this file to /output and writes /output/dossier.json, the summary the
-// judge reads, with the vendored make.fun library. Only the plumbing, not an open world: Block
-// Dodger, a plain 2D canvas game where a paddle dodges falling blocks and catches coins, with a
-// title screen, score, lives and levels, game over and restart, flat colours and no sound. Build
-// your own open-world crime game in its place (three.js or any library you vendor under game/),
-// put your 3 or 4 PNG or JPEG screenshots in screenshots/ (the first by name is the cover) and run it.
-//
-// Serve it locally with `node serve.ts`, then open http://localhost:8080.
-// Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
-//   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
+/**
+ * Nightfall City — Production Entrypoint & Dossier Generator
+ * 
+ * Prepares the distributable package for Nightfall City (Vela Bay):
+ * 1. Resolves repository root and destination output directory.
+ * 2. Mirrors the static game assets and offline ES modules (`game/`).
+ * 3. Copies verified gameplay screenshots into the output bundle (`screenshots/`).
+ * 4. Compiles the authoritative make.fun dossier (`dossier.json`) enforcing competition bounds.
+ */
 
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildDossier } from './vendor/makefun-game.ts';
 
-const here = fileURLToPath(new URL('.', import.meta.url));
-const out = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
+// Resolve directory paths relative to this script
+const currentDir = fileURLToPath(new URL('.', import.meta.url));
+const gameSourceDir = join(currentDir, 'game');
+const screenSourceDir = join(currentDir, 'screenshots');
 
-mkdirSync(out, { recursive: true });
-cpSync(join(here, 'game'), join(out, 'game'), { recursive: true });
-mkdirSync(join(out, 'screenshots'), { recursive: true });
-if (existsSync(join(here, 'screenshots'))) cpSync(join(here, 'screenshots'), join(out, 'screenshots'), { recursive: true });
+// Target directory provided by the test environment or grader container
+const targetOutputDir = resolve(process.env.MAKEFUN_OUTPUT_DIR ?? '/output');
 
-// The scorer's own caps (reference/gate.json): only text_max_bytes shapes the bytes; the others refuse an entry the
-// scorer would refuse (more than 4 screenshots or one over 256 KiB; more than 993 files in game/ or 48 MiB of game
-// files, in all, or a path under game/ over 1000 bytes: game/ counts beside /output's own 1000-entry cap, its
-// screenshots/ and dossier.json).
-writeFileSync(
-  join(out, 'dossier.json'),
-  buildDossier(out, {
-    text_max_bytes: 163840,
-    screenshots: { max: 4, max_bytes: 262144 },
-    game_max_files: 993,
-    game_max_bytes: 50331648,
-    game_path_max_bytes: 1000,
-  }),
-);
+// Strict competition constraints
+const DOSSIER_LIMITS = {
+  text_max_bytes: 163840, // 160 KiB limit for code listing text in dossier
+  screenshots: {
+    max: 4,               // Exactly 4 curated screenshots
+    max_bytes: 262144,    // 256 KiB cap per screenshot image
+  },
+  game_max_files: 993,    // Fit within overall 1000-entry directory cap
+  game_max_bytes: 48 * 1024 * 1024, // 48 MiB total game size cap
+  game_path_max_bytes: 1000,        // Max UTF-8 byte length for any single relative path
+} as const;
+
+function bundleNightfallCity(): void {
+  const startTime = Date.now();
+  console.log(`[Nightfall City] Packaging distribution to: ${targetOutputDir}`);
+
+  // Ensure root output container exists
+  mkdirSync(targetOutputDir, { recursive: true });
+
+  // 1. Copy the standalone web game tree
+  const gameDest = join(targetOutputDir, 'game');
+  mkdirSync(gameDest, { recursive: true });
+  cpSync(gameSourceDir, gameDest, { recursive: true });
+  console.log(`[Nightfall City] Copied web runtime to ${gameDest}`);
+
+  // 2. Copy screenshots if present
+  const screenDest = join(targetOutputDir, 'screenshots');
+  mkdirSync(screenDest, { recursive: true });
+  if (existsSync(screenSourceDir)) {
+    cpSync(screenSourceDir, screenDest, { recursive: true });
+    console.log(`[Nightfall City] Copied gameplay screenshots to ${screenDest}`);
+  }
+
+  // 3. Generate canonical dossier summary using make.fun engine
+  console.log('[Nightfall City] Compiling dossier against competition caps...');
+  const dossierPayload = buildDossier(targetOutputDir, DOSSIER_LIMITS);
+  const dossierPath = join(targetOutputDir, 'dossier.json');
+  writeFileSync(dossierPath, dossierPayload);
+
+  const durationMs = Date.now() - startTime;
+  console.log(`[Nightfall City] Successfully bundled in ${durationMs}ms: ${dossierPath}`);
+}
+
+bundleNightfallCity();

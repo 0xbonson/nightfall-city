@@ -3,11 +3,12 @@
 import { world } from './world.js';
 import { audio } from './audio.js';
 import { particles } from './effects.js';
+import { CONFIG } from './config.js';
 
 export class PedestrianManager {
   constructor() {
     this.pedestrians = [];
-    this.maxPeds = 28;
+    this.maxPeds = CONFIG.gameplay.pedestrianMaxCount;
     this.cashPickups = [];
 
     this.outfits = [

@@ -4,6 +4,7 @@ import { CharacterPhysics, VehiclePhysics } from './physics.js';
 import { WeaponManager } from './weapons.js';
 import { audio } from './audio.js';
 import { screenEffects, particles } from './effects.js';
+import { CONFIG } from './config.js';
 
 export class Player {
   constructor() {
@@ -51,6 +52,10 @@ export class Player {
   cycleWeapon() {
     this.activeWeaponIndex = (this.activeWeaponIndex + 1) % this.weapons.length;
     audio.playReload();
+  }
+
+  addCash(amount) {
+    this.cash = Math.max(0, this.cash + amount);
   }
 
   enterVehicle(car) {

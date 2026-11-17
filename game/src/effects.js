@@ -65,6 +65,10 @@ export class ParticleSystem {
     }
   }
 
+  clear() {
+    this.particles.length = 0;
+  }
+
   update(dt) {
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
@@ -114,6 +118,10 @@ export class ScreenEffects {
 
   flashWhite(amount = 0.8) {
     this.whiteFlash = Math.max(this.whiteFlash, amount);
+  }
+
+  clear() {
+    this.particles.length = 0;
   }
 
   update(dt) {

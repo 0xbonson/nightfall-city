@@ -125,11 +125,34 @@ export class Weapon {
   }
 }
 
+export const WEAPON_DEFAULTS = {
+  PISTOL: { name: 'Viper .45', type: 'pistol', damage: 28, magSize: 12, maxReserve: 120, fireRate: 3.8, reloadTime: 1.1, spread: 0.04 },
+  RIFLE: { name: 'Vane Carbine', type: 'rifle', damage: 22, magSize: 30, maxReserve: 240, fireRate: 9.5, reloadTime: 1.7, spread: 0.08 },
+};
+
 export class WeaponManager {
   static createArsenal() {
     return [
-      new Weapon('Viper .45', 'pistol', 28, 12, 120, 3.8, 1.1, 0.04),
-      new Weapon('Vane Carbine', 'rifle', 22, 30, 240, 9.5, 1.7, 0.08),
+      new Weapon(
+        WEAPON_DEFAULTS.PISTOL.name,
+        WEAPON_DEFAULTS.PISTOL.type,
+        WEAPON_DEFAULTS.PISTOL.damage,
+        WEAPON_DEFAULTS.PISTOL.magSize,
+        WEAPON_DEFAULTS.PISTOL.maxReserve,
+        WEAPON_DEFAULTS.PISTOL.fireRate,
+        WEAPON_DEFAULTS.PISTOL.reloadTime,
+        WEAPON_DEFAULTS.PISTOL.spread
+      ),
+      new Weapon(
+        WEAPON_DEFAULTS.RIFLE.name,
+        WEAPON_DEFAULTS.RIFLE.type,
+        WEAPON_DEFAULTS.RIFLE.damage,
+        WEAPON_DEFAULTS.RIFLE.magSize,
+        WEAPON_DEFAULTS.RIFLE.maxReserve,
+        WEAPON_DEFAULTS.RIFLE.fireRate,
+        WEAPON_DEFAULTS.RIFLE.reloadTime,
+        WEAPON_DEFAULTS.RIFLE.spread
+      ),
     ];
   }
 }

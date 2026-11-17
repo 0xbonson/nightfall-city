@@ -3,6 +3,7 @@
 import { world } from './world.js';
 import { audio } from './audio.js';
 import { particles, screenEffects } from './effects.js';
+import { CONFIG } from './config.js';
 
 export class VehiclePhysics {
   static createVehicle(x, z, angle = 0, type = 'sedan') {
@@ -153,7 +154,7 @@ export class CharacterPhysics {
     const { moveX = 0, moveZ = 0, sprint = false } = inputs;
     const isMoving = moveX !== 0 || moveZ !== 0;
 
-    const baseSpeed = sprint ? 8.2 : 4.4;
+    const baseSpeed = sprint ? (CONFIG.gameplay.playerSprintSpeed || 8.2) : (CONFIG.gameplay.playerWalkSpeed || 4.4);
     const accel = 30;
     const friction = 14;
 

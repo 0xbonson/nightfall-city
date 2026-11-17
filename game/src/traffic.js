@@ -3,11 +3,12 @@
 import { VehiclePhysics } from './physics.js';
 import { audio } from './audio.js';
 import { particles } from './effects.js';
+import { CONFIG } from './config.js';
 
 export class TrafficManager {
   constructor() {
     this.vehicles = [];
-    this.maxActive = 18;
+    this.maxActive = CONFIG.gameplay.trafficMaxCount;
     this.parkedVehicles = [];
 
     this.carColors = [
@@ -60,7 +61,7 @@ export class TrafficManager {
     if (this.vehicles.length >= this.maxActive + 12) return;
 
     // Pick a road line away from player but within streaming distance (70 to 140m)
-    const roads = [-220, -140, -60, 0, 60, 140, 220];
+    const roads = CONFIG.world.roadGrid;
     const isEW = Math.random() > 0.5;
     const rCoord = roads[Math.floor(Math.random() * roads.length)];
     const offset = (Math.random() > 0.5 ? 1 : -1) * (70 + Math.random() * 60);

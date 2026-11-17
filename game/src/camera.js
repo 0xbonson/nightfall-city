@@ -2,6 +2,9 @@
 
 import { screenEffects } from './effects.js';
 
+const NEAR_CLIP_PLANE = 0.4;
+const FAR_CLIP_PLANE = 650.0;
+
 export class Camera {
   constructor() {
     this.x = 0;
@@ -75,7 +78,7 @@ export class Camera {
   }
 
   computeMatrices() {
-    this.perspective(this.fov * Math.PI / 180, this.aspect, 0.4, 600.0, this.projMatrix);
+    this.perspective(this.fov * Math.PI / 180, this.aspect, NEAR_CLIP_PLANE, FAR_CLIP_PLANE, this.projMatrix);
     this.lookAt(
       this.x, this.y, this.z,
       this.targetX, this.targetY, this.targetZ,

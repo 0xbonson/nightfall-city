@@ -1,6 +1,22 @@
 [
-  { "name": "1-on-foot-downtown.png", "query": "?shot=1" },
-  { "name": "2-car-drive-promenade.png", "query": "?shot=2" },
-  { "name": "3-police-pursuit-stars.png", "query": "?shot=3" },
-  { "name": "4-mission-dock-showdown.png", "query": "?shot=4" }
+  {
+    "name": "1-on-foot-downtown.png",
+    "query": "?shot=1",
+    "description": "Rhea 'Rook' Solano on foot in Downtown Vela Bay with skyscrapers, street lamps, and pedestrians"
+  },
+  {
+    "name": "2-car-drive-promenade.png",
+    "query": "?shot=2",
+    "description": "High-speed sports car cruise along Ocean Promenade with palm trees, coastal boardwalk, and drift smoke"
+  },
+  {
+    "name": "3-police-pursuit-stars.png",
+    "query": "?shot=3",
+    "description": "Escalating 3-star police pursuit with interceptor cruisers, siren flash, and tactical roadblocks"
+  },
+  {
+    "name": "4-mission-dock-showdown.png",
+    "query": "?shot=4",
+    "description": "Mission 6 'Nightfall at the Docks' showdown with shipping containers, syndicate enforcers, and police helicopter"
+  }
 ]

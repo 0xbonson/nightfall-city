@@ -102,17 +102,17 @@ nightfall-city/
 ├── game/
 │   ├── index.html           # Main HTML document, canvas setup, viewport styling
 │   └── src/
+│       ├── config.js        # Central engine constants, daylight parameters & district config
 │       ├── main.js          # Game loop, state machine, lifecycle, deterministic query hooks
-│       ├── world.js         # Map geometry, 4 districts, road network, building collision
+│       ├── world.js         # Map geometry, 4 districts, road network, building collision & props
 │       ├── physics.js       # Arcade vehicle dynamics, drift physics, character collision
 │       ├── player.js        # Player entity, movement, health, armor, carjacking
 │       ├── camera.js        # 3D chase camera, orbit camera, screenshake, view matrices
-│       ├── render.js        # Pure WebGL 3D renderer, shaders, lighting, 3D meshes
+│       ├── render.js        # WebGL 3D renderer: daylight shaders, sky dome, buildings, vehicles
 │       ├── traffic.js       # AI traffic manager, parked cars, lane driving, vehicle damage
 │       ├── pedestrians.js   # AI pedestrians, fleeing behaviors, cash pickup drops
 │       ├── police.js        # 0-5 star wanted system, pursuit AI, roadblocks, helicopter
 │       ├── weapons.js       # Pistol and Rifle ballistics, damage, reload, raycasting
-│       ├── missions.js      # 6 storyline missions, dialogue, timers, objective tracker
 │       ├── hud.js           # 2D canvas HUD overlay, health/armor bars, stars, speedometer
 │       ├── minimap.js       # Rotating circular radar minimap with roads, cops, markers
 │       ├── audio.js         # WebAudio synthesizer for engine, sirens, guns, radio

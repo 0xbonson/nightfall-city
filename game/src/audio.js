@@ -1,6 +1,8 @@
 // WebAudio API synthesis for Nightfall City - 100% procedurally generated audio
 // No external sound files, zero network requests.
 
+import { CONFIG } from './config.js';
+
 class SoundManager {
   constructor() {
     this.ctx = null;

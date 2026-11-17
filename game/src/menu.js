@@ -83,10 +83,10 @@ export class MenuManager {
     const radioLabel = audio.radioStation === 1 ? 'RADIO: VELA WAVE' : audio.radioStation === 2 ? 'RADIO: NIGHTFALL' : 'RADIO: OFF';
     this.drawButton(ctx, btnX, btnY, btnW, btnH, radioLabel, 'toggle_radio');
 
-    // Footer credits
+    // Footer credits & edition
     ctx.font = '12px system-ui, sans-serif';
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
-    ctx.fillText('Bounty Entry: make.fun (gta6-01) · Playable offline in modern browsers', width / 2, height - 24);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+    ctx.fillText('Nightfall City: Vela Bay · make.fun (gta6-01) · 100% Offline Static ES Modules', width / 2, height - 24);
 
     ctx.restore();
   }

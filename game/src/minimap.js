@@ -209,7 +209,7 @@ export class Minimap {
     ctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
     ctx.stroke();
 
-    // North Indicator on Bezel
+    // North & Cardinal Indicators on Bezel
     const nAngle = -(player.heading || 0) - Math.PI / 2;
     const nx = cx + Math.cos(nAngle) * (r - 10);
     const ny = cy + Math.sin(nAngle) * (r - 10);
@@ -218,6 +218,12 @@ export class Minimap {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('N', nx, ny);
+
+    // East Indicator
+    const eAngle = nAngle + Math.PI / 2;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.font = 'bold 9px system-ui, sans-serif';
+    ctx.fillText('E', cx + Math.cos(eAngle) * (r - 10), cy + Math.sin(eAngle) * (r - 10));
   }
 }
 

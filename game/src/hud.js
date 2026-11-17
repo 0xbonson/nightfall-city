@@ -2,6 +2,7 @@
 
 import { minimap } from './minimap.js';
 import { screenEffects } from './effects.js';
+import { CONFIG } from './config.js';
 
 export class HUD {
   render(ctx, player, world, police, traffic, pedestrians, missions, width, height) {

@@ -51,4 +51,14 @@ export class SaveManager {
       return false;
     }
   }
+
+  static getSaveSummary() {
+    const data = this.load();
+    if (!data) return null;
+    return {
+      missionIndex: data.missionIndex,
+      cash: data.cash,
+      savedAt: new Date(data.timestamp).toLocaleString(),
+    };
+  }
 }
