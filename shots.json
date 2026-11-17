@@ -1,5 +1,6 @@
 [
-  { "name": "1-start.jpg", "query": "?shot=start&seed=1" },
-  { "name": "2-play.jpg", "query": "?shot=play&seed=1" },
-  { "name": "3-end.jpg", "query": "?shot=end&seed=1" }
+  { "name": "1-on-foot-downtown.png", "query": "?shot=1" },
+  { "name": "2-car-drive-promenade.png", "query": "?shot=2" },
+  { "name": "3-police-pursuit-stars.png", "query": "?shot=3" },
+  { "name": "4-mission-dock-showdown.png", "query": "?shot=4" }
 ]

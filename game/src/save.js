@@ -1,0 +1,54 @@
+// Game save/load system using localStorage for Nightfall City
+
+const SAVE_KEY = 'nightfall_city_save_v1';
+
+export class SaveManager {
+  static hasSave() {
+    try {
+      return !!localStorage.getItem(SAVE_KEY);
+    } catch {
+      return false;
+    }
+  }
+
+  static save(data) {
+    try {
+      const payload = {
+        version: 1,
+        timestamp: Date.now(),
+        cash: data.cash ?? 500,
+        missionIndex: data.missionIndex ?? 0,
+        health: data.health ?? 100,
+        armor: data.armor ?? 100,
+        posX: data.x ?? 0,
+        posZ: data.z ?? 0,
+        pistolAmmo: data.pistolAmmo ?? 60,
+        rifleAmmo: data.rifleAmmo ?? 120,
+        wantedLevel: data.wantedLevel ?? 0,
+      };
+      localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  static load() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+
+  static clear() {
+    try {
+      localStorage.removeItem(SAVE_KEY);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
