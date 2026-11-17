@@ -68,6 +68,13 @@ export class ParticleSystem {
         p.size = options.size || (0.55 + Math.random() * 0.45);
         p.color = options.color || [1.0, 0.94, 0.80, 0.25];
         p.decay = 0.6;
+      } else if (type === 'steam') {
+        p.vx = (Math.random() - 0.5) * 0.35;
+        p.vy = Math.random() * 1.4 + 0.8;
+        p.vz = (Math.random() - 0.5) * 0.35;
+        p.size = options.size || (0.28 + Math.random() * 0.25);
+        p.color = options.color || [0.95, 0.95, 1.0, 0.45];
+        p.decay = options.decay || (0.75 + Math.random() * 0.5);
       }
 
       this.particles.push(p);
@@ -91,7 +98,7 @@ export class ParticleSystem {
       p.y += p.vy * dt;
       p.z += p.vz * dt;
 
-      if (p.type === 'smoke' || p.type === 'fire' || p.type === 'haze' || p.type === 'dust') {
+      if (p.type === 'smoke' || p.type === 'fire' || p.type === 'haze' || p.type === 'dust' || p.type === 'steam') {
         p.size += dt * 0.6;
         p.vy *= 0.97;
       } else {

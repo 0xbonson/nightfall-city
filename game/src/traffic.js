@@ -202,6 +202,13 @@ export class TrafficManager {
 
         if (obstacleAhead) {
           desiredThrottle = -0.7; // Brake smoothly at light or behind obstacle
+
+          // Annoyed driver honk if blocked closely by player
+          v.honkCooldown = (v.honkCooldown || (2 + Math.random() * 3)) - dt;
+          if (v.honkCooldown <= 0 && distToPlayer < 18) {
+            v.honkCooldown = 5.0 + Math.random() * 4.0;
+            audio.playHorn();
+          }
         }
 
         VehiclePhysics.updateVehicle(v, dt, {

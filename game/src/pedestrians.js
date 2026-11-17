@@ -28,6 +28,7 @@ export class PedestrianManager {
     ];
 
     this.sheltersInitialized = false;
+    this.parkInitialized = false;
   }
 
   initShelterWaiting() {
@@ -58,6 +59,34 @@ export class PedestrianManager {
           isVehicle: false,
         });
       }
+    }
+  }
+
+  initParkStrollers() {
+    if (this.parkInitialized || !world.park) return;
+    this.parkInitialized = true;
+    const park = world.park;
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2;
+      const dist = 5 + Math.random() * 12;
+      const px = park.x + Math.cos(angle) * dist;
+      const pz = park.z + Math.sin(angle) * dist;
+      const outfit = this.outfits[Math.floor(Math.random() * this.outfits.length)];
+      this.pedestrians.push({
+        x: px,
+        z: pz,
+        heading: Math.random() * Math.PI * 2,
+        speed: 1.1,
+        health: 40,
+        alive: true,
+        isFleeing: false,
+        fleeTimer: 0,
+        isWaiting: false,
+        animTime: Math.random() * 5,
+        outfit,
+        isParkStroller: true,
+        isVehicle: false,
+      });
     }
   }
 
@@ -136,6 +165,7 @@ export class PedestrianManager {
 
   update(dt, player, onCrime) {
     this.initShelterWaiting();
+    this.initParkStrollers();
 
     // Populate around player
     if (this.pedestrians.length < this.maxPeds && Math.random() < dt * 4) {

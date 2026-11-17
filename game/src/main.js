@@ -241,6 +241,12 @@ class GameApp {
         player.x = data.posX;
         player.z = data.posZ;
         missions.startMission(data.missionIndex);
+        if (data.collectedCaches) {
+          world.collectedCaches = new Set(data.collectedCaches);
+        }
+        if (missions.courierRun && data.courierRuns) {
+          missions.courierRun.completedRuns = data.courierRuns;
+        }
       }
       menu.state = 'playing';
       input.requestLock();
@@ -252,6 +258,14 @@ class GameApp {
     } else if (action === 'resume' || action === 'continue_roam') {
       menu.state = 'playing';
       input.requestLock();
+    } else if (action === 'toggle_courier') {
+      if (missions.courierRun && missions.courierRun.active) {
+        missions.cancelCourierRun();
+      } else {
+        missions.startCourierRun(player);
+      }
+      menu.state = 'playing';
+      input.requestLock();
     } else if (action === 'save') {
       SaveManager.save({
         cash: player.cash,
@@ -260,6 +274,8 @@ class GameApp {
         armor: player.armor,
         x: player.x,
         z: player.z,
+        collectedCaches: world.collectedCaches,
+        courierRuns: missions.courierRun ? missions.courierRun.completedRuns : 0,
       });
       missions.showDialogue('SYSTEM', 'CAREER PROGRESS SAVED', 4.0);
       menu.state = 'playing';
@@ -343,6 +359,20 @@ class GameApp {
       this.interactPressed = false;
     }
 
+    // Express Courier activity toggle with KeyT
+    if (input.isAction('activity')) {
+      if (!this.activityPressed) {
+        this.activityPressed = true;
+        if (missions.courierRun && missions.courierRun.active) {
+          missions.cancelCourierRun();
+        } else {
+          missions.startCourierRun(player);
+        }
+      }
+    } else {
+      this.activityPressed = false;
+    }
+
     // Weapons cycling & reload
     if (input.isAction('weapon1')) player.switchWeapon(0);
     if (input.isAction('weapon2')) player.switchWeapon(1);
@@ -371,17 +401,26 @@ class GameApp {
     }
 
     // Update Player & Camera
-    inputsObj.cameraYaw = camera.yaw;
+    input.cameraYaw = camera.yaw;
     player.update(dt, input);
     camera.update(player, dt, mouse);
 
-    // Update Traffic, Pedestrians, Police, Missions, Particles
+    // Update Traffic, Pedestrians, Police, Missions, Particles, and Audio Ambience
     traffic.update(dt, player, onCrime);
     pedestrians.update(dt, player, onCrime);
     police.update(dt, player, pedestrians);
     missions.update(dt, player);
     particles.update(dt);
     screenEffects.update(dt);
+    audio.updateAmbience(player.x, player.z, dt);
+
+    // Periodic steam from street food carts
+    if (world.streetFoodCarts && Math.random() < dt * 5.0) {
+      const cart = world.streetFoodCarts[Math.floor(Math.random() * world.streetFoodCarts.length)];
+      if (Math.hypot(player.x - cart.x, player.z - cart.z) < 65) {
+        particles.emit('steam', cart.x, cart.y + 1.25, cart.z, 1, { size: 0.35, up: 1.2 });
+      }
+    }
 
     // Maintain stable actor compositions for query-driven screenshot capture
     if (this.activeShot) {

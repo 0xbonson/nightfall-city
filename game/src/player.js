@@ -6,6 +6,8 @@ import { WeaponManager } from './weapons.js';
 import { audio } from './audio.js';
 import { screenEffects, particles } from './effects.js';
 import { CONFIG } from './config.js';
+import { world } from './world.js';
+import { police } from './police.js';
 
 export const PLAYER_INITIAL_HEALTH = 100;
 export const PLAYER_INITIAL_ARMOR = 50;
@@ -38,6 +40,10 @@ export class Player {
     this.isMoving = false;
     this.isSprinting = false;
     this.animTime = 0;
+    this.footstepTimer = 0;
+    this.staggerTimer = 0;
+    this.landTimer = 0;
+    this.lastHonkTime = 0;
     this.wastedTimer = 0;
     this.isWasted = false;
   }
@@ -70,16 +76,13 @@ export class Player {
     audio.playReload();
   }
 
-  addCash(amount) {
-    this.cash = Math.max(0, this.cash + amount);
-  }
-
   enterVehicle(car) {
     if (!car || car.wrecked) return false;
     this.inVehicle = true;
     this.vehicle = car;
     this.x = car.x;
     this.z = car.z;
+    audio.playCarDoor();
     audio.resume();
     return true;
   }
@@ -94,6 +97,7 @@ export class Player {
     this.heading = this.vehicle.angle;
     this.inVehicle = false;
     this.vehicle = null;
+    audio.playCarDoor();
   }
 
   takeDamage(amount, source = null) {
@@ -170,6 +174,12 @@ export class Player {
       this.z = this.vehicle.z;
       this.heading = this.vehicle.angle;
       audio.updateEngine(true, this.vehicle.speed / this.vehicle.maxSpeed, inputs.isAction('forward'));
+
+      // Horn action
+      if (inputs.isAction('horn') && Date.now() - this.lastHonkTime > 600) {
+        this.lastHonkTime = Date.now();
+        audio.playHorn();
+      }
     } else {
       // On Foot
       audio.updateEngine(false, 0, false);
@@ -198,6 +208,37 @@ export class Player {
 
       if (this.isMoving) {
         this.animTime += dt * (this.isSprinting ? 12 : 7);
+        this.footstepTimer -= dt;
+        if (this.footstepTimer <= 0) {
+          audio.playFootstep(this.isSprinting ? 'sprint' : 'walk');
+          this.footstepTimer = this.isSprinting ? 0.28 : 0.44;
+        }
+      } else {
+        this.footstepTimer = 0.1;
+      }
+    }
+
+    // Proximity check for hidden Smuggler Caches
+    if (world && world.smugglerCaches) {
+      for (const cache of world.smugglerCaches) {
+        if (world.collectedCaches && world.collectedCaches.has(cache.id)) continue;
+        const dist = Math.hypot(this.x - cache.x, this.z - cache.z);
+        if (dist < 3.2) {
+          const collected = world.collectCache(cache.id);
+          if (collected) {
+            this.addCash(cache.reward);
+            audio.playCash();
+            particles.emit('spark', cache.x, 0.8, cache.z, 14);
+          }
+        }
+      }
+    }
+
+    // Alleyway escape route detection when wanted by police
+    if (world && world.isInAlleyEscapeRoute && world.isInAlleyEscapeRoute(this.x, this.z)) {
+      if (police && police.wantedLevel > 0) {
+        // Accelerate police evasion timer in alleyways
+        police.evasionTimer = Math.max(0, police.evasionTimer - dt * 2.8);
       }
     }
   }

@@ -125,6 +125,11 @@ export class VehiclePhysics {
     const targetRoll = -(car.steer * (car.speed / (car.maxSpeed * 0.6))) * 0.06;
     car.roll = (car.roll || 0) + (targetRoll - (car.roll || 0)) * Math.min(1.0, 9 * dt);
 
+    // Dynamic wheel spin rotation & steer angle for visual rendering
+    car.wheelRotation = (car.wheelRotation || 0) + (car.speed / 0.35) * dt;
+    car.steerAngle = car.steer;
+    car.isReversing = car.speed < -0.1;
+
     // Angular turning with speed sensitivity
     const turnSensitivity = (car.speed >= 0 ? 1 : -1) * (1 - Math.min(0.5, Math.abs(car.speed) / (car.maxSpeed * 1.6)));
     const turnAmount = car.steer * car.steerRate * (car.speed / 14) * turnSensitivity;
@@ -184,9 +189,18 @@ export class VehiclePhysics {
 export class CharacterPhysics {
   static updatePlayer(player, dt, inputs = {}) {
     const { moveX = 0, moveZ = 0, sprint = false } = inputs;
-    const isMoving = moveX !== 0 || moveZ !== 0;
 
-    const baseSpeed = sprint ? (CONFIG.gameplay.playerSprintSpeed || 8.2) : (CONFIG.gameplay.playerWalkSpeed || 4.4);
+    // Stagger / recovery decay
+    if (player.staggerTimer > 0) {
+      player.staggerTimer = Math.max(0, player.staggerTimer - dt);
+    }
+    if (player.landTimer > 0) {
+      player.landTimer = Math.max(0, player.landTimer - dt);
+    }
+
+    const isMoving = (moveX !== 0 || moveZ !== 0) && player.staggerTimer <= 0;
+    const speedMult = player.landTimer > 0 ? 0.75 : 1.0;
+    const baseSpeed = (sprint ? (CONFIG.gameplay.playerSprintSpeed || 8.2) : (CONFIG.gameplay.playerWalkSpeed || 4.4)) * speedMult;
     const accel = 30;
     const friction = 14;
 

@@ -1,13 +1,14 @@
 // Game save/load system using browser localStorage for Nightfall City: Vela Bay
 // Persists player career progression, cash reserves, weapons inventory, and story milestones.
 
-export const SAVE_STORAGE_KEY = 'nightfall_city_save_v1';
-export const SAVE_CURRENT_VERSION = 1;
+export const SAVE_STORAGE_KEY = 'nightfall_city_save_v2';
+export const SAVE_LEGACY_KEY = 'nightfall_city_save_v1';
+export const SAVE_CURRENT_VERSION = 2;
 
 export class SaveManager {
   static hasSave() {
     try {
-      return !!localStorage.getItem(SAVE_STORAGE_KEY);
+      return !!localStorage.getItem(SAVE_STORAGE_KEY) || !!localStorage.getItem(SAVE_LEGACY_KEY);
     } catch {
       return false;
     }
@@ -27,6 +28,8 @@ export class SaveManager {
         pistolAmmo: data.pistolAmmo ?? 60,
         rifleAmmo: data.rifleAmmo ?? 120,
         wantedLevel: data.wantedLevel ?? 0,
+        collectedCaches: Array.from(data.collectedCaches || []),
+        courierRuns: data.courierRuns ?? 0,
       };
       localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(payload));
       return true;
@@ -37,7 +40,10 @@ export class SaveManager {
 
   static load() {
     try {
-      const raw = localStorage.getItem(SAVE_STORAGE_KEY);
+      let raw = localStorage.getItem(SAVE_STORAGE_KEY);
+      if (!raw) {
+        raw = localStorage.getItem(SAVE_LEGACY_KEY);
+      }
       if (!raw) return null;
       return JSON.parse(raw);
     } catch {
@@ -48,6 +54,7 @@ export class SaveManager {
   static clear() {
     try {
       localStorage.removeItem(SAVE_STORAGE_KEY);
+      localStorage.removeItem(SAVE_LEGACY_KEY);
       return true;
     } catch {
       return false;
@@ -60,6 +67,8 @@ export class SaveManager {
     return {
       missionIndex: data.missionIndex,
       cash: data.cash,
+      collectedCaches: data.collectedCaches ? data.collectedCaches.length : 0,
+      courierRuns: data.courierRuns || 0,
       savedAt: new Date(data.timestamp).toLocaleString(),
     };
   }

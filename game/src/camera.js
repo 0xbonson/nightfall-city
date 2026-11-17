@@ -7,6 +7,8 @@ import { world } from './world.js';
 
 const NEAR_CLIP_PLANE = 0.4;
 const FAR_CLIP_PLANE = 750.0;
+export const CAMERA_DEFAULT_FOV = 68;
+export const CAMERA_MAX_DYNAMIC_FOV = 82;
 
 export class Camera {
   constructor() {
@@ -111,13 +113,13 @@ export class Camera {
       }
 
       // Speed-based dynamic FOV expansion (68 deg at rest up to 82 deg at top velocity)
-      this.fov = 68 + speedRatio * 14;
+      this.fov = CAMERA_DEFAULT_FOV + speedRatio * (CAMERA_MAX_DYNAMIC_FOV - CAMERA_DEFAULT_FOV);
     } else {
       // On-foot camera shows player and street around them
       targetDist = 5.0;
       targetHeight = 1.4;
       this.targetRoll = 0;
-      this.fov = 68;
+      this.fov = CAMERA_DEFAULT_FOV;
     }
 
     this.roll += (this.targetRoll - this.roll) * Math.min(1.0, 6.0 * dt);

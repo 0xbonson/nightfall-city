@@ -1,5 +1,5 @@
 // Input handling for Nightfall City: Vela Bay
-// Keyboard, mouse look with Pointer Lock support, and weapon controls.
+// Keyboard, mouse look with Pointer Lock support, weapon controls, and vehicle horns.
 
 export const MOUSE_LOOK_SENSITIVITY = 0.0022;
 export const MOUSE_SMOOTHING_FACTOR = 0.85;
@@ -111,6 +111,8 @@ class InputManager {
       case 'handbrake': return this.isDown('Space');
       case 'interact': return this.isDown('KeyF') || this.isDown('KeyE');
       case 'reload': return this.isDown('KeyR');
+      case 'horn': return this.isDown('KeyH');
+      case 'activity': return this.isDown('KeyT');
       case 'weapon1': return this.isDown('Digit1');
       case 'weapon2': return this.isDown('Digit2');
       case 'cycleWeapon': return this.isDown('KeyQ') || this.wheelDelta !== 0;

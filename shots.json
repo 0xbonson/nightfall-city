@@ -2,21 +2,21 @@
   {
     "name": "1-on-foot-downtown.png",
     "query": "?shot=1",
-    "description": "Rhea 'Rook' Solano on foot on a busy Downtown pavement, tall glass towers rising behind into a warm sky, pedestrians in groups, and traffic in the street"
+    "description": "Rhea 'Rook' Solano on foot on a busy Downtown pavement, tall glass towers rising behind into a warm golden sky, long soft shadows, pedestrians in groups, and traffic in the street"
   },
   {
     "name": "2-car-drive-promenade.png",
     "query": "?shot=2",
-    "description": "Sports car at speed along Ocean Promenade boulevard with glistening ocean water, low sun over the water, palm trees, and the coastal boardwalk"
+    "description": "Sports car at speed along the Ocean Promenade with the sea, low sun specular reflection over moving waves, palm trees, the boardwalk, and the new marina in frame"
   },
   {
     "name": "3-police-pursuit-stars.png",
     "query": "?shot=3",
-    "description": "High-speed police pursuit at its height, wanted stars in the HUD, flashing cruiser lights, player car flanked between two cruisers on a wide road"
+    "description": "High-speed police pursuit at its height, wanted stars in the HUD, flashing cruiser lights, player car flanked between two cruisers on a wide road with the new Elevated Skyway Overpass in the background"
   },
   {
     "name": "4-mission-dock-showdown.png",
     "query": "?shot=4",
-    "description": "Showdown at Meridian Docks with colorful shipping container stacks, 38m gantry crane, armed syndicate guards, hovering helicopter, and water beyond"
+    "description": "Showdown at Meridian Docks with colorful shipping container stacks, 38m gantry crane, armed syndicate guards, police helicopter with volumetric searchlight, and the open bay beyond"
   }
 ]

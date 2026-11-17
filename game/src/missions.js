@@ -7,8 +7,19 @@ import { police } from './police.js';
 import { CONFIG } from './config.js';
 
 export const MISSION_MARKER_TRIGGER_RADIUS = 5.0; // Distance in meters to activate mission beacon
-export const TOTAL_STORY_CAMPAIGN_MISSIONS = 6;
+export const TOTAL_STORY_CAMPAIGN_MISSIONS = 7;
 export const CHECKPOINT_TRIGGER_RADIUS = 8.0; // Proximity trigger threshold for street race checkpoints
+
+export const COURIER_DESTINATIONS = [
+  { x: -180, z: 90, name: 'Vela Marina Pier' },
+  { x: -20, z: -25, name: 'Central Park Fountain' },
+  { x: 95, z: -95, name: 'Downtown Penthouse' },
+  { x: -130, z: -135, name: 'Old Market Quarter' },
+  { x: 160, z: 170, name: 'Meridian Docks Depot' },
+  { x: -90, z: 25, name: 'Grand Arena Plaza' },
+  { x: 140, z: -40, name: 'Skyway Construction Site' },
+  { x: -105, z: 175, name: 'Ocean Promenade Boardwalk' },
+];
 
 export class MissionManager {
   constructor() {
@@ -170,6 +181,35 @@ export class MissionManager {
           }
         ],
         reward: 25000,
+      },
+      {
+        id: 7,
+        title: 'The Skyway Lockdown',
+        client: 'Matteo Port Meridian',
+        startMarker: { x: 0, z: 20, radius: 6.0 },
+        steps: [
+          {
+            desc: 'Drive to the Elevated Skyway Overpass where corrupt Metro SWAT units formed a tactical blockade.',
+            dialogue: { speaker: 'MATTEO', text: 'Rhea, Reynolds is finished, but rogue precinct brass have barricaded the Skyway overpass. Break their blockade before they lock down Vela Bay!' },
+            target: { x: -60, z: 75, radius: 7.0 },
+            action: 'reach',
+            spawnEnemies: 6
+          },
+          {
+            desc: 'Eliminate the 6 rogue SWAT commanders holding the overpass checkpoint.',
+            dialogue: { speaker: 'SWAT COMMANDER', text: 'Target Solano on the deck! Open fire, don\'t let her off the bridge!' },
+            action: 'eliminate'
+          },
+          {
+            desc: 'Evade the 4-star citywide dragnet and deliver the command vehicle to the Downtown Tower!',
+            dialogue: { speaker: 'MATTEO', text: 'Cruisers and gunships are converging! Floor it down the Skyway ramp and bring it home to Downtown!' },
+            triggerPolice: 4,
+            target: { x: 100, z: -100, radius: 6.0 },
+            timeLimit: 120,
+            action: 'deliver'
+          }
+        ],
+        reward: 35000,
       }
     ];
 
@@ -182,6 +222,17 @@ export class MissionManager {
     this.dialogue = null;
     this.dialogueTimer = 0;
     this.storyCompleted = false;
+
+    // Express Courier Open-World Activity Loop
+    this.courierRun = {
+      active: false,
+      target: null,
+      targetName: '',
+      timeLimit: 0,
+      timer: 0,
+      reward: 0,
+      completedRuns: 0,
+    };
   }
 
   get currentMission() {
@@ -210,11 +261,11 @@ export class MissionManager {
     audio.playCash();
   }
 
-  startStep(stepIdx) {
+  startStep(stepIdx, player = null) {
     this.currentStepIndex = stepIdx;
     const step = this.activeMission.steps[stepIdx];
     if (!step) {
-      this.completeMission();
+      this.completeMission(player);
       return;
     }
 
@@ -277,9 +328,12 @@ export class MissionManager {
     }
   }
 
-  completeMission() {
+  completeMission(player = null) {
     audio.playMissionFanfare();
     const rew = this.activeMission.reward;
+    if (player) {
+      player.cash += rew;
+    }
     this.showDialogue('SYSTEM', `MISSION PASSED! +$${rew}`, 7.0);
 
     this.activeMission = null;
@@ -287,6 +341,66 @@ export class MissionManager {
 
     if (this.currentMissionIndex >= this.missions.length) {
       this.storyCompleted = true;
+    }
+  }
+
+  // --- Express Courier Delivery Activity Loop ---
+  startCourierRun(player) {
+    if (this.courierRun.active) {
+      this.cancelCourierRun();
+      return;
+    }
+    const available = COURIER_DESTINATIONS.filter(d => Math.hypot(player.x - d.x, player.z - d.z) > 45);
+    const dest = available.length > 0 ? available[Math.floor(Math.random() * available.length)] : COURIER_DESTINATIONS[0];
+    const dist = Math.hypot(player.x - dest.x, player.z - dest.z);
+    const timeLimit = Math.max(50, Math.ceil((dist / 22.0) * 1.5) + 15);
+    const reward = Math.round(750 + dist * 5.5);
+
+    this.courierRun = {
+      active: true,
+      target: { x: dest.x, z: dest.z, radius: 8.5 },
+      targetName: dest.name,
+      timeLimit: timeLimit,
+      timer: timeLimit,
+      reward: reward,
+      completedRuns: this.courierRun.completedRuns || 0,
+    };
+
+    audio.playCash();
+    this.showDialogue('DISPATCH', `EXPRESS RUN: Deliver package to ${dest.name}! (${timeLimit}s)`, 5.5);
+  }
+
+  cancelCourierRun() {
+    if (!this.courierRun.active) return;
+    this.courierRun.active = false;
+    this.courierRun.target = null;
+    this.showDialogue('DISPATCH', 'Courier delivery cancelled.', 3.0);
+  }
+
+  updateCourier(dt, player) {
+    if (!this.courierRun.active) return;
+
+    this.courierRun.timer -= dt;
+    if (this.courierRun.timer <= 0) {
+      this.courierRun.active = false;
+      this.courierRun.target = null;
+      audio.playSiren(false);
+      this.showDialogue('DISPATCH', 'DELIVERY EXPIRED! Job failed.', 4.0);
+      return;
+    }
+
+    const dist = Math.hypot(player.x - this.courierRun.target.x, player.z - this.courierRun.target.z);
+    if (dist < this.courierRun.target.radius) {
+      const rew = this.courierRun.reward;
+      if (player) {
+        player.cash += rew;
+      }
+      this.courierRun.completedRuns++;
+      this.courierRun.active = false;
+      this.courierRun.target = null;
+      audio.playCash();
+      audio.playMissionFanfare();
+      this.showDialogue('DISPATCH', `PACKAGE DELIVERED! +$${rew} (Runs: ${this.courierRun.completedRuns})`, 6.0);
     }
   }
 
@@ -303,6 +417,9 @@ export class MissionManager {
         this.dialogue = null;
       }
     }
+
+    // Update open-world courier activity
+    this.updateCourier(dt, player);
 
     // If no active mission, check if player walks into next mission start marker
     if (!this.activeMission && !this.storyCompleted) {
@@ -334,21 +451,21 @@ export class MissionManager {
     if (step.action === 'reach' || step.action === 'deliver') {
       const dist = Math.hypot(player.x - step.target.x, player.z - step.target.z);
       if (dist < step.target.radius) {
-        this.startStep(this.currentStepIndex + 1);
+        this.startStep(this.currentStepIndex + 1, player);
       }
     } else if (step.action === 'eliminate') {
       const aliveCount = this.enemies.filter(e => e.alive).length;
       if (aliveCount === 0) {
-        this.startStep(this.currentStepIndex + 1);
+        this.startStep(this.currentStepIndex + 1, player);
       }
     } else if (step.action === 'eliminate_boss') {
       const boss = this.enemies.find(e => e.isBoss);
       if (!boss || !boss.alive) {
-        this.startStep(this.currentStepIndex + 1);
+        this.startStep(this.currentStepIndex + 1, player);
       }
     } else if (step.action === 'evade') {
       if (police.wantedLevel === 0) {
-        this.startStep(this.currentStepIndex + 1);
+        this.startStep(this.currentStepIndex + 1, player);
       }
     } else if (step.action === 'checkpoints') {
       const cp = step.checkpoints[this.currentCheckpointIndex];
@@ -357,7 +474,7 @@ export class MissionManager {
         this.currentCheckpointIndex++;
         audio.playCash();
         if (this.currentCheckpointIndex >= step.checkpoints.length) {
-          this.startStep(this.currentStepIndex + 1);
+          this.startStep(this.currentStepIndex + 1, player);
         }
       }
     }

@@ -52,15 +52,15 @@ export class PoliceManager {
     else if (this.heat >= 15) this.wantedLevel = 1;
     else this.wantedLevel = 0;
 
-    // Helicopter activates at 4+ stars
-    if (this.wantedLevel >= 4 && !this.helicopter) {
+    // Helicopter activates at 3+ stars (searchlights tracking player at 3 and 4 stars)
+    if (this.wantedLevel >= 3 && !this.helicopter) {
       this.helicopter = {
         x: 0, y: 35, z: 0,
         rotorAngle: 0,
         spotlightX: 0, spotlightZ: 0,
         shootCooldown: 0,
       };
-    } else if (this.wantedLevel < 4 && this.helicopter) {
+    } else if (this.wantedLevel < 3 && this.helicopter) {
       this.helicopter = null;
     }
   }

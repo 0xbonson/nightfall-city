@@ -21,8 +21,8 @@ const screenSourceDir = join(currentDir, 'screenshots');
 // Target directory provided by the test environment or grader container
 const targetOutputDir = resolve(process.env.MAKEFUN_OUTPUT_DIR ?? '/output');
 
-export const BUNDLE_VERSION = '1.0.0';
-export const GAME_DIST_TITLE = 'Nightfall City: Vela Bay';
+export const BUNDLE_VERSION = '1.1.0';
+export const GAME_DIST_TITLE = 'Nightfall City: Vela Bay (Polish Edition)';
 
 // Strict competition constraints
 const DOSSIER_LIMITS = {

@@ -6,6 +6,10 @@ import { particles, screenEffects } from './effects.js';
 import { world } from './world.js';
 
 export const WEAPON_MAX_EFFECTIVE_RANGE = 120.0; // Hitscan maximum raycast range in meters
+export const BULLET_HIT_RADIUS_PEDESTRIAN = 0.75;
+export const BULLET_HIT_RADIUS_VEHICLE = 2.10;
+export const RECOIL_TRAUMA_PISTOL = 0.12;
+export const RECOIL_TRAUMA_RIFLE = 0.08;
 
 export class Weapon {
   constructor(name, type, damage, magSize, maxReserve, fireRate, reloadTime, spread) {

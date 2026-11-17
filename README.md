@@ -16,13 +16,19 @@ Explore four expansive, handcrafted districts: the soaring glass skyscrapers of 
 - **Articulated Character & Cinematic Camera**: On-foot player model with articulated swinging limbs, torso lean, headwear, and weapon aiming. Third-person cinematic chase camera with speed-dependent pull-back, corner banking roll, dynamic FOV expansion, and collision raycasting against building architecture.
 - **Living City Ecosystem**: Autonomous AI traffic that obeys traffic light cycles, navigates road lanes, yields at intersections, and honks at obstacles. Active pedestrians stroll sidewalks in small groups, wait at bus shelters, obey pedestrian signals, react to gunfire, flee speeding vehicles, and drop cash upon being eliminated. Flocks of sea birds circle over the harbour and marina.
 - **5-Star Escalating Wanted System**: Commit crimes (carjacking, hit-and-run, gunshots, assaulting officers) to raise your heat from 1 to 5 stars. The Vela Bay Metro deploys foot patrol officers, high-speed interceptor cruisers, road barricades with spike strips at 3+ stars, and tactical police helicopters equipped with searchlights and sniper fire at 4+ stars. Evade line-of-sight to cool heat, or ditch stolen vehicles in alleyways to double evasion speed.
-- **6-Part Narrative Campaign**: Full storyline with mission markers, live dialogue, timed deliveries, shootouts, and boss encounters:
+- **7-Part Narrative Campaign**: Full storyline with mission markers, live dialogue, timed deliveries, shootouts, and boss encounters:
   1. *The Marina Drop* (Courier Run) — Collect an encrypted datapad from Marina Pier and speed through downtown traffic to Matteo's penthouse before time expires.
   2. *Repo on Vane Turf* (Grand Theft) — Infiltrate the Syndicate's Old Town stronghold, eliminate guarding thugs, and deliver the custom Nero GT to the Docks Chop Shop.
   3. *Market Muscle* (Protection Shootout) — Defend Old Market merchants by taking down 5 Vane Syndicate enforcers, then shake the arriving Metro 2-star heat.
   4. *Vela Bay Sprint* (Street Race) — High-speed 8-checkpoint race through the urban core and coastal expressway under 110 seconds.
   5. *Armory Infiltration* (Depot Heist) — Breach the heavily guarded syndicate military depot, eliminate garrison defenders, blow the vault, and escape a 3-star police dragnet.
-  6. *Nightfall at the Docks* (Final Showdown) — Assault Shipping Pier 7, eliminate Boss Hector Vane and corrupt Police Captain Reynolds, destroy armored convoys, and escape on the getaway speedboat.
+  6. *Nightfall at the Docks* (Pier Showdown) — Assault Shipping Pier 7, eliminate Boss Hector Vane and corrupt Police Captain Reynolds, destroy armored convoys, and escape on the getaway speedboat.
+  7. *The Skyway Lockdown* (Overpass Assault) — Break through rogue Metro SWAT commanders barricading the new Elevated Skyway Overpass, eliminate the tactical blockade, and deliver the command cruiser to Downtown under 4-star citywide pursuit.
+- **Open-World Activities & Exploration**:
+  - *Express Courier Runs* — Dynamic timed delivery jobs across Vela Bay startable at any time via `T` key or the pause map.
+  - *15 Hidden Smuggler Caches* — Contraband cases hidden on rooftops, piers, alleyways, and park grounds, rewarded with cash and tracked on the HUD and pause dossier.
+  - *Wanted Level Reactivity & Escape Routes* — High-speed roadblocks, helicopter searchlights tracking the player at wanted level 3 and 4, and narrow alley escape routes where heat cools 3x faster.
+  - *Living Coastal Architecture* — Elevated Skyway Overpass with ramps and support pillars, Vela Marina with moored yachts, sailboats, and Harbour Master headquarters, Central Park with fountains, hedges, and strolling visitors, Grand Arena stadium, construction site with 48m tower crane, festoon string lights, and street food carts with rising steam.
 - **Combat & Arsenal**: Equip the high-precision *Viper .45 Pistol* and the fully-automatic *Vane Carbine Assault Rifle*. Features third-person mouse aim (with Pointer Lock), dynamic bullet spread, recoil, realistic reload cycles, and hostile retaliation from armed syndicate enforcers and police.
 - **Full HUD, Rotating Minimap & Tactical Pause Map**: Circular radar with compass ring displaying roads, ocean shoreline, player orientation arrow, mission waypoints, police blips (flashing red/blue during pursuit), traffic vehicles, and enemy targets. Screen HUD tracks health, armor, cash balance, active weapon, ammo, and dynamic vehicle speedometer. Pause screen features a full tactical city map of Vela Bay with district borders, roads, player location, and active objective markers.
 - **100% Synthesized WebAudio**: Procedurally synthesized sound effects and generative 80s synthwave music radio stations (*Vela Wave 80.4* and *Nightfall Beats*) built entirely on the WebAudio API without external audio files.
@@ -36,12 +42,14 @@ Explore four expansive, handcrafted districts: the soaring glass skyscrapers of 
 | **Sprint** | `Shift` (on foot) |
 | **Handbrake / Drift** | `Space` (in vehicle) |
 | **Jack Car / Exit** | `F` or `E` |
+| **Honk Horn** | `H` (in vehicle) |
+| **Express Courier Job** | `T` (start / cancel delivery) |
 | **Aim & Look** | Mouse Movement (Pointer Lock enabled) |
 | **Fire Weapon** | Left Mouse Click |
 | **Reload Weapon** | `R` |
 | **Cycle Weapon** | `1`, `2`, `Q`, or Mouse Wheel |
 | **Change Radio Station** | `R` (in vehicle) |
-| **Pause / Menu** | `Esc` or `P` |
+| **Tactical Pause Map & Dossier** | `M`, `Esc`, or `P` |
 
 ## Run it
 

@@ -63,14 +63,21 @@ The game world spans a rich coordinate area (-280m to +280m in X and Z) featurin
 - Weapons feature ammunition tracking, reload cycles (`R`), spread recoil, muzzle flashes, and blood/spark impact particles.
 - Hostile syndicate enforcers and police return fire with tactical AI.
 
-### 2.6 Narrative Campaign (6 Story Missions)
-A connected 6-mission story arc detailing Rook's struggle against the rival crews:
+### 2.6 Narrative Campaign (7 Story Missions)
+A connected 7-mission story arc detailing Rook's struggle against the rival crews:
 1. **The Marina Drop**: Collect an encrypted datapad at Marina Pier and deliver it across town to Matteo Port Meridian's penthouse before the 95s timer expires.
 2. **Repo on Vane Turf**: Infiltrate the Vane Syndicate's Old Town compound, neutralize 3 guarding thugs, steal back the custom Nero GT, and deliver it to the Docks Chop Shop.
 3. **Market Muscle**: Protect Old Market merchants by taking down 5 extortionist syndicate enforcers in the market square, then evade the responding Metro 2-star police patrol.
 4. **Vela Bay Sprint**: High-stakes underground checkpoint street race across 8 gates connecting the beach boulevard, downtown freeway, and dockyard within 110 seconds.
 5. **Armory Infiltration**: Infiltrate the fortified syndicate munitions depot, eliminate 6 compound defenders, blow the vault, secure the military cache, and escape a 3-star police net.
-6. **Nightfall at the Docks**: Final showdown at Shipping Pier 7; take down Boss Hector Vane and corrupt Police Captain Reynolds, destroy their armored vehicle, and board the getaway speedboat to claim control of Vela Bay.
+6. **Nightfall at the Docks**: Assault Shipping Pier 7; take down Boss Hector Vane and corrupt Police Captain Reynolds, destroy their armored vehicle, and board the getaway speedboat.
+7. **The Skyway Lockdown**: Grand finale overpass assault; eliminate 6 rogue Metro SWAT commanders barricading the new Elevated Skyway Overpass and deliver the command vehicle to Downtown under 4-star citywide pursuit.
+
+### 2.7 Open-World Activities & Systems Polish
+- **Express Courier Deliveries**: Timed delivery activity loop startable via `T` key or the pause map for quick cash and reputation.
+- **15 Hidden Smuggler Caches**: Contraband crates scattered across rooftops, docks, and park grounds, rewarded with cash and tracked on the HUD.
+- **Alley Escape Routes**: Narrow shaded corridors where wanted heat cools 3x faster, with HUD notification.
+- **Urban Infrastructure**: Elevated Skyway Overpass with pillars and ramps, coastal Marina with moored boats and Harbour Master building, landscaped Central Park with fountain, Grand Arena stadium, and construction site with 48m tower crane.
 
 ### 2.7 Heads-Up Display (HUD) & Rotating Radar Minimap
 - Custom 2D canvas overlay layered over the WebGL 3D viewport.

@@ -110,11 +110,13 @@ export class MenuManager {
       ['Shift', 'Sprint on Foot'],
       ['Space', 'Handbrake & Drift in Car'],
       ['F or E', 'Jack Nearby Vehicle / Exit Vehicle'],
+      ['H', 'Honk Vehicle Horn (Alerts Pedestrians & Traffic)'],
+      ['T', 'Express Courier Run (Timed Delivery Loop for Cash)'],
       ['Mouse Look', 'Look Around / Aim (Pointer Lock enabled)'],
       ['Left Mouse Click', 'Fire Weapon (Pistol / Assault Rifle)'],
       ['R', 'Reload Weapon / Change Radio Station'],
       ['1 / 2 / Q', 'Switch Weapons'],
-      ['Esc or P', 'Pause / Menu'],
+      ['M / Esc / P', 'Tactical Pause Map & Dossier'],
     ];
 
     let rowY = height * 0.28;
@@ -213,6 +215,36 @@ export class MenuManager {
       ctx.stroke();
     }
 
+    // Central Park & Marina on tactical map
+    if (world && world.park) {
+      ctx.fillStyle = 'rgba(40, 130, 70, 0.55)';
+      ctx.fillRect(toScreenX(world.park.x - world.park.w / 2), toScreenY(world.park.z - world.park.d / 2), world.park.w * scale, world.park.d * scale);
+      ctx.fillStyle = '#4ade80';
+      ctx.font = 'bold 8px system-ui, sans-serif';
+      ctx.fillText('CENTRAL PARK', toScreenX(world.park.x), toScreenY(world.park.z));
+    }
+    if (world && world.marina) {
+      ctx.fillStyle = 'rgba(80, 70, 60, 0.75)';
+      ctx.fillRect(toScreenX(world.marina.x - world.marina.w / 2), toScreenY(world.marina.z - world.marina.d / 2), world.marina.w * scale, world.marina.d * scale);
+    }
+    // Elevated Skyway Overpass Deck
+    if (world && world.overpass) {
+      const op = world.overpass;
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = 'rgba(120, 135, 160, 0.95)';
+      ctx.beginPath();
+      ctx.moveTo(toScreenX(op.x1), toScreenY(op.z));
+      ctx.lineTo(toScreenX(op.x2), toScreenY(op.z));
+      ctx.stroke();
+
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = 'rgba(255, 180, 0, 0.9)';
+      ctx.beginPath();
+      ctx.moveTo(toScreenX(op.x1), toScreenY(op.z));
+      ctx.lineTo(toScreenX(op.x2), toScreenY(op.z));
+      ctx.stroke();
+    }
+
     // 4. District Labels on Map
     const districts = [
       { name: 'OCEAN PROMENADE', wx: -85, wz: -80, color: 'rgba(56, 189, 248, 0.8)' },
@@ -302,57 +334,83 @@ export class MenuManager {
 
     ctx.restore(); // End map clip
 
-    // Right Side: Pause Controls and Mission Dossier
+    // Right Side: Pause Controls, Mission List, and Career Dossier
     const panelX = mapX + mapW + 28;
     const panelW = width - panelX - 40;
     let py = mapY + 12;
 
     ctx.textAlign = 'left';
     ctx.font = 'bold 22px system-ui, sans-serif';
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = '#00f0ff';
     ctx.fillText('TACTICAL DOSSIER', panelX, py);
 
-    py += 24;
-    ctx.font = '13px system-ui, sans-serif';
-    ctx.fillStyle = '#94a3b8';
-    if (missions?.activeMission) {
-      ctx.fillText(`Active: ${missions.activeMission.title}`, panelX, py);
-      py += 18;
-      ctx.fillStyle = '#ffcc00';
-      ctx.fillText(`Task: ${missions.currentStep?.desc || 'Proceed to target'}`, panelX, py);
-    } else if (missions?.currentMission) {
-      ctx.fillText(`Next: ${missions.currentMission.title}`, panelX, py);
-      py += 18;
-      ctx.fillStyle = '#38bdf8';
-      ctx.fillText('Go to mission marker to begin.', panelX, py);
-    } else {
-      ctx.fillText('Free roam active. Vela Bay under control.', panelX, py);
+    py += 22;
+    ctx.font = 'bold 12px system-ui, sans-serif';
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillText('STORY CAMPAIGN (7 MISSIONS):', panelX, py);
+    py += 16;
+
+    const missionTitles = [
+      '1. The Marina Drop',
+      '2. Repo on Vane Turf',
+      '3. Market Muscle',
+      '4. Vela Bay Sprint',
+      '5. Armory Infiltration',
+      '6. Nightfall at the Docks',
+      '7. The Skyway Lockdown'
+    ];
+
+    ctx.font = '11px system-ui, monospace';
+    const curIdx = missions ? missions.currentMissionIndex : 0;
+    for (let i = 0; i < missionTitles.length; i++) {
+      if (i < curIdx) {
+        ctx.fillStyle = '#2ecc71';
+        ctx.fillText(`[✔] ${missionTitles[i]}`, panelX, py);
+      } else if (i === curIdx && !missions.storyCompleted) {
+        ctx.fillStyle = '#f39c12';
+        ctx.fillText(`[►] ${missionTitles[i]} (ACTIVE)`, panelX, py);
+      } else if (missions.storyCompleted) {
+        ctx.fillStyle = '#2ecc71';
+        ctx.fillText(`[✔] ${missionTitles[i]}`, panelX, py);
+      } else {
+        ctx.fillStyle = '#64748b';
+        ctx.fillText(`[ ] ${missionTitles[i]}`, panelX, py);
+      }
+      py += 15;
     }
 
-    py += 34;
+    py += 8;
 
     // Career Quick Stats
     if (player) {
-      ctx.font = 'bold 14px system-ui, monospace';
+      ctx.font = 'bold 12px system-ui, monospace';
       ctx.fillStyle = '#39e75f';
       ctx.fillText(`CASH: $${player.cash.toLocaleString()}`, panelX, py);
-      py += 20;
+      py += 16;
       ctx.fillStyle = '#38bdf8';
       ctx.fillText(`HEALTH: ${Math.round(player.health)}%  ARMOR: ${Math.round(player.armor)}%`, panelX, py);
-      py += 20;
+      py += 16;
+      const collectedCount = world && world.collectedCaches ? world.collectedCaches.size : 0;
       ctx.fillStyle = '#f59e0b';
-      ctx.fillText(`WANTED: ${'★'.repeat(player.wantedLevel || 0)}${'☆'.repeat(5 - (player.wantedLevel || 0))}`, panelX, py);
+      ctx.fillText(`SMUGGLER CACHES: ${collectedCount} / 15`, panelX, py);
+      py += 16;
+      const courierCount = missions && missions.courierRun ? missions.courierRun.completedRuns : 0;
+      ctx.fillStyle = '#a855f7';
+      ctx.fillText(`EXPRESS DELIVERIES: ${courierCount}`, panelX, py);
     }
 
     // Action Buttons
     const btnW = Math.min(260, panelW);
-    const btnH = 44;
-    let btnY = height - 170;
+    const btnH = 38;
+    let btnY = height - 195;
 
     this.drawButton(ctx, panelX, btnY, btnW, btnH, 'RESUME CAREER', 'resume');
-    btnY += 54;
+    btnY += 46;
+    const isCourierActive = missions && missions.courierRun && missions.courierRun.active;
+    this.drawButton(ctx, panelX, btnY, btnW, btnH, isCourierActive ? 'CANCEL COURIER JOB' : 'START COURIER JOB', 'toggle_courier');
+    btnY += 46;
     this.drawButton(ctx, panelX, btnY, btnW, btnH, 'SAVE GAME', 'save');
-    btnY += 54;
+    btnY += 46;
     this.drawButton(ctx, panelX, btnY, btnW, btnH, 'QUIT TO TITLE', 'quit_title');
 
     ctx.restore();
@@ -382,8 +440,8 @@ export class MenuManager {
       'The Vane Street Syndicate has crumbled.',
       'Corrupt Police Captain Reynolds has been ousted.',
       'Port Meridian family honors your independence as Queen of the Streets.',
-      'All 6 Story Missions completed successfully.',
-      'Free roam continues with your earnings and cars.'
+      'All 7 Story Missions completed successfully.',
+      'Free roam continues with your earnings, cars, and courier contracts.'
     ];
 
     let ly = height * 0.42;

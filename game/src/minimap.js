@@ -44,6 +44,26 @@ export class Minimap {
     ctx.fillRect((-400 - px) * this.zoom, (-400 - pz) * this.zoom, 275 * this.zoom, 800 * this.zoom);
     ctx.fillRect((50 - px) * this.zoom, (130 - pz) * this.zoom, 350 * this.zoom, 300 * this.zoom);
 
+    // Draw Central Park Green Lawn
+    if (world.park) {
+      const parkX = (world.park.x - px) * this.zoom;
+      const parkZ = (world.park.z - pz) * this.zoom;
+      const parkW = world.park.w * this.zoom;
+      const parkD = world.park.d * this.zoom;
+      ctx.fillStyle = 'rgba(40, 120, 65, 0.45)';
+      ctx.fillRect(parkX - parkW / 2, parkZ - parkD / 2, parkW, parkD);
+    }
+
+    // Draw Marina Jetty Pier
+    if (world.marina) {
+      const jx = (world.marina.x - px) * this.zoom;
+      const jz = (world.marina.z - pz) * this.zoom;
+      const jw = world.marina.w * this.zoom;
+      const jd = world.marina.d * this.zoom;
+      ctx.fillStyle = 'rgba(90, 80, 70, 0.75)';
+      ctx.fillRect(jx - jw / 2, jz - jd / 2, jw, jd);
+    }
+
     // Draw Roads Grid
     ctx.lineWidth = 14 * this.zoom;
     ctx.strokeStyle = 'rgba(50, 60, 75, 0.85)';
@@ -71,6 +91,25 @@ export class Minimap {
       ctx.lineTo(x2, z2);
     }
     ctx.stroke();
+
+    // Draw Elevated Skyway Overpass Deck
+    if (world.overpass) {
+      const op = world.overpass;
+      ctx.lineWidth = op.width * this.zoom;
+      ctx.strokeStyle = 'rgba(85, 95, 115, 0.95)';
+      ctx.beginPath();
+      ctx.moveTo((op.x1 - px) * this.zoom, (op.z - pz) * this.zoom);
+      ctx.lineTo((op.x2 - px) * this.zoom, (op.z - pz) * this.zoom);
+      ctx.stroke();
+
+      // Overpass center divider
+      ctx.lineWidth = 2.0;
+      ctx.strokeStyle = 'rgba(255, 180, 0, 0.85)';
+      ctx.beginPath();
+      ctx.moveTo((op.x1 - px) * this.zoom, (op.z - pz) * this.zoom);
+      ctx.lineTo((op.x2 - px) * this.zoom, (op.z - pz) * this.zoom);
+      ctx.stroke();
+    }
 
     // Draw Buildings
     ctx.fillStyle = 'rgba(28, 36, 48, 0.9)';
@@ -181,6 +220,50 @@ export class Minimap {
       ctx.closePath();
       ctx.fill();
       ctx.shadowBlur = 0;
+    }
+
+    // Draw Courier Objective Marker (Green Diamond)
+    if (missions.courierRun && missions.courierRun.active && missions.courierRun.target) {
+      const cxTarget = missions.courierRun.target;
+      const ctx_x = (cxTarget.x - px) * this.zoom;
+      const ctx_z = (cxTarget.z - pz) * this.zoom;
+      const cDist = Math.hypot(ctx_x, ctx_z);
+      let cdrawX = ctx_x;
+      let cdrawZ = ctx_z;
+      if (cDist > r - 12) {
+        const cAngle = Math.atan2(ctx_z, ctx_x);
+        cdrawX = Math.cos(cAngle) * (r - 12);
+        cdrawZ = Math.sin(cAngle) * (r - 12);
+      }
+      ctx.fillStyle = '#2ecc71';
+      ctx.shadowColor = '#2ecc71';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.moveTo(cdrawX, cdrawZ - 6);
+      ctx.lineTo(cdrawX + 6, cdrawZ);
+      ctx.lineTo(cdrawX, cdrawZ + 6);
+      ctx.lineTo(cdrawX - 6, cdrawZ);
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
+    // Draw Nearby Smuggler Caches (Amber blips when within 50m)
+    if (world.smugglerCaches) {
+      ctx.fillStyle = '#f39c12';
+      for (const cache of world.smugglerCaches) {
+        if (world.collectedCaches && world.collectedCaches.has(cache.id)) continue;
+        const cDist = Math.hypot(cache.x - px, cache.z - pz);
+        if (cDist < 55) {
+          const cacheX = (cache.x - px) * this.zoom;
+          const cacheZ = (cache.z - pz) * this.zoom;
+          if (Math.hypot(cacheX, cacheZ) < r - 5) {
+            ctx.beginPath();
+            ctx.arc(cacheX, cacheZ, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
     }
 
     ctx.restore(); // Undo player transform

@@ -63,10 +63,10 @@ export class HUD {
       ctx.fill();
     }
 
-    // 3. Top-Right: Cash, Wanted Stars, Health & Armor, Weapon Readout
-    this.renderStatusBars(ctx, player, police, width);
+    // 3. Top-Right: Cash, Wanted Stars, Health & Armor, Weapon Readout, Smuggler Caches
+    this.renderStatusBars(ctx, player, police, world, width);
 
-    // 4. Top-Center: Mission Objective Banner
+    // 4. Top-Center: Mission Objective Banner & Express Courier Banner
     this.renderMissionBanner(ctx, missions, player, width);
 
     // 5. Vehicle Speedometer (when driving)
@@ -74,8 +74,8 @@ export class HUD {
       this.renderSpeedometer(ctx, player.vehicle, width, height);
     }
 
-    // 6. Interaction Hint Prompt
-    this.renderInteractionHint(ctx, player, traffic, width, height);
+    // 6. Interaction Hint Prompt & Alley Escape Route Notice
+    this.renderInteractionHint(ctx, player, world, police, traffic, width, height);
 
     // 7. Dialogue Subtitles Box
     if (missions.dialogue) {
@@ -105,7 +105,7 @@ export class HUD {
     }
   }
 
-  renderStatusBars(ctx, player, police, width) {
+  renderStatusBars(ctx, player, police, world, width) {
     const right = width - 24;
     let y = 28;
 
@@ -207,6 +207,17 @@ export class HUD {
         ctx.fillText(`${wep.ammoInMag} / ${wep.reserveAmmo}`, right, y + 18);
       }
     }
+
+    // Smuggler Caches counter
+    const collectedCount = world && world.collectedCaches ? world.collectedCaches.size : 0;
+    const totalCaches = (world && world.smugglerCaches) ? world.smugglerCaches.length : 15;
+    y += 36;
+    ctx.save();
+    ctx.textAlign = 'right';
+    ctx.font = 'bold 12px system-ui, monospace';
+    ctx.fillStyle = '#f39c12';
+    ctx.fillText(`CACHES: ${collectedCount} / ${totalCaches}`, right, y);
+    ctx.restore();
   }
 
   drawStar(ctx, cx, cy, outerRadius, innerRadius) {
@@ -252,32 +263,57 @@ export class HUD {
       objective = 'You rule Vela Bay. Free roam active.';
     }
 
-    if (!title) return;
+    if (title) {
+      ctx.save();
+      ctx.textAlign = 'center';
 
-    ctx.save();
-    ctx.textAlign = 'center';
+      // Banner background plate
+      const plateW = 460;
+      const plateH = 46;
+      const plateX = width / 2 - plateW / 2;
+      const plateY = 18;
 
-    // Banner background plate
-    const plateW = 460;
-    const plateH = 46;
-    const plateX = width / 2 - plateW / 2;
-    const plateY = 18;
+      ctx.fillStyle = 'rgba(10, 16, 26, 0.85)';
+      ctx.strokeStyle = 'rgba(255, 204, 0, 0.6)';
+      ctx.lineWidth = 1.5;
+      ctx.fillRect(plateX, plateY, plateW, plateH);
+      ctx.strokeRect(plateX, plateY, plateW, plateH);
 
-    ctx.fillStyle = 'rgba(10, 16, 26, 0.85)';
-    ctx.strokeStyle = 'rgba(255, 204, 0, 0.6)';
-    ctx.lineWidth = 1.5;
-    ctx.fillRect(plateX, plateY, plateW, plateH);
-    ctx.strokeRect(plateX, plateY, plateW, plateH);
+      ctx.font = 'bold 14px system-ui, sans-serif';
+      ctx.fillStyle = '#ffcc00';
+      ctx.fillText(title, width / 2, plateY + 18);
 
-    ctx.font = 'bold 14px system-ui, sans-serif';
-    ctx.fillStyle = '#ffcc00';
-    ctx.fillText(title, width / 2, plateY + 18);
+      ctx.font = '12px system-ui, sans-serif';
+      ctx.fillStyle = '#ecf0f1';
+      ctx.fillText(objective, width / 2, plateY + 36);
 
-    ctx.font = '12px system-ui, sans-serif';
-    ctx.fillStyle = '#ecf0f1';
-    ctx.fillText(objective, width / 2, plateY + 36);
+      ctx.restore();
+    }
 
-    ctx.restore();
+    // Express Courier Run Secondary Banner
+    if (missions.courierRun && missions.courierRun.active) {
+      ctx.save();
+      ctx.textAlign = 'center';
+      const cr = missions.courierRun;
+      const mins = Math.floor(cr.timer / 60);
+      const secs = Math.floor(cr.timer % 60).toString().padStart(2, '0');
+      const d = cr.target ? Math.round(Math.hypot(player.x - cr.target.x, player.z - cr.target.z)) : 0;
+      const cBoxW = 420;
+      const cBoxH = 32;
+      const cBoxX = width / 2 - cBoxW / 2;
+      const cBoxY = title ? 72 : 18;
+
+      ctx.fillStyle = 'rgba(8, 24, 18, 0.90)';
+      ctx.strokeStyle = '#2ecc71';
+      ctx.lineWidth = 1.5;
+      ctx.fillRect(cBoxX, cBoxY, cBoxW, cBoxH);
+      ctx.strokeRect(cBoxX, cBoxY, cBoxW, cBoxH);
+
+      ctx.font = 'bold 12px system-ui, sans-serif';
+      ctx.fillStyle = '#2ecc71';
+      ctx.fillText(`EXPRESS: Deliver to ${cr.targetName} (${d}m) [${mins}:${secs}] +$${cr.reward}`, width / 2, cBoxY + 20);
+      ctx.restore();
+    }
   }
 
   renderSpeedometer(ctx, vehicle, width, height) {
@@ -303,10 +339,10 @@ export class HUD {
     ctx.restore();
   }
 
-  renderInteractionHint(ctx, player, traffic, width, height) {
+  renderInteractionHint(ctx, player, world, police, traffic, width, height) {
     let hint = '';
     if (player.inVehicle) {
-      hint = '[F] Exit Vehicle';
+      hint = '[F] Exit Vehicle | [H] Horn';
     } else {
       const nearCar = traffic.findNearbyVehicle(player.x, player.z, 3.8);
       if (nearCar && !nearCar.wrecked) {
@@ -314,15 +350,30 @@ export class HUD {
       }
     }
 
-    if (!hint) return;
+    // Alley Escape Route active notifier
+    const inEscapeRoute = police && police.wantedLevel > 0 && world && world.isInAlleyEscapeRoute && world.isInAlleyEscapeRoute(player.x, player.z);
+
+    if (!hint && !inEscapeRoute) return;
 
     ctx.save();
     ctx.textAlign = 'center';
-    ctx.font = 'bold 15px system-ui, sans-serif';
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = '#000000';
-    ctx.shadowBlur = 6;
-    ctx.fillText(hint, width / 2, height - 120);
+
+    if (inEscapeRoute) {
+      ctx.font = 'bold 15px system-ui, sans-serif';
+      ctx.fillStyle = '#2ecc71';
+      ctx.shadowColor = '#27ae60';
+      ctx.shadowBlur = 8;
+      ctx.fillText('⚡ ALLEY ESCAPE ROUTE — HEAT COOLING 3X FASTER ⚡', width / 2, height - 148);
+      ctx.shadowBlur = 0;
+    }
+
+    if (hint) {
+      ctx.font = 'bold 15px system-ui, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = '#000000';
+      ctx.shadowBlur = 6;
+      ctx.fillText(hint, width / 2, height - 120);
+    }
     ctx.restore();
   }
 
@@ -354,8 +405,8 @@ export class HUD {
     ctx.save();
     ctx.textAlign = 'left';
     ctx.font = '11px system-ui, sans-serif';
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
-    ctx.fillText('WASD: Move / Drive | SPACE: Handbrake | F: Jack Car | CLICK: Shoot | R: Reload', 20, 24);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.70)';
+    ctx.fillText('WASD: Move / Drive | SPACE: Handbrake | F: Jack/Exit | H: Horn | T: Courier Job | CLICK: Shoot | R: Reload | M: Map', 20, 24);
     ctx.restore();
   }
 }
