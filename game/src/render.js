@@ -86,8 +86,15 @@ export class WebGLRenderer {
       void main() {
         float normLen = length(v_normal);
 
-        // Emissive geometry check (sky dome has normal = 0)
+        // Emissive geometry check (sky dome has normal = 0, or local glowing elements)
         if (normLen < 0.1) {
+          float camDist = length(v_worldPos - u_camPos);
+          if (camDist < 320.0) {
+            // Local glowing emissive elements: neon signage, storefront signs, traffic signals, vehicle lamps
+            gl_FragColor = vec4(v_color.rgb, v_color.a);
+            return;
+          }
+
           vec3 viewDir = normalize(v_worldPos - u_camPos);
           vec3 sunDirNorm = normalize(u_sunDir);
           float sunDot = max(dot(viewDir, sunDirNorm), 0.0);
@@ -115,12 +122,13 @@ export class WebGLRenderer {
         // Specular highlight for metallic/glass surfaces & ocean glint
         vec3 viewDir = normalize(u_camPos - v_worldPos);
         vec3 halfDir = normalize(sunD + viewDir);
-        float specPower = (v_worldPos.y < 0.05 && norm.y > 0.8) ? 80.0 : 28.0;
-        float specIntensity = (v_worldPos.y < 0.05 && norm.y > 0.8) ? 0.85 : 0.32;
+        bool isOcean = (v_worldPos.y < 0.05 && norm.y > 0.8 && (v_worldPos.z > 220.0 || v_worldPos.x < -220.0));
+        float specPower = isOcean ? 80.0 : 28.0;
+        float specIntensity = isOcean ? 0.85 : 0.10;
         float spec = pow(max(dot(norm, halfDir), 0.0), specPower) * specIntensity;
 
         // Extra ocean glint reflection along sun path
-        if (v_worldPos.y < 0.05 && norm.y > 0.8) {
+        if (isOcean) {
           float oceanGlow = pow(max(dot(norm, halfDir), 0.0), 12.0) * 0.35;
           diffuse += u_sunColor * oceanGlow;
         }
@@ -405,6 +413,20 @@ export class WebGLRenderer {
       }
     }
 
+    // Road Wear, Asphalt Repair Tar Patches, and Street Drain Infill
+    if (world.roadWear) {
+      for (const rw of world.roadWear) {
+        pushQuad(
+          [rw.x - rw.w / 2, 0.07, rw.z - rw.d / 2],
+          [rw.x - rw.w / 2, 0.07, rw.z + rw.d / 2],
+          [rw.x + rw.w / 2, 0.07, rw.z + rw.d / 2],
+          [rw.x + rw.w / 2, 0.07, rw.z - rw.d / 2],
+          [0, 1, 0],
+          rw.color || [0.28, 0.27, 0.26, 1.0]
+        );
+      }
+    }
+
     // =========================================================================
     // 4. ARCHITECTURAL CITY BUILDINGS (Facades, Setbacks, Crowns, Storefronts)
     // =========================================================================
@@ -434,13 +456,40 @@ export class WebGLRenderer {
       pushBox(x + w / 2 + 0.06, 0.9, z, 0.16, 3.0, d * 0.85, glassCol);
       pushBox(x - w / 2 - 0.06, 0.9, z, 0.16, 3.0, d * 0.85, glassCol);
 
-      // Protruding District / Building Shopfront Signs
+      // Recessed Entrance Portico & Architectural Columns
+      const entW = Math.min(6.2, w * 0.32);
+      pushBox(x, 0, z + d / 2 - 0.4, entW, 3.6, 1.0, [0.12, 0.14, 0.18, 1.0]);
+      pushBox(x - entW / 2 - 0.35, 0, z + d / 2 + 0.12, 0.6, plinthH, 0.6, [0.84, 0.82, 0.80, 1.0]);
+      pushBox(x + entW / 2 + 0.35, 0, z + d / 2 + 0.12, 0.6, plinthH, 0.6, [0.84, 0.82, 0.80, 1.0]);
+
+      // Protruding District / Building Shopfront Signs with Emissive Lettering Face
       if (details.shopSign) {
         const signCol = [...details.signColor, 1.0];
-        const darkFrame = [0.15, 0.16, 0.18, 1.0];
+        const darkFrame = [0.12, 0.14, 0.16, 1.0];
         // Front sign over entrance
-        pushBox(x, plinthH - 0.6, z + d / 2 + 0.28, w * 0.55, 0.8, 0.24, darkFrame);
-        pushBox(x, plinthH - 0.6, z + d / 2 + 0.38, w * 0.50, 0.55, 0.08, signCol);
+        pushBox(x, plinthH - 0.6, z + d / 2 + 0.28, w * 0.55, 0.85, 0.22, darkFrame);
+        // Emissive face (unlit normal [0, 0, 0] so it glows in late afternoon & dusk!)
+        const sw2 = (w * 0.50) / 2;
+        pushQuad(
+          [x - sw2, plinthH - 0.9, z + d / 2 + 0.40],
+          [x + sw2, plinthH - 0.9, z + d / 2 + 0.40],
+          [x + sw2, plinthH - 0.3, z + d / 2 + 0.40],
+          [x - sw2, plinthH - 0.3, z + d / 2 + 0.40],
+          [0, 0, 0],
+          signCol
+        );
+
+        // Avenue side sign on East facade along major streets
+        pushBox(x + w / 2 + 0.22, plinthH - 0.6, z, 0.22, 0.85, d * 0.55, darkFrame);
+        const sd2 = (d * 0.50) / 2;
+        pushQuad(
+          [x + w / 2 + 0.35, plinthH - 0.9, z + sd2],
+          [x + w / 2 + 0.35, plinthH - 0.9, z - sd2],
+          [x + w / 2 + 0.35, plinthH - 0.3, z - sd2],
+          [x + w / 2 + 0.35, plinthH - 0.3, z + sd2],
+          [0, 0, 0],
+          signCol
+        );
       }
 
       // Merchant Awnings over storefronts
@@ -465,9 +514,17 @@ export class WebGLRenderer {
           // Main body of this tier
           pushBox(x, curY, z, curW, tierH, curD, bCol);
 
-          // Window strips so facade reads clearly at a distance
+          // Window strips with vertical architectural mullions
           for (let wy = curY + 2.5; wy < nextY - 1.5; wy += 4.2) {
             pushBox(x, wy, z, curW + 0.14, 1.6, curD + 0.14, winCol);
+            for (let mx = -curW / 2 + 3.0; mx < curW / 2 - 2.0; mx += 3.8) {
+              pushBox(x + mx, wy, z + curD / 2 + 0.08, 0.32, 1.6, 0.12, bCol);
+              pushBox(x + mx, wy, z - curD / 2 - 0.08, 0.32, 1.6, 0.12, bCol);
+            }
+            for (let mz = -curD / 2 + 3.0; mz < curD / 2 - 2.0; mz += 3.8) {
+              pushBox(x + curW / 2 + 0.08, wy, z + mz, 0.12, 1.6, 0.32, bCol);
+              pushBox(x - curW / 2 - 0.08, wy, z + mz, 0.12, 1.6, 0.32, bCol);
+            }
           }
 
           // Setback cornice / terrace ledge
@@ -484,6 +541,14 @@ export class WebGLRenderer {
           pushBox(x, curY, z, curW, topH, curD, bCol, rCol);
           for (let wy = curY + 2.5; wy < h - 2.0; wy += 4.2) {
             pushBox(x, wy, z, curW + 0.14, 1.6, curD + 0.14, winCol);
+            for (let mx = -curW / 2 + 3.0; mx < curW / 2 - 2.0; mx += 3.8) {
+              pushBox(x + mx, wy, z + curD / 2 + 0.08, 0.32, 1.6, 0.12, bCol);
+              pushBox(x + mx, wy, z - curD / 2 - 0.08, 0.32, 1.6, 0.12, bCol);
+            }
+            for (let mz = -curD / 2 + 3.0; mz < curD / 2 - 2.0; mz += 3.8) {
+              pushBox(x + curW / 2 + 0.08, wy, z + mz, 0.12, 1.6, 0.32, bCol);
+              pushBox(x - curW / 2 - 0.08, wy, z + mz, 0.12, 1.6, 0.32, bCol);
+            }
           }
         }
 
@@ -527,11 +592,19 @@ export class WebGLRenderer {
         // Standard Building / Warehouse / Market Block
         pushBox(x, plinthH, z, w, h - plinthH, d, bCol, rCol);
 
-        // Window strips
+        // Window strips with mullions
         const winBandCol = type === 'market' ? [0.26, 0.20, 0.16, 1.0] : [0.70, 0.84, 0.94, 1.0];
         const step = type === 'market' ? 3.4 : 4.8;
         for (let wy = plinthH + 2.4; wy < h - 2.5; wy += step) {
           pushBox(x, wy, z, w + 0.12, 1.4, d + 0.12, winBandCol);
+          for (let mx = -w / 2 + 2.5; mx < w / 2 - 2.0; mx += 3.6) {
+            pushBox(x + mx, wy, z + d / 2 + 0.07, 0.28, 1.4, 0.12, bCol);
+            pushBox(x + mx, wy, z - d / 2 - 0.07, 0.28, 1.4, 0.12, bCol);
+          }
+          for (let mz = -d / 2 + 2.5; mz < d / 2 - 2.0; mz += 3.6) {
+            pushBox(x + w / 2 + 0.07, wy, z + mz, 0.12, 1.4, 0.28, bCol);
+            pushBox(x - w / 2 - 0.07, wy, z + mz, 0.12, 1.4, 0.28, bCol);
+          }
         }
 
         // Terracotta pitched roof caps on Market buildings
@@ -557,6 +630,89 @@ export class WebGLRenderer {
           pushBox(hx, h + 0.7, hz, 3.6, 2.0, 3.6, [0.36, 0.39, 0.43, 1.0]);
           pushBox(hx, h + 2.7, hz, 2.0, 0.4, 2.0, [0.18, 0.20, 0.22, 1.0]); // Fan grille
         }
+      }
+    }
+
+    // Exterior Steel Fire Escapes on Historic & Commercial Facades
+    if (world.fireEscapes) {
+      const steelDark = [0.20, 0.22, 0.25, 1.0];
+      for (const fe of world.fireEscapes) {
+        for (let fl = 1; fl <= fe.floors; fl++) {
+          const fy = fe.y + fl * fe.floorHeight;
+          // Platform
+          pushBox(fe.x, fy, fe.z, fe.width, 0.12, fe.depth, steelDark);
+          // Safety railings
+          pushBox(fe.x, fy + 0.12, fe.z + fe.depth / 2, fe.width, 0.8, 0.08, steelDark);
+          pushBox(fe.x - fe.width / 2, fy + 0.12, fe.z, 0.08, 0.8, fe.depth, steelDark);
+          pushBox(fe.x + fe.width / 2, fy + 0.12, fe.z, 0.08, 0.8, fe.depth, steelDark);
+          // Diagonal stair stringers
+          if (fl < fe.floors) {
+            pushBox(fe.x, fy + fe.floorHeight * 0.5, fe.z, fe.width * 0.4, fe.floorHeight, 0.15, steelDark);
+          }
+        }
+        // Vertical ground access ladder
+        pushBox(fe.x + fe.width * 0.35, fe.y, fe.z, 0.35, fe.floorHeight, 0.15, steelDark);
+      }
+    }
+
+    // Large Commercial Advertising Hoardings & Rooftop Billboards
+    if (world.billboards) {
+      const trussCol = [0.26, 0.28, 0.32, 1.0];
+      for (const bb of world.billboards) {
+        // Steel mounting support pylons
+        pushBox(bb.x - bb.width * 0.35, bb.y - 4.5, bb.z, 0.45, 4.5, 0.45, trussCol);
+        pushBox(bb.x + bb.width * 0.35, bb.y - 4.5, bb.z, 0.45, 4.5, 0.45, trussCol);
+        // Backboard frame
+        pushBox(bb.x, bb.y, bb.z, bb.width + 0.5, bb.height + 0.5, 0.35, [0.12, 0.14, 0.16, 1.0]);
+        // Front hoarding display surface (glowing unlit face)
+        const hw2 = bb.width / 2;
+        const hh2 = bb.height / 2;
+        pushQuad(
+          [bb.x - hw2, bb.y - hh2, bb.z + 0.22],
+          [bb.x + hw2, bb.y - hh2, bb.z + 0.22],
+          [bb.x + hw2, bb.y + hh2, bb.z + 0.22],
+          [bb.x - hw2, bb.y + hh2, bb.z + 0.22],
+          [0, 0, 0], // Emissive normal -> glows vividly in twilight/daylight!
+          bb.color
+        );
+        // Accent stripe / logo band across bottom
+        pushQuad(
+          [bb.x - hw2, bb.y - hh2, bb.z + 0.24],
+          [bb.x + hw2, bb.y - hh2, bb.z + 0.24],
+          [bb.x + hw2, bb.y - hh2 + bb.height * 0.28, bb.z + 0.24],
+          [bb.x - hw2, bb.y - hh2 + bb.height * 0.28, bb.z + 0.24],
+          [0, 0, 0],
+          bb.accent
+        );
+      }
+    }
+
+    // Cedar Stave Rooftop Water Tanks
+    if (world.waterTanks) {
+      const woodStave = [0.52, 0.36, 0.22, 1.0];
+      const ironBand = [0.18, 0.18, 0.20, 1.0];
+      const trestleCol = [0.25, 0.28, 0.32, 1.0];
+      for (const wt of world.waterTanks) {
+        // 4-legged support trestle
+        const ts = wt.radius * 0.9;
+        pushBox(wt.x - ts, wt.y, wt.z - ts, 0.3, 3.2, 0.3, trestleCol);
+        pushBox(wt.x + ts, wt.y, wt.z - ts, 0.3, 3.2, 0.3, trestleCol);
+        pushBox(wt.x - ts, wt.y, wt.z + ts, 0.3, 3.2, 0.3, trestleCol);
+        pushBox(wt.x + ts, wt.y, wt.z + ts, 0.3, 3.2, 0.3, trestleCol);
+        // Trestle platform
+        pushBox(wt.x, wt.y + 3.2, wt.z, wt.radius * 2.2, 0.3, wt.radius * 2.2, trestleCol);
+        // Cylindrical tank body (octagonal box approximation)
+        const ty = wt.y + 3.5;
+        const tw = wt.radius * 2;
+        pushBox(wt.x, ty, wt.z, tw, wt.height, tw * 0.9, woodStave);
+        pushBox(wt.x, ty, wt.z, tw * 0.9, wt.height, tw, woodStave);
+        // Iron tension bands
+        pushBox(wt.x, ty + wt.height * 0.3, wt.z, tw + 0.08, 0.12, tw + 0.08, ironBand);
+        pushBox(wt.x, ty + wt.height * 0.7, wt.z, tw + 0.08, 0.12, tw + 0.08, ironBand);
+        // Conical / stepped roof cap
+        pushBox(wt.x, ty + wt.height, wt.z, tw * 1.05, 0.5, tw * 1.05, [0.38, 0.26, 0.16, 1.0]);
+        pushBox(wt.x, ty + wt.height + 0.5, wt.z, tw * 0.6, 0.5, tw * 0.6, [0.38, 0.26, 0.16, 1.0]);
+        pushBox(wt.x, ty + wt.height + 1.0, wt.z, tw * 0.2, 0.5, tw * 0.2, [0.38, 0.26, 0.16, 1.0]);
       }
     }
 
@@ -847,114 +1003,287 @@ export class WebGLRenderer {
     this.pushDynamicQuad([x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1], [1, 0, 0], col);
   }
 
-  // Draw soft ground shadow decal under vehicles & characters
-  drawGroundShadow(x, z, width, length) {
-    const shadowCol = [0.10, 0.10, 0.12, 0.42];
-    this.pushDynamicBox(x, 0.04, z, width, 0.02, length, shadowCol);
+  // Draw soft elongated late-afternoon ground shadow decal
+  drawGroundShadow(x, z, width, length, height = 0) {
+    const shadowCol = [0.12, 0.12, 0.14, 0.38];
+    const sDir = CONFIG.lighting.shadowDir;
+    const sLen = CONFIG.lighting.shadowLength;
+    const sx = x + sDir[0] * sLen * (0.8 + height * 0.4);
+    const sz = z + sDir[2] * sLen * (0.8 + height * 0.4);
+    const sw = width * 1.1;
+    const sl = length * (1.0 + sLen * 0.4);
+    this.pushDynamicBox(sx, 0.04, sz, sw, 0.02, sl, shadowCol);
   }
 
   drawVehicle(v) {
-    const sinA = Math.sin(v.angle);
-    const cosA = Math.cos(v.angle);
+    const yaw = v.angle;
+    const pitch = v.pitch || 0;
+    const roll = v.roll || 0;
 
-    const toWorld = (lx, ly, lz) => [
-      v.x + lx * cosA + lz * sinA,
-      v.y + ly,
-      v.z - lx * sinA + lz * cosA
-    ];
+    const cosY = Math.cos(yaw), sinY = Math.sin(yaw);
+    const cosP = Math.cos(pitch), sinP = Math.sin(pitch);
+    const cosR = Math.cos(roll), sinR = Math.sin(roll);
+
+    const toWorld = (lx, ly, lz) => {
+      // 1. Pitch around local X axis
+      const py = ly * cosP - lz * sinP;
+      const pz = ly * sinP + lz * cosP;
+      // 2. Roll around local Z axis
+      const rx = lx * cosR - py * sinR;
+      const ry = lx * sinR + py * cosR;
+      // 3. Yaw around world Y axis
+      const wx = v.x + rx * cosY + pz * sinY;
+      const wy = (v.y || 0) + ry;
+      const wz = v.z - rx * sinY + pz * cosY;
+      return [wx, wy, wz];
+    };
 
     const bodyCol = [...v.color, 1.0];
     const glassCol = [0.18, 0.28, 0.40, 1.0];
     const wheelCol = [0.12, 0.12, 0.14, 1.0];
+    const chromeCol = [0.82, 0.84, 0.88, 1.0];
 
+    const type = v.type || 'sedan';
     const hw = v.width / 2;
     const hl = v.length / 2;
-    const bh = 0.85;
 
-    // Ground shadow under vehicle
-    this.drawGroundShadow(v.x, v.z, v.width * 1.15, v.length * 1.08);
+    // Ground shadow stretching along sun direction
+    this.drawGroundShadow(v.x, v.z, v.width * 1.15, v.length * 1.05, 0.6);
 
-    // Main chassis
-    const p1 = toWorld(-hw, 0.3, -hl);
-    const p2 = toWorld(hw, 0.3, -hl);
-    const p3 = toWorld(hw, 0.3 + bh, -hl);
-    const p4 = toWorld(-hw, 0.3 + bh, -hl);
-    const p5 = toWorld(-hw, 0.3, hl);
-    const p6 = toWorld(hw, 0.3, hl);
-    const p7 = toWorld(hw, 0.3 + bh, hl);
-    const p8 = toWorld(-hw, 0.3 + bh, hl);
+    if (type === 'bus') {
+      // Transit bus (11.2m long, 2.7m wide, 3.4m tall)
+      const bh = 2.7;
+      // Lower and main transit body
+      const b1 = toWorld(-hw, 0.35, -hl), b2 = toWorld(hw, 0.35, -hl);
+      const b3 = toWorld(hw, 0.35 + bh, -hl), b4 = toWorld(-hw, 0.35 + bh, -hl);
+      const b5 = toWorld(-hw, 0.35, hl), b6 = toWorld(hw, 0.35, hl);
+      const b7 = toWorld(hw, 0.35 + bh, hl), b8 = toWorld(-hw, 0.35 + bh, hl);
 
-    this.pushDynamicQuad(p4, p3, p7, p8, [0, 1, 0], bodyCol);
-    this.pushDynamicQuad(p5, p6, p7, p8, [sinA, 0, cosA], bodyCol);
-    this.pushDynamicQuad(p2, p1, p4, p3, [-sinA, 0, -cosA], bodyCol);
-    this.pushDynamicQuad(p1, p5, p8, p4, [-cosA, 0, sinA], bodyCol);
-    this.pushDynamicQuad(p6, p2, p3, p7, [cosA, 0, -sinA], bodyCol);
+      this.pushDynamicQuad(b4, b3, b7, b8, [0, 1, 0], [0.92, 0.92, 0.94, 1.0]); // White roof
+      this.pushDynamicQuad(b5, b6, b7, b8, [sinY, 0, cosY], bodyCol);
+      this.pushDynamicQuad(b2, b1, b4, b3, [-sinY, 0, -cosY], bodyCol);
+      this.pushDynamicQuad(b1, b5, b8, b4, [-cosY, 0, sinY], bodyCol);
+      this.pushDynamicQuad(b6, b2, b3, b7, [cosY, 0, -sinY], bodyCol);
 
-    // Cabin / Windshields
-    const cw = hw * 0.88;
-    const cp1 = toWorld(-cw, 0.3 + bh, -hl * 0.4);
-    const cp2 = toWorld(cw, 0.3 + bh, -hl * 0.4);
-    const cp3 = toWorld(cw, 0.3 + bh + 0.68, -hl * 0.28);
-    const cp4 = toWorld(-cw, 0.3 + bh + 0.68, -hl * 0.28);
-    const cp5 = toWorld(-cw, 0.3 + bh, hl * 0.32);
-    const cp6 = toWorld(cw, 0.3 + bh, hl * 0.32);
-    const cp7 = toWorld(cw, 0.3 + bh + 0.68, hl * 0.15);
-    const cp8 = toWorld(-cw, 0.3 + bh + 0.68, hl * 0.15);
+      // Panoramic passenger window ribbons
+      const gw1 = toWorld(-hw - 0.02, 1.5, -hl * 0.9);
+      const gw2 = toWorld(-hw - 0.02, 1.5, hl * 0.8);
+      const gw3 = toWorld(-hw - 0.02, 2.4, hl * 0.8);
+      const gw4 = toWorld(-hw - 0.02, 2.4, -hl * 0.9);
+      this.pushDynamicQuad(gw1, gw2, gw3, gw4, [-cosY, 0, sinY], [0.20, 0.35, 0.48, 1.0]);
 
-    this.pushDynamicQuad(cp4, cp3, cp7, cp8, [0, 1, 0], v.roofColor ? [...v.roofColor, 1.0] : bodyCol);
-    this.pushDynamicQuad(cp8, cp7, cp6, cp5, [sinA, 0.4, cosA], glassCol);
-    this.pushDynamicQuad(cp2, cp1, cp4, cp3, [-sinA, 0.4, -cosA], glassCol);
-    this.pushDynamicQuad(cp1, cp5, cp8, cp4, [-cosA, 0, sinA], glassCol);
-    this.pushDynamicQuad(cp6, cp2, cp3, cp7, [cosA, 0, -sinA], glassCol);
+      const egw1 = toWorld(hw + 0.02, 1.5, -hl * 0.9);
+      const egw2 = toWorld(hw + 0.02, 1.5, hl * 0.8);
+      const egw3 = toWorld(hw + 0.02, 2.4, hl * 0.8);
+      const egw4 = toWorld(hw + 0.02, 2.4, -hl * 0.9);
+      this.pushDynamicQuad(egw2, egw1, egw4, egw3, [cosY, 0, -sinY], [0.20, 0.35, 0.48, 1.0]);
 
-    // Wheels
-    const wheelPositions = [
-      [-hw - 0.05, 0.3, hl * 0.58],
-      [hw + 0.05, 0.3, hl * 0.58],
-      [-hw - 0.05, 0.3, -hl * 0.58],
-      [hw + 0.05, 0.3, -hl * 0.58]
-    ];
-    for (const wp of wheelPositions) {
-      const pos = toWorld(wp[0], wp[1], wp[2]);
-      this.pushDynamicBox(pos[0], pos[1] - 0.15, pos[2], 0.35, 0.65, 0.65, wheelCol);
+      // Front windshield & illuminated destination route sign
+      const fw1 = toWorld(-hw * 0.9, 1.2, hl + 0.02);
+      const fw2 = toWorld(hw * 0.9, 1.2, hl + 0.02);
+      const fw3 = toWorld(hw * 0.9, 2.5, hl * 0.95);
+      const fw4 = toWorld(-hw * 0.9, 2.5, hl * 0.95);
+      this.pushDynamicQuad(fw1, fw2, fw3, fw4, [sinY, 0, cosY], glassCol);
+
+      // Route sign box (emissive glow!)
+      const destBox = toWorld(0, 2.7, hl + 0.04);
+      this.pushDynamicBox(destBox[0], destBox[1], destBox[2], 1.6, 0.35, 0.12, [0.96, 0.82, 0.14, 1.0]);
+
+      // Rooftop AC pods
+      const ac1 = toWorld(0, 0.35 + bh + 0.25, -1.5);
+      const ac2 = toWorld(0, 0.35 + bh + 0.25, 2.0);
+      this.pushDynamicBox(ac1[0], ac1[1], ac1[2], 1.8, 0.4, 2.4, [0.82, 0.84, 0.86, 1.0]);
+      this.pushDynamicBox(ac2[0], ac2[1], ac2[2], 1.8, 0.4, 2.4, [0.82, 0.84, 0.86, 1.0]);
+
+      // 6 Bus wheels
+      const bWheels = [
+        [-hw - 0.05, 0.45, hl * 0.65], [hw + 0.05, 0.45, hl * 0.65],
+        [-hw - 0.05, 0.45, -hl * 0.45], [hw + 0.05, 0.45, -hl * 0.45],
+        [-hw - 0.05, 0.45, -hl * 0.75], [hw + 0.05, 0.45, -hl * 0.75],
+      ];
+      for (const bp of bWheels) {
+        const pos = toWorld(bp[0], bp[1], bp[2]);
+        this.pushDynamicBox(pos[0], pos[1] - 0.15, pos[2], 0.42, 0.85, 0.85, wheelCol);
+      }
+    } else if (type === 'truck') {
+      // Freight hauler truck: Cab in front + cargo box in rear
+      const cabL = 2.4;
+      const cabH = 2.3;
+      const boxL = 5.2;
+      const boxH = 2.8;
+
+      // Front cab
+      const c1 = toWorld(-hw, 0.35, hl - cabL), c2 = toWorld(hw, 0.35, hl - cabL);
+      const c3 = toWorld(hw, 0.35 + cabH, hl - cabL), c4 = toWorld(-hw, 0.35 + cabH, hl - cabL);
+      const c5 = toWorld(-hw, 0.35, hl), c6 = toWorld(hw, 0.35, hl);
+      const c7 = toWorld(hw, 0.35 + cabH, hl), c8 = toWorld(-hw, 0.35 + cabH, hl);
+      this.pushDynamicQuad(c4, c3, c7, c8, [0, 1, 0], bodyCol);
+      this.pushDynamicQuad(c5, c6, c7, c8, [sinY, 0, cosY], bodyCol);
+      this.pushDynamicQuad(c1, c5, c8, c4, [-cosY, 0, sinY], bodyCol);
+      this.pushDynamicQuad(c6, c2, c3, c7, [cosY, 0, -sinY], bodyCol);
+
+      // Cab windshield
+      const tw1 = toWorld(-hw * 0.85, 1.3, hl + 0.02);
+      const tw2 = toWorld(hw * 0.85, 1.3, hl + 0.02);
+      const tw3 = toWorld(hw * 0.85, 2.3, hl - 0.2);
+      const tw4 = toWorld(-hw * 0.85, 2.3, hl - 0.2);
+      this.pushDynamicQuad(tw1, tw2, tw3, tw4, [sinY, 0, cosY], glassCol);
+
+      // Chrome front radiator grille
+      const grPos = toWorld(0, 0.95, hl + 0.04);
+      this.pushDynamicBox(grPos[0], grPos[1], grPos[2], 1.4, 0.9, 0.12, chromeCol);
+
+      // Dual vertical exhaust stacks
+      const ex1 = toWorld(-hw - 0.1, 2.2, hl - cabL - 0.15);
+      const ex2 = toWorld(hw + 0.1, 2.2, hl - cabL - 0.15);
+      this.pushDynamicBox(ex1[0], ex1[1], ex1[2], 0.14, 1.8, 0.14, chromeCol);
+      this.pushDynamicBox(ex2[0], ex2[1], ex2[2], 0.14, 1.8, 0.14, chromeCol);
+
+      // Rear cargo box
+      const boxPos = toWorld(0, 0.4 + boxH / 2, -hl + boxL / 2);
+      this.pushDynamicBox(boxPos[0], boxPos[1], boxPos[2], v.width + 0.1, boxH, boxL, [0.78, 0.80, 0.84, 1.0]);
+
+      // 6 Wheels
+      const tWheels = [
+        [-hw - 0.05, 0.45, hl - 1.0], [hw + 0.05, 0.45, hl - 1.0],
+        [-hw - 0.05, 0.45, -hl + 2.2], [hw + 0.05, 0.45, -hl + 2.2],
+        [-hw - 0.05, 0.45, -hl + 0.9], [hw + 0.05, 0.45, -hl + 0.9],
+      ];
+      for (const tp of tWheels) {
+        const pos = toWorld(tp[0], tp[1], tp[2]);
+        this.pushDynamicBox(pos[0], pos[1] - 0.15, pos[2], 0.38, 0.8, 0.8, wheelCol);
+      }
+    } else {
+      // Passenger cars: sports, muscle, taxi, police, sedan
+      const bh = type === 'sports' ? 0.68 : (type === 'muscle' ? 0.78 : 0.85);
+
+      // Main chassis
+      const p1 = toWorld(-hw, 0.3, -hl);
+      const p2 = toWorld(hw, 0.3, -hl);
+      const p3 = toWorld(hw, 0.3 + bh, -hl);
+      const p4 = toWorld(-hw, 0.3 + bh, -hl);
+      const p5 = toWorld(-hw, 0.3, hl);
+      const p6 = toWorld(hw, 0.3, hl);
+      const p7 = toWorld(hw, 0.3 + bh, hl);
+      const p8 = toWorld(-hw, 0.3 + bh, hl);
+
+      this.pushDynamicQuad(p4, p3, p7, p8, [0, 1, 0], bodyCol);
+      this.pushDynamicQuad(p5, p6, p7, p8, [sinY, 0, cosY], bodyCol);
+      this.pushDynamicQuad(p2, p1, p4, p3, [-sinY, 0, -cosY], bodyCol);
+      this.pushDynamicQuad(p1, p5, p8, p4, [-cosY, 0, sinY], bodyCol);
+      this.pushDynamicQuad(p6, p2, p3, p7, [cosY, 0, -sinY], bodyCol);
+
+      // Cabin / Greenhouse Glass
+      const cw = hw * (type === 'sports' ? 0.82 : 0.88);
+      const ch = type === 'sports' ? 0.52 : (type === 'muscle' ? 0.62 : 0.68);
+      const cp1 = toWorld(-cw, 0.3 + bh, -hl * 0.4);
+      const cp2 = toWorld(cw, 0.3 + bh, -hl * 0.4);
+      const cp3 = toWorld(cw, 0.3 + bh + ch, -hl * 0.28);
+      const cp4 = toWorld(-cw, 0.3 + bh + ch, -hl * 0.28);
+      const cp5 = toWorld(-cw, 0.3 + bh, hl * 0.32);
+      const cp6 = toWorld(cw, 0.3 + bh, hl * 0.32);
+      const cp7 = toWorld(cw, 0.3 + bh + ch, hl * 0.15);
+      const cp8 = toWorld(-cw, 0.3 + bh + ch, hl * 0.15);
+
+      const roofCol = v.roofColor ? [...v.roofColor, 1.0] : bodyCol;
+      this.pushDynamicQuad(cp4, cp3, cp7, cp8, [0, 1, 0], roofCol);
+      this.pushDynamicQuad(cp8, cp7, cp6, cp5, [sinY, 0.4, cosY], glassCol);
+      this.pushDynamicQuad(cp2, cp1, cp4, cp3, [-sinY, 0.4, -cosY], glassCol);
+      this.pushDynamicQuad(cp1, cp5, cp8, cp4, [-cosY, 0, sinY], glassCol);
+      this.pushDynamicQuad(cp6, cp2, cp3, cp7, [cosY, 0, -sinY], glassCol);
+
+      // Sports Car Aerodynamic Rear Wing Spoiler
+      if (type === 'sports') {
+        const wingY = 0.3 + bh + 0.55;
+        const pylonL = toWorld(-hw * 0.65, wingY - 0.25, -hl * 0.85);
+        const pylonR = toWorld(hw * 0.65, wingY - 0.25, -hl * 0.85);
+        this.pushDynamicBox(pylonL[0], pylonL[1], pylonL[2], 0.08, 0.35, 0.25, [0.12, 0.12, 0.15, 1.0]);
+        this.pushDynamicBox(pylonR[0], pylonR[1], pylonR[2], 0.08, 0.35, 0.25, [0.12, 0.12, 0.15, 1.0]);
+        const wingBlade = toWorld(0, wingY, -hl * 0.88);
+        this.pushDynamicBox(wingBlade[0], wingBlade[1], wingBlade[2], v.width * 0.95, 0.08, 0.45, bodyCol);
+      }
+
+      // Muscle Car Power-Bulge Hood Air Scoop
+      if (type === 'muscle') {
+        const scoopPos = toWorld(0, 0.3 + bh + 0.12, hl * 0.45);
+        this.pushDynamicBox(scoopPos[0], scoopPos[1], scoopPos[2], 0.75, 0.16, 1.1, [0.12, 0.12, 0.14, 1.0]);
+      }
+
+      // Taxi Checker Stripe & Roof Pod
+      if (type === 'taxi') {
+        const podPos = toWorld(0, 0.3 + bh + ch + 0.15, 0);
+        this.pushDynamicBox(podPos[0], podPos[1], podPos[2], 0.75, 0.22, 0.35, [0.96, 0.85, 0.2, 1.0]);
+        // Checker waistlines
+        const chkL = toWorld(-hw - 0.02, 0.3 + bh * 0.6, 0);
+        const chkR = toWorld(hw + 0.02, 0.3 + bh * 0.6, 0);
+        this.pushDynamicBox(chkL[0], chkL[1], chkL[2], 0.04, 0.14, hl * 1.5, [0.12, 0.12, 0.14, 1.0]);
+        this.pushDynamicBox(chkR[0], chkR[1], chkR[2], 0.04, 0.14, hl * 1.5, [0.12, 0.12, 0.14, 1.0]);
+      }
+
+      // Police Cruiser Lightbar & Bull-Bar
+      if (v.isPolice) {
+        const flashRed = Math.sin(Date.now() * 0.018 + (v.sirenPhase || 0)) > 0;
+        const barY = 0.3 + bh + ch + 0.14;
+        const redPos = toWorld(-0.42, barY, 0);
+        const bluePos = toWorld(0.42, barY, 0);
+        this.pushDynamicBox(redPos[0], redPos[1], redPos[2], 0.44, 0.22, 0.32, flashRed ? [1.0, 0.15, 0.15, 1.0] : [0.25, 0.05, 0.05, 1.0]);
+        this.pushDynamicBox(bluePos[0], bluePos[1], bluePos[2], 0.44, 0.22, 0.32, !flashRed ? [0.15, 0.65, 1.0, 1.0] : [0.05, 0.12, 0.3, 1.0]);
+
+        // Front bull-bar / push bumper
+        const bbPos = toWorld(0, 0.6, hl + 0.18);
+        this.pushDynamicBox(bbPos[0], bbPos[1], bbPos[2], v.width * 0.82, 0.55, 0.16, [0.15, 0.16, 0.18, 1.0]);
+      }
+
+      // 4 Wheels
+      const wheelPositions = [
+        [-hw - 0.06, 0.32, hl * 0.60],
+        [hw + 0.06, 0.32, hl * 0.60],
+        [-hw - 0.06, 0.32, -hl * 0.60],
+        [hw + 0.06, 0.32, -hl * 0.60]
+      ];
+      for (const wp of wheelPositions) {
+        const pos = toWorld(wp[0], wp[1], wp[2]);
+        this.pushDynamicBox(pos[0], pos[1] - 0.15, pos[2], 0.34, 0.65, 0.65, wheelCol);
+      }
     }
 
-    // Police Cruiser Lightbar
-    if (v.isPolice) {
-      const flashRed = Math.sin(Date.now() * 0.016 + (v.sirenPhase || 0)) > 0;
-      const barY = 0.3 + bh + 0.72;
-      const redPos = toWorld(-0.4, barY, 0);
-      const bluePos = toWorld(0.4, barY, 0);
-      this.pushDynamicBox(redPos[0], redPos[1], redPos[2], 0.4, 0.2, 0.3, flashRed ? [1.0, 0.15, 0.15, 1.0] : [0.3, 0.05, 0.05, 1.0]);
-      this.pushDynamicBox(bluePos[0], bluePos[1], bluePos[2], 0.4, 0.2, 0.3, !flashRed ? [0.15, 0.55, 1.0, 1.0] : [0.05, 0.1, 0.3, 1.0]);
-    }
-
-    // Headlights
+    // Headlights (glowing emissive lenses)
     const hlCol = [1.0, 0.96, 0.85, 1.0];
-    const leftHl = toWorld(-hw * 0.7, 0.6, hl + 0.05);
-    const rightHl = toWorld(hw * 0.7, 0.6, hl + 0.05);
-    this.pushDynamicBox(leftHl[0], leftHl[1], leftHl[2], 0.4, 0.25, 0.1, hlCol);
-    this.pushDynamicBox(rightHl[0], rightHl[1], rightHl[2], 0.4, 0.25, 0.1, hlCol);
+    const leftHl = toWorld(-hw * 0.72, 0.62, hl + 0.06);
+    const rightHl = toWorld(hw * 0.72, 0.62, hl + 0.06);
+    this.pushDynamicBox(leftHl[0], leftHl[1], leftHl[2], 0.38, 0.22, 0.08, hlCol);
+    this.pushDynamicBox(rightHl[0], rightHl[1], rightHl[2], 0.38, 0.22, 0.08, hlCol);
+
+    // Taillights (ruby red glow)
+    const tlCol = (v.speed < -0.1 || (v.throttle < 0 && v.speed > 0.5)) ? [1.0, 0.15, 0.15, 1.0] : [0.65, 0.10, 0.10, 1.0];
+    const leftTl = toWorld(-hw * 0.72, 0.62, -hl - 0.06);
+    const rightTl = toWorld(hw * 0.72, 0.62, -hl - 0.06);
+    this.pushDynamicBox(leftTl[0], leftTl[1], leftTl[2], 0.38, 0.18, 0.08, tlCol);
+    this.pushDynamicBox(rightTl[0], rightTl[1], rightTl[2], 0.38, 0.18, 0.08, tlCol);
   }
 
+  // Draw fully articulated character with visible swinging limbs, knee flexion, and lean
   drawCharacter(char, type = 'ped') {
     const x = char.x;
     const y = char.y || 0;
     const z = char.z;
-    const angle = char.heading || 0;
-    const sinA = Math.sin(angle);
-    const cosA = Math.cos(angle);
+    const heading = char.heading || 0;
+    const sinH = Math.sin(heading);
+    const cosH = Math.cos(heading);
 
     let shirtCol = [0.32, 0.52, 0.82, 1.0];
     let pantsCol = [0.16, 0.18, 0.25, 1.0];
     let skinCol = [0.92, 0.76, 0.64, 1.0];
+    let hairCol = [0.18, 0.14, 0.12, 1.0];
 
     if (type === 'player') {
-      shirtCol = [0.85, 0.20, 0.18, 1.0]; // Rook's iconic red sports leather jacket
-      pantsCol = [0.18, 0.22, 0.30, 1.0]; // Dark fitted jeans
+      shirtCol = [0.88, 0.18, 0.16, 1.0]; // Rook's vivid red racing jacket
+      pantsCol = [0.16, 0.18, 0.24, 1.0]; // Dark fitted jeans
+      hairCol = [0.15, 0.12, 0.10, 1.0];
     } else if (type === 'police') {
-      shirtCol = [0.12, 0.18, 0.34, 1.0]; // Metro Police navy
-      pantsCol = [0.12, 0.15, 0.22, 1.0];
+      shirtCol = [0.12, 0.18, 0.35, 1.0]; // Metro Police navy
+      pantsCol = [0.10, 0.14, 0.22, 1.0];
+      hairCol = [0.12, 0.14, 0.25, 1.0]; // Police cap
     } else if (type === 'syndicate') {
       shirtCol = [0.55, 0.18, 0.55, 1.0]; // Syndicate violet
       pantsCol = [0.12, 0.12, 0.15, 1.0];
@@ -963,29 +1292,68 @@ export class WebGLRenderer {
       pantsCol = [...char.outfit.pants, 1.0];
     }
 
-    // Walking stride animation
-    const anim = Math.sin(char.animTime || 0);
-    const legL = Math.max(-0.25, Math.min(0.25, anim * 0.35));
-    const legR = -legL;
+    const speed = Math.abs(char.speed || 0);
+    const isMoving = speed > 0.3;
+    const stride = isMoving ? Math.sin(char.animTime || 0) : 0;
+    const armSwing = isMoving ? Math.sin(char.animTime || 0) : 0;
 
-    // Soft pedestrian ground shadow
-    this.drawGroundShadow(x, z, 0.85, 0.85);
+    // Running torso forward lean
+    const lean = Math.min(0.22, speed * 0.035);
+    const leanZ = Math.cos(heading) * lean;
+    const leanX = Math.sin(heading) * lean;
 
-    // Legs
-    this.pushDynamicBox(x - 0.18 * cosA + legL * sinA, y, z + 0.18 * sinA + legL * cosA, 0.26, 0.85, 0.26, pantsCol);
-    this.pushDynamicBox(x + 0.18 * cosA + legR * sinA, y, z - 0.18 * sinA + legR * cosA, 0.26, 0.85, 0.26, pantsCol);
+    // Soft elongated character ground shadow
+    this.drawGroundShadow(x, z, 0.85, 0.85, 1.2);
 
-    // Torso
-    this.pushDynamicBox(x, y + 0.85, z, 0.62, 0.75, 0.38, shirtCol);
+    // Left leg (thigh + calf)
+    const legLSwing = stride * 0.35;
+    const lThighX = x - 0.16 * cosH + Math.sin(heading) * legLSwing;
+    const lThighZ = z + 0.16 * sinH + Math.cos(heading) * legLSwing;
+    this.pushDynamicBox(lThighX, y + 0.42, lThighZ, 0.24, 0.44, 0.24, pantsCol);
+    this.pushDynamicBox(lThighX, y, lThighZ, 0.22, 0.42, 0.26, [0.12, 0.12, 0.14, 1.0]); // Shoe
 
-    // Head
-    this.pushDynamicBox(x, y + 1.62, z, 0.38, 0.42, 0.38, skinCol);
+    // Right leg (counter phase)
+    const legRSwing = -stride * 0.35;
+    const rThighX = x + 0.16 * cosH + Math.sin(heading) * legRSwing;
+    const rThighZ = z - 0.16 * sinH + Math.cos(heading) * legRSwing;
+    this.pushDynamicBox(rThighX, y + 0.42, rThighZ, 0.24, 0.44, 0.24, pantsCol);
+    this.pushDynamicBox(rThighX, y, rThighZ, 0.22, 0.42, 0.26, [0.12, 0.12, 0.14, 1.0]); // Shoe
 
-    // Weapon in hand
-    if (type === 'player' || type === 'police' || type === 'syndicate') {
-      const gunX = x + sinA * 0.45 + cosA * 0.25;
-      const gunZ = z + cosA * 0.45 - sinA * 0.25;
-      this.pushDynamicBox(gunX, y + 1.05, gunZ, 0.12, 0.15, 0.55, [0.15, 0.15, 0.18, 1.0]);
+    // Torso with forward lean
+    const torsoX = x + leanX * 0.5;
+    const torsoZ = z + leanZ * 0.5;
+    this.pushDynamicBox(torsoX, y + 0.85, torsoZ, 0.58, 0.72, 0.34, shirtCol);
+
+    // Neck & Head
+    this.pushDynamicBox(torsoX, y + 1.57, torsoZ, 0.18, 0.12, 0.18, skinCol); // Neck
+    this.pushDynamicBox(torsoX, y + 1.68, torsoZ, 0.34, 0.36, 0.34, skinCol); // Face
+    this.pushDynamicBox(torsoX, y + 1.88, torsoZ, 0.36, 0.14, 0.36, hairCol); // Hair / cap
+
+    // Arms
+    const hasGun = (type === 'player' && char.hasWeapon) || type === 'police' || type === 'syndicate';
+    if (hasGun) {
+      // Weapon aiming forward pose
+      const gunArmX = torsoX + sinH * 0.45 + cosH * 0.20;
+      const gunArmZ = torsoZ + cosH * 0.45 - sinH * 0.20;
+      this.pushDynamicBox(gunArmX, y + 1.15, gunArmZ, 0.18, 0.18, 0.42, shirtCol); // Extended right arm
+      this.pushDynamicBox(gunArmX, y + 1.12, gunArmZ + cosH * 0.25, 0.12, 0.16, 0.55, [0.15, 0.16, 0.18, 1.0]); // Gun
+      // Left supporting arm
+      const leftArmX = torsoX + sinH * 0.28 - cosH * 0.20;
+      const leftArmZ = torsoZ + cosH * 0.28 + sinH * 0.20;
+      this.pushDynamicBox(leftArmX, y + 1.10, leftArmZ, 0.18, 0.18, 0.32, shirtCol);
+    } else {
+      // Natural walking swinging arms (opposite to leg swings)
+      const lArmSwing = -armSwing * 0.28;
+      const rArmSwing = armSwing * 0.28;
+      const lArmX = torsoX - 0.34 * cosH + Math.sin(heading) * lArmSwing;
+      const lArmZ = torsoZ + 0.34 * sinH + Math.cos(heading) * lArmSwing;
+      const rArmX = torsoX + 0.34 * cosH + Math.sin(heading) * rArmSwing;
+      const rArmZ = torsoZ - 0.34 * sinH + Math.cos(heading) * rArmSwing;
+
+      this.pushDynamicBox(lArmX, y + 0.95, lArmZ, 0.18, 0.65, 0.18, shirtCol);
+      this.pushDynamicBox(lArmX, y + 0.80, lArmZ, 0.14, 0.16, 0.14, skinCol); // Left hand
+      this.pushDynamicBox(rArmX, y + 0.95, rArmZ, 0.18, 0.65, 0.18, shirtCol);
+      this.pushDynamicBox(rArmX, y + 0.80, rArmZ, 0.14, 0.16, 0.14, skinCol); // Right hand
     }
   }
 
@@ -1025,11 +1393,9 @@ export class WebGLRenderer {
     const p4 = [x - rCos * bladeLen, y + 1.3, z + rSin * bladeLen + 0.35];
     this.pushDynamicQuad(p1, p2, p3, p4, [0, 1, 0], [0.22, 0.22, 0.25, 1.0]);
 
-    // Searchlight beam ground pool
-    const spotX = heli.spotlightX;
-    const spotZ = heli.spotlightZ;
-    const spotRadius = 8.5;
-    this.pushDynamicBox(spotX, 0.1, spotZ, spotRadius * 2, 0.08, spotRadius * 2, [1.0, 1.0, 0.85, 0.75]);
+    // Nose-mounted searchlight housing & illuminated lens
+    this.pushDynamicBox(x, y - 0.7, z + 1.8, 0.5, 0.5, 0.6, [0.20, 0.22, 0.25, 1.0]);
+    this.pushDynamicBox(x, y - 0.7, z + 2.12, 0.4, 0.4, 0.08, [1.0, 1.0, 0.85, 1.0]);
   }
 
   drawHarbourBirds(birds) {
@@ -1109,8 +1475,23 @@ export class WebGLRenderer {
     this.setupVertexAttribPointers();
     gl.drawArrays(gl.TRIANGLES, 0, this.staticVertexCount);
 
-    // 2. Draw dynamic entities (Vehicles, characters, helicopter, birds, particles)
+    // 2. Draw dynamic entities (Vehicles, characters, helicopter, birds, particles, traffic lights)
     this.beginDynamic();
+
+    // Dynamic Traffic Light Signal Lenses (obeyed by traffic and pedestrians)
+    for (const p of world.props) {
+      if (p.type === 'traffic_light') {
+        const isEW = (p.rotation === 0 || p.rotation === Math.PI);
+        const signal = world.getTrafficLightColor(isEW ? 'ew' : 'ns');
+        const redCol = signal === 'red' ? [1.0, 0.15, 0.10, 1.0] : [0.22, 0.04, 0.04, 1.0];
+        const amberCol = signal === 'amber' ? [1.0, 0.75, 0.10, 1.0] : [0.22, 0.16, 0.04, 1.0];
+        const greenCol = signal === 'green' ? [0.10, 1.0, 0.35, 1.0] : [0.04, 0.20, 0.08, 1.0];
+
+        this.pushDynamicBox(p.x, 4.85, p.z, 0.52, 0.35, 0.52, redCol);
+        this.pushDynamicBox(p.x, 4.40, p.z, 0.52, 0.35, 0.52, amberCol);
+        this.pushDynamicBox(p.x, 3.95, p.z, 0.52, 0.35, 0.52, greenCol);
+      }
+    }
 
     for (const v of traffic.vehicles) {
       if (v === player.vehicle && player.inVehicle) continue;

@@ -2,6 +2,7 @@
 // Persists player career progression, cash reserves, weapons inventory, and story milestones.
 
 export const SAVE_STORAGE_KEY = 'nightfall_city_save_v1';
+export const SAVE_CURRENT_VERSION = 1;
 
 export class SaveManager {
   static hasSave() {
@@ -15,7 +16,7 @@ export class SaveManager {
   static save(data) {
     try {
       const payload = {
-        version: 1,
+        version: SAVE_CURRENT_VERSION,
         timestamp: Date.now(),
         cash: data.cash ?? 500,
         missionIndex: data.missionIndex ?? 0,

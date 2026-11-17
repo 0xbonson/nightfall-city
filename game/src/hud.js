@@ -4,6 +4,9 @@ import { minimap } from './minimap.js';
 import { screenEffects } from './effects.js';
 import { CONFIG } from './config.js';
 
+export const HUD_STATUS_BAR_WIDTH = 140;
+export const HUD_STATUS_BAR_HEIGHT = 12;
+
 export class HUD {
   render(ctx, player, world, police, traffic, pedestrians, missions, width, height) {
     ctx.clearRect(0, 0, width, height);
@@ -153,8 +156,8 @@ export class HUD {
     y += 26;
 
     // Health and Armor Bars
-    const barWidth = 140;
-    const barHeight = 12;
+    const barWidth = HUD_STATUS_BAR_WIDTH;
+    const barHeight = HUD_STATUS_BAR_HEIGHT;
 
     // Health Bar (Green)
     ctx.fillStyle = 'rgba(20, 20, 30, 0.8)';

@@ -21,6 +21,9 @@ const screenSourceDir = join(currentDir, 'screenshots');
 // Target directory provided by the test environment or grader container
 const targetOutputDir = resolve(process.env.MAKEFUN_OUTPUT_DIR ?? '/output');
 
+export const BUNDLE_VERSION = '1.0.0';
+export const GAME_DIST_TITLE = 'Nightfall City: Vela Bay';
+
 // Strict competition constraints
 const DOSSIER_LIMITS = {
   text_max_bytes: 163840, // 160 KiB limit for code listing text in dossier

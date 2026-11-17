@@ -1,9 +1,11 @@
 // Particle effects and screen juice for Nightfall City
 
+export const MAX_ACTIVE_PARTICLES = 300;
+
 export class ParticleSystem {
   constructor() {
     this.particles = [];
-    this.maxParticles = 300;
+    this.maxParticles = MAX_ACTIVE_PARTICLES;
   }
 
   emit(type, x, y, z, count = 1, options = {}) {
@@ -128,7 +130,11 @@ export class ScreenEffects {
   }
 
   clear() {
-    this.particles.length = 0;
+    this.trauma = 0;
+    this.hitFlash = 0;
+    this.whiteFlash = 0;
+    this.shakeX = 0;
+    this.shakeY = 0;
   }
 
   update(dt) {

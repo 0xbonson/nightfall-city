@@ -1,7 +1,8 @@
 // Traffic and Vehicle Population System for Nightfall City: Vela Bay
-// Simulates dynamic road cruising, civilian lane navigation, and curbside parked vehicles.
+// Simulates dynamic road cruising, civilian lane navigation, traffic light compliance, and curbside parked vehicles.
 
 import { VehiclePhysics } from './physics.js';
+import { world } from './world.js';
 import { audio } from './audio.js';
 import { particles } from './effects.js';
 import { CONFIG } from './config.js';
@@ -81,13 +82,21 @@ export class TrafficManager {
       angle = offset > 0 ? 3.14 : 0;
     }
 
-    const types = ['sedan', 'sedan', 'taxi', 'sports', 'muscle', 'truck'];
+    const types = ['sedan', 'sedan', 'taxi', 'taxi', 'sports', 'muscle', 'truck', 'bus'];
     const type = types[Math.floor(Math.random() * types.length)];
     const v = VehiclePhysics.createVehicle(x, z, angle, type);
-    v.color = type === 'taxi' ? [0.95, 0.82, 0.10] : this.carColors[Math.floor(Math.random() * this.carColors.length)];
+    if (type === 'taxi') {
+      v.color = [0.96, 0.82, 0.12]; // Golden yellow cab
+    } else if (type === 'bus') {
+      v.color = Math.random() > 0.5 ? [0.18, 0.52, 0.78] : [0.85, 0.42, 0.18]; // Transit blue or Metro copper
+    } else if (type === 'truck') {
+      v.color = [0.42, 0.45, 0.50]; // Freight industrial grey
+    } else {
+      v.color = this.carColors[Math.floor(Math.random() * this.carColors.length)];
+    }
     v.isTraffic = true;
     v.isVehicle = true;
-    v.speed = 12 + Math.random() * 6;
+    v.speed = type === 'bus' ? 8 : (type === 'truck' ? 10 : 12 + Math.random() * 5);
     this.vehicles.push(v);
   }
 
@@ -163,8 +172,36 @@ export class TrafficManager {
           if (pLat < 2.5) obstacleAhead = true;
         }
 
+        // Compliance with intersection traffic signals
+        const isEW = Math.abs(sinA) > Math.abs(cosA);
+        const roadGrid = CONFIG.world.roadGrid;
+        let distToNextIntersection = 999;
+        if (isEW) {
+          const moveDir = sinA > 0 ? 1 : -1;
+          for (const rx of roadGrid) {
+            const d = (rx - v.x) * moveDir;
+            if (d > 0 && d < distToNextIntersection) {
+              distToNextIntersection = d;
+            }
+          }
+        } else {
+          const moveDir = cosA > 0 ? 1 : -1;
+          for (const rz of roadGrid) {
+            const d = (rz - v.z) * moveDir;
+            if (d > 0 && d < distToNextIntersection) {
+              distToNextIntersection = d;
+            }
+          }
+        }
+
+        const signalColor = world.getTrafficLightColor(isEW ? 'ew' : 'ns');
+        if ((signalColor === 'red' || (signalColor === 'amber' && distToNextIntersection > 8)) &&
+            distToNextIntersection >= 6 && distToNextIntersection <= 20) {
+          obstacleAhead = true;
+        }
+
         if (obstacleAhead) {
-          desiredThrottle = -0.6; // Brake
+          desiredThrottle = -0.7; // Brake smoothly at light or behind obstacle
         }
 
         VehiclePhysics.updateVehicle(v, dt, {

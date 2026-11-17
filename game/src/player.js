@@ -46,6 +46,18 @@ export class Player {
     return this.weapons[this.activeWeaponIndex];
   }
 
+  get hasWeapon() {
+    return this.activeWeaponIndex > 0;
+  }
+
+  set hasWeapon(val) {
+    if (val && this.activeWeaponIndex === 0) {
+      this.activeWeaponIndex = 1;
+    } else if (!val) {
+      this.activeWeaponIndex = 0;
+    }
+  }
+
   switchWeapon(index) {
     if (index >= 0 && index < this.weapons.length && index !== this.activeWeaponIndex) {
       this.activeWeaponIndex = index;

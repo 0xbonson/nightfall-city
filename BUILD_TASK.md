@@ -121,10 +121,10 @@ nightfall-city/
 │       ├── menu.js          # Title screen, pause menu, controls guide, victory screen
 │       └── save.js          # localStorage game state persistence
 ├── screenshots/
-│   ├── 1-on-foot-downtown.png        # Downtown on-foot exploration, high-rises & HUD
-│   ├── 2-car-drive-promenade.png     # Sports car driving along sunset ocean promenade
-│   ├── 3-police-pursuit-stars.png    # 3-star police pursuit with cruisers & roadblock
-│   └── 4-mission-dock-showdown.png   # Mission 6 dock showdown with helicopter searchlight
+│   ├── 1-on-foot-downtown.png        # Downtown on-foot exploration, articulated player, towers, pedestrians & HUD
+│   ├── 2-car-drive-promenade.png     # Sports car driving along sunset ocean promenade, palm trees & water
+│   ├── 3-police-pursuit-stars.png    # 4-star police pursuit flanked between cruisers with flashing lightbars
+│   └── 4-mission-dock-showdown.png   # Mission 6 dock showdown with gantry crane & hovering tactical helicopter
 ├── vendor/
 │   └── makefun-game.ts      # make.fun dossier generator (standard library only)
 ├── main.ts                  # Entry packaging script for make.fun evaluation

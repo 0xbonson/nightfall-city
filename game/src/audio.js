@@ -8,6 +8,10 @@ export const RADIO_STATION_OFF = 0;
 export const RADIO_STATION_VELA_WAVE = 1;
 export const RADIO_STATION_NIGHTFALL = 2;
 
+export const DEFAULT_MASTER_GAIN = 0.65;
+export const DEFAULT_SFX_GAIN = 0.8;
+export const DEFAULT_MUSIC_GAIN = 0.35;
+
 class SoundManager {
   constructor() {
     this.ctx = null;
@@ -34,15 +38,15 @@ class SoundManager {
       if (!AudioCtx) return;
       this.ctx = new AudioCtx();
       this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.setValueAtTime(0.65, this.ctx.currentTime);
+      this.masterGain.gain.setValueAtTime(DEFAULT_MASTER_GAIN, this.ctx.currentTime);
       this.masterGain.connect(this.ctx.destination);
 
       this.sfxGain = this.ctx.createGain();
-      this.sfxGain.gain.setValueAtTime(0.8, this.ctx.currentTime);
+      this.sfxGain.gain.setValueAtTime(DEFAULT_SFX_GAIN, this.ctx.currentTime);
       this.sfxGain.connect(this.masterGain);
 
       this.musicGain = this.ctx.createGain();
-      this.musicGain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+      this.musicGain.gain.setValueAtTime(DEFAULT_MUSIC_GAIN, this.ctx.currentTime);
       this.musicGain.connect(this.masterGain);
 
       this.initEngineSynth();

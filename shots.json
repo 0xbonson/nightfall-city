@@ -2,21 +2,21 @@
   {
     "name": "1-on-foot-downtown.png",
     "query": "?shot=1",
-    "description": "Rhea 'Rook' Solano on foot in Downtown Vela Bay with warm afternoon sunlight, set-back glass towers, crowns, and pedestrian plazas"
+    "description": "Rhea 'Rook' Solano on foot on a busy Downtown pavement, tall glass towers rising behind into a warm sky, pedestrians in groups, and traffic in the street"
   },
   {
     "name": "2-car-drive-promenade.png",
     "query": "?shot=2",
-    "description": "High-speed sports car cruise along Ocean Promenade with palm trees, glistening ocean water, late-afternoon sun, and coastal boardwalk"
+    "description": "Sports car at speed along Ocean Promenade boulevard with glistening ocean water, low sun over the water, palm trees, and the coastal boardwalk"
   },
   {
     "name": "3-police-pursuit-stars.png",
     "query": "?shot=3",
-    "description": "Escalating 3-star police pursuit on warm grey asphalt with interceptor cruisers, active siren lights, wanted stars HUD, and drift smoke"
+    "description": "High-speed police pursuit at its height, wanted stars in the HUD, flashing cruiser lights, player car flanked between two cruisers on a wide road"
   },
   {
     "name": "4-mission-dock-showdown.png",
     "query": "?shot=4",
-    "description": "Mission 6 'Nightfall at the Docks' showdown with shipping containers, port gantry cranes, and tactical police helicopter"
+    "description": "Showdown at Meridian Docks with colorful shipping container stacks, 38m gantry crane, armed syndicate guards, hovering helicopter, and water beyond"
   }
 ]

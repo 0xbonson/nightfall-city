@@ -14,6 +14,14 @@ export const CONFIG = {
     roadGrid: [-220, -140, -60, 0, 60, 140, 220],
   },
 
+  // Traffic light signal cycle timings (in seconds)
+  trafficLights: {
+    nsGreenDuration: 9.0,
+    nsAmberDuration: 2.5,
+    ewGreenDuration: 9.0,
+    ewAmberDuration: 2.5,
+  },
+
   // Atmospheric late afternoon daylight and coastal sun lighting constants
   lighting: {
     // Warm sun coming from South-West over the bay
@@ -25,12 +33,15 @@ export const CONFIG = {
     ambientGround: [0.32, 0.28, 0.22], // Warm asphalt and sand ground bounce
     fogColor: [0.92, 0.84, 0.74], // Atmospheric haze matching horizon color
     fogStart: 75.0,
-    fogEnd: 440.0,
+    fogEnd: 460.0,
+    shadowDir: [0.60, 0.0, -0.64], // Direction shadows stretch away from sun
+    shadowLength: 1.45, // Afternoon long shadow multiplier
   },
 
   // Material surface colors (warm grey asphalt, light stone kerbs, coastal sand)
   surfaces: {
     asphalt: [0.38, 0.37, 0.35, 1.0], // Warm grey asphalt rather than blue-black
+    asphaltPatch: [0.28, 0.27, 0.26, 1.0], // Darker fresh asphalt repair patch
     sidewalk: [0.70, 0.68, 0.65, 1.0], // Paved stone sidewalk
     kerb: [0.78, 0.76, 0.72, 1.0], // Raised granite kerbstone
     centerline: [0.96, 0.82, 0.16, 1.0], // Golden yellow highway line
@@ -75,8 +86,8 @@ export const CONFIG = {
     playerSprintSpeed: 9.6,
     maxWantedLevel: 5,
     wantedCooldownDuration: 18.0, // Seconds in evasion before heat clears
-    pedestrianMaxCount: 40,
-    trafficMaxCount: 30,
+    pedestrianMaxCount: 48,
+    trafficMaxCount: 36,
     policeMaxCruisers: 6,
     audioMasterVolume: 0.85,
   },

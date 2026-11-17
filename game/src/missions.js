@@ -8,6 +8,7 @@ import { CONFIG } from './config.js';
 
 export const MISSION_MARKER_TRIGGER_RADIUS = 5.0; // Distance in meters to activate mission beacon
 export const TOTAL_STORY_CAMPAIGN_MISSIONS = 6;
+export const CHECKPOINT_TRIGGER_RADIUS = 8.0; // Proximity trigger threshold for street race checkpoints
 
 export class MissionManager {
   constructor() {

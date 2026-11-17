@@ -3,6 +3,9 @@
 import { SaveManager } from './save.js';
 import { audio } from './audio.js';
 
+export const MENU_BUTTON_WIDTH = 260;
+export const MENU_BUTTON_HEIGHT = 46;
+
 export class MenuManager {
   constructor() {
     this.state = 'title'; // 'title', 'controls', 'playing', 'paused', 'ending'
@@ -64,8 +67,8 @@ export class MenuManager {
     ctx.fillText('VELA BAY · OPEN WORLD CRIME', width / 2, titleY + 34);
 
     // Menu Buttons
-    const btnW = 260;
-    const btnH = 46;
+    const btnW = MENU_BUTTON_WIDTH;
+    const btnH = MENU_BUTTON_HEIGHT;
     const btnX = width / 2 - btnW / 2;
     let btnY = height * 0.50;
 

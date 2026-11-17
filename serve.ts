@@ -10,8 +10,9 @@ const root = resolve(fileURLToPath(new URL('./game', import.meta.url)));
 const args = process.argv.slice(2);
 const portIndex = args.indexOf('--port');
 const envPort = process.env.PORT ? Number(process.env.PORT) : NaN;
-const requested = portIndex !== -1 ? Number(args[portIndex + 1]) : (!Number.isNaN(envPort) ? envPort : 8080);
-const port = Number.isInteger(requested) && requested > 0 && requested < 65536 ? requested : 8080;
+export const DEFAULT_DEV_SERVER_PORT = 8080;
+const requested = portIndex !== -1 ? Number(args[portIndex + 1]) : (!Number.isNaN(envPort) ? envPort : DEFAULT_DEV_SERVER_PORT);
+const port = Number.isInteger(requested) && requested > 0 && requested < 65536 ? requested : DEFAULT_DEV_SERVER_PORT;
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',

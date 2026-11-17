@@ -2,6 +2,7 @@
 // Keyboard, mouse look with Pointer Lock support, and weapon controls.
 
 export const MOUSE_LOOK_SENSITIVITY = 0.0022;
+export const MOUSE_SMOOTHING_FACTOR = 0.85;
 
 class InputManager {
   constructor() {
@@ -90,6 +91,10 @@ class InputManager {
     this.keys = {};
     this.mouse.left = false;
     this.mouse.right = false;
+  }
+
+  clearKeys() {
+    this.resetKeys();
   }
 
   isDown(code) {

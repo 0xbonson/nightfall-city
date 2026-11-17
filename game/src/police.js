@@ -226,7 +226,15 @@ export class PoliceManager {
         continue;
       }
 
-      if (!c.isRoadblock) {
+      if (c.isCinematic) {
+        // Locked pursuit formation alongside player vehicle
+        if (player.vehicle) {
+          c.speed = player.vehicle.speed;
+          c.angle = player.vehicle.angle;
+          c.x = player.x + (c.cinematicOffsetX || 0);
+          c.z = player.z + (c.cinematicOffsetZ || 0);
+        }
+      } else if (!c.isRoadblock) {
         const desiredAngle = Math.atan2(dx, dz);
         let angleDiff = desiredAngle - c.angle;
         while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
@@ -278,11 +286,17 @@ export class PoliceManager {
     // Update Helicopter
     if (this.helicopter) {
       this.helicopter.rotorAngle += dt * 38;
-      // Fly towards player smoothly
-      this.helicopter.x += (player.x - this.helicopter.x) * Math.min(1.0, 1.2 * dt);
-      this.helicopter.z += (player.z - this.helicopter.z) * Math.min(1.0, 1.2 * dt);
-      this.helicopter.spotlightX = player.x;
-      this.helicopter.spotlightZ = player.z;
+      if (this.helicopter.hoverX !== undefined) {
+        this.helicopter.x = this.helicopter.hoverX;
+        this.helicopter.y = this.helicopter.hoverY || 15;
+        this.helicopter.z = this.helicopter.hoverZ;
+      } else {
+        // Fly towards player smoothly
+        this.helicopter.x += (player.x - this.helicopter.x) * Math.min(1.0, 1.2 * dt);
+        this.helicopter.z += (player.z - this.helicopter.z) * Math.min(1.0, 1.2 * dt);
+      }
+      this.helicopter.spotlightX = this.helicopter.spotlightTargetX !== undefined ? this.helicopter.spotlightTargetX : player.x;
+      this.helicopter.spotlightZ = this.helicopter.spotlightTargetZ !== undefined ? this.helicopter.spotlightTargetZ : player.z;
 
       // Helicopter sniper fire at 5 stars
       if (this.wantedLevel >= 5 && player.alive) {

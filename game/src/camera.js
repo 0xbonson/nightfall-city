@@ -19,6 +19,8 @@ export class Camera {
 
     this.yaw = 0; // Horizontal angle in radians
     this.pitch = 0.18; // Vertical angle in radians (looking down)
+    this.roll = 0; // Corner banking roll angle in radians
+    this.targetRoll = 0;
     this.distance = 5.0;
     this.fov = 68; // Degrees
     this.aspect = 16 / 9;
@@ -34,18 +36,20 @@ export class Camera {
   snap(player) {
     if (!player) return;
     this.targetX = player.x;
-    this.targetY = player.y + (player.inVehicle ? 1.2 : 1.4);
+    this.targetY = player.y + (player.inVehicle ? 1.1 : 1.4);
     this.targetZ = player.z;
 
     const inVehicle = player.inVehicle && player.vehicle;
-    const targetDist = inVehicle ? 7.8 : 5.0;
-    const targetHeight = inVehicle ? 2.8 : 1.4;
+    const targetDist = inVehicle ? 7.6 : 5.0;
+    const targetHeight = inVehicle ? 2.5 : 1.4;
     const hDist = targetDist * Math.cos(this.pitch);
     const vDist = targetDist * Math.sin(this.pitch) + targetHeight;
 
     this.x = this.targetX - Math.sin(this.yaw) * hDist;
     this.y = Math.max(1.8, this.targetY + vDist);
     this.z = this.targetZ - Math.cos(this.yaw) * hDist;
+    this.roll = 0;
+    this.targetRoll = 0;
 
     this.avoidBuildingCollision();
     this.computeMatrices();
@@ -56,20 +60,21 @@ export class Camera {
     const dx = this.x - this.targetX;
     const dz = this.z - this.targetZ;
     const totalDist = Math.hypot(dx, dz) || 0.001;
-    const steps = 8;
+    const steps = 12;
 
     for (let i = steps; i >= 1; i--) {
       const frac = i / steps;
       const testX = this.targetX + (dx / totalDist) * (totalDist * frac);
       const testZ = this.targetZ + (dz / totalDist) * (totalDist * frac);
 
-      const col = world.checkCollision(testX, testZ, 1.0);
+      // Check center ray plus slight side clearance
+      const col = world.checkCollision(testX, testZ, 0.85);
       if (col.collided) {
-        // Bring camera closer along view vector so it stays outside the wall
-        const safeDist = Math.max(2.2, totalDist * (frac - 0.15));
+        // Bring camera closer along view vector so it stays firmly outside the wall
+        const safeDist = Math.max(2.0, totalDist * (frac - 0.12));
         this.x = this.targetX + (dx / totalDist) * safeDist;
         this.z = this.targetZ + (dz / totalDist) * safeDist;
-        this.y = Math.max(2.2, this.y + 0.4); // Lift slightly when near wall
+        this.y = Math.max(2.0, this.y + 0.35); // Lift slightly when near obstacle
         break;
       }
     }
@@ -86,30 +91,37 @@ export class Camera {
     let targetHeight = 1.4;
 
     if (player.inVehicle && player.vehicle) {
-      // Chase camera sits above car and looks down slightly at the street
-      targetDist = 7.8;
-      targetHeight = 2.8;
+      const v = player.vehicle;
+      const speedRatio = Math.min(1.0, Math.abs(v.speed) / (v.maxSpeed || 28.0));
+
+      // Chase camera sits above car, pulls back smoothly with speed
+      targetDist = 7.4 + speedRatio * 3.6;
+      targetHeight = 2.4 + speedRatio * 0.7;
+
+      // Camera leans into corners dynamically with vehicle roll and lateral slide
+      this.targetRoll = -(v.roll || 0) * 0.7 - (v.steer || 0) * 0.06;
 
       // Auto-align camera yaw behind vehicle gently (unless explicitly locked by cinematic shot)
       if (!this.lockedYaw) {
-        const carAngle = player.vehicle.angle;
+        const carAngle = v.angle;
         let angleDiff = carAngle - this.yaw;
         while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
         while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-        this.yaw += angleDiff * Math.min(1.0, 3.5 * dt);
+        this.yaw += angleDiff * Math.min(1.0, 3.8 * dt);
       }
 
-      // Speed-based dynamic FOV
-      const speedRatio = Math.abs(player.vehicle.speed) / player.vehicle.maxSpeed;
-      this.fov = 68 + speedRatio * 16;
+      // Speed-based dynamic FOV expansion (68 deg at rest up to 82 deg at top velocity)
+      this.fov = 68 + speedRatio * 14;
     } else {
       // On-foot camera shows player and street around them
       targetDist = 5.0;
       targetHeight = 1.4;
+      this.targetRoll = 0;
       this.fov = 68;
     }
 
-    this.distance += (targetDist - this.distance) * Math.min(1.0, 6 * dt);
+    this.roll += (this.targetRoll - this.roll) * Math.min(1.0, 6.0 * dt);
+    this.distance += (targetDist - this.distance) * Math.min(1.0, 6.5 * dt);
 
     // Target point is character/vehicle center
     this.targetX = player.x;
@@ -132,7 +144,7 @@ export class Camera {
       this.z = idealZ;
     } else {
       // Smooth camera lag
-      const lerpSpeed = player.inVehicle ? 8.5 : 12.0;
+      const lerpSpeed = player.inVehicle ? 9.0 : 12.0;
       this.x += (idealX - this.x) * Math.min(1.0, lerpSpeed * dt);
       this.y += (idealY - this.y) * Math.min(1.0, lerpSpeed * dt);
       this.z += (idealZ - this.z) * Math.min(1.0, lerpSpeed * dt);
@@ -146,10 +158,16 @@ export class Camera {
 
   computeMatrices() {
     this.perspective(this.fov * Math.PI / 180, this.aspect, NEAR_CLIP_PLANE, FAR_CLIP_PLANE, this.projMatrix);
+    
+    // Up vector incorporates banking roll
+    const upX = -Math.sin(this.roll) * Math.cos(this.yaw);
+    const upY = Math.cos(this.roll);
+    const upZ = Math.sin(this.roll) * Math.sin(this.yaw);
+
     this.lookAt(
       this.x, this.y, this.z,
       this.targetX, this.targetY, this.targetZ,
-      0, 1, 0,
+      upX, upY, upZ,
       this.viewMatrix
     );
     this.multiply(this.projMatrix, this.viewMatrix, this.viewProjMatrix);

@@ -11,21 +11,25 @@ export const HANDBRAKE_SLIP_FACTOR = 0.45; // Friction multiplier during handbra
 export class VehiclePhysics {
   static createVehicle(x, z, angle = 0, type = 'sedan') {
     const specs = {
-      sports: { maxSpeed: 34, accel: 18, reverseMax: -12, steerRate: 2.8, grip: 0.92, health: 300, mass: 1200, length: 4.6, width: 2.1 },
-      sedan: { maxSpeed: 26, accel: 13, reverseMax: -10, steerRate: 2.4, grip: 0.88, health: 350, mass: 1500, length: 4.8, width: 2.2 },
-      muscle: { maxSpeed: 30, accel: 20, reverseMax: -11, steerRate: 2.5, grip: 0.82, health: 380, mass: 1650, length: 5.0, width: 2.2 },
-      police: { maxSpeed: 31, accel: 16, reverseMax: -11, steerRate: 2.6, grip: 0.90, health: 400, mass: 1600, length: 4.9, width: 2.2 },
-      truck: { maxSpeed: 20, accel: 9, reverseMax: -8, steerRate: 1.8, grip: 0.85, health: 600, mass: 2800, length: 5.8, width: 2.5 },
-      taxi: { maxSpeed: 25, accel: 13, reverseMax: -10, steerRate: 2.4, grip: 0.88, health: 350, mass: 1500, length: 4.8, width: 2.2 },
-    }[type] || { maxSpeed: 26, accel: 13, reverseMax: -10, steerRate: 2.4, grip: 0.88, health: 350, mass: 1500, length: 4.8, width: 2.2 };
+      sports: { maxSpeed: 35, accel: 19, reverseMax: -12, steerRate: 2.8, grip: 0.92, health: 320, mass: 1250, length: 4.6, width: 2.1, height: 1.35 },
+      sedan: { maxSpeed: 26, accel: 13, reverseMax: -10, steerRate: 2.4, grip: 0.88, health: 360, mass: 1550, length: 4.8, width: 2.2, height: 1.50 },
+      muscle: { maxSpeed: 31, accel: 21, reverseMax: -11, steerRate: 2.5, grip: 0.82, health: 390, mass: 1700, length: 5.0, width: 2.2, height: 1.45 },
+      police: { maxSpeed: 32, accel: 17, reverseMax: -11, steerRate: 2.6, grip: 0.90, health: 420, mass: 1650, length: 4.9, width: 2.2, height: 1.55 },
+      taxi: { maxSpeed: 25, accel: 13, reverseMax: -10, steerRate: 2.4, grip: 0.88, health: 360, mass: 1550, length: 4.8, width: 2.2, height: 1.50 },
+      truck: { maxSpeed: 21, accel: 10, reverseMax: -8, steerRate: 1.8, grip: 0.85, health: 700, mass: 3800, length: 6.4, width: 2.5, height: 2.80 },
+      bus: { maxSpeed: 19, accel: 8.5, reverseMax: -7, steerRate: 1.5, grip: 0.86, health: 950, mass: 6500, length: 8.4, width: 2.6, height: 2.90 },
+    }[type] || { maxSpeed: 26, accel: 13, reverseMax: -10, steerRate: 2.4, grip: 0.88, health: 360, mass: 1550, length: 4.8, width: 2.2, height: 1.50 };
 
     return {
       x, z, y: 0,
       angle, // radians (0 = facing North/+Z)
       speed: 0,
       lateralSpeed: 0,
+      lateralVelocity: 0,
       steer: 0, // current wheel steer
       angularVel: 0,
+      pitch: 0, // vehicle body nose pitch (acceleration squat / braking dive)
+      roll: 0, // vehicle body roll (cornering lean)
       type,
       ...specs,
       maxHealth: specs.health,
@@ -44,6 +48,8 @@ export class VehiclePhysics {
   static updateVehicle(car, dt, inputs = {}) {
     if (car.wrecked) {
       car.speed *= Math.max(0, 1 - 3 * dt);
+      car.pitch *= Math.max(0, 1 - 5 * dt);
+      car.roll *= Math.max(0, 1 - 5 * dt);
       return;
     }
 
@@ -51,11 +57,11 @@ export class VehiclePhysics {
     car.isAccelerating = throttle > 0;
     car.isBraking = throttle < 0 || handbrake;
 
-    // Steering response
+    // Steering response with speed sensitivity
     const targetSteer = steer * 0.55;
     car.steer += (targetSteer - car.steer) * Math.min(1.0, 12 * dt);
 
-    // Acceleration & Braking
+    // Acceleration & Braking with momentum
     if (throttle > 0) {
       if (car.speed < 0) {
         // Braking while in reverse
@@ -76,27 +82,27 @@ export class VehiclePhysics {
         if (car.speed < car.reverseMax) car.speed = car.reverseMax;
       }
     } else {
-      // Natural engine drag
+      // Natural rolling engine drag
       car.speed *= Math.max(0, 1 - 1.2 * dt);
     }
 
-    // Handbrake / Drift
+    // Handbrake / Drift Dynamics
     let grip = car.grip;
     if (handbrake) {
       car.speed *= Math.max(0, 1 - 1.8 * dt);
-      grip *= 0.45; // Slide easily
+      grip *= 0.40; // Reduced lateral friction for powerslide
       car.isDrifting = Math.abs(car.speed) > 5;
     } else {
-      car.isDrifting = Math.abs(car.speed) > 14 && Math.abs(car.steer) > 0.25;
+      car.isDrifting = Math.abs(car.speed) > 13 && Math.abs(car.steer) > 0.22;
     }
 
     if (car.isDrifting) {
       car.driftFactor = Math.min(1.0, car.driftFactor + 4 * dt);
-      // Spawn tire smoke particles
+      // Spawn tire smoke particles at rear wheels
       const sin = Math.sin(car.angle);
       const cos = Math.cos(car.angle);
-      const rearX = car.x - sin * 1.8;
-      const rearZ = car.z - cos * 1.8;
+      const rearX = car.x - sin * (car.length * 0.4);
+      const rearZ = car.z - cos * (car.length * 0.4);
       if (inputs.isPlayer) {
         particles.emit('smoke', rearX, 0.2, rearZ, 1, { size: 0.35, up: 0.5 });
         audio.playTireScreech();
@@ -105,7 +111,21 @@ export class VehiclePhysics {
       car.driftFactor = Math.max(0, car.driftFactor - 3 * dt);
     }
 
-    // Angular turning (steering turns the car based on forward speed)
+    // Body pitch & roll weight transfer:
+    // Nose rises under acceleration; dives under hard braking
+    let targetPitch = 0;
+    if (car.isBraking && car.speed > 2) {
+      targetPitch = -0.045; // Nose dive
+    } else if (car.isAccelerating && car.speed < car.maxSpeed * 0.8) {
+      targetPitch = 0.035; // Nose squat
+    }
+    car.pitch = (car.pitch || 0) + (targetPitch - (car.pitch || 0)) * Math.min(1.0, 9 * dt);
+
+    // Body roll away from turn direction (centrifugal lean)
+    const targetRoll = -(car.steer * (car.speed / (car.maxSpeed * 0.6))) * 0.06;
+    car.roll = (car.roll || 0) + (targetRoll - (car.roll || 0)) * Math.min(1.0, 9 * dt);
+
+    // Angular turning with speed sensitivity
     const turnSensitivity = (car.speed >= 0 ? 1 : -1) * (1 - Math.min(0.5, Math.abs(car.speed) / (car.maxSpeed * 1.6)));
     const turnAmount = car.steer * car.steerRate * (car.speed / 14) * turnSensitivity;
     car.angle += turnAmount * dt;
@@ -118,8 +138,17 @@ export class VehiclePhysics {
     const forwardX = sinA * car.speed * dt;
     const forwardZ = cosA * car.speed * dt;
 
-    car.x += forwardX;
-    car.z += forwardZ;
+    // Lateral slide momentum during drift
+    if (car.isDrifting) {
+      car.lateralVelocity = (car.lateralVelocity || 0) + car.steer * car.speed * 0.25 * dt;
+    } else {
+      car.lateralVelocity = (car.lateralVelocity || 0) * Math.max(0, 1.0 - 8 * dt);
+    }
+    const lateralX = -cosA * (car.lateralVelocity || 0) * dt;
+    const lateralZ = sinA * (car.lateralVelocity || 0) * dt;
+
+    car.x += forwardX + lateralX;
+    car.z += forwardZ + lateralZ;
 
     // Check collision with city buildings/props
     const colRadius = car.width * 0.75;

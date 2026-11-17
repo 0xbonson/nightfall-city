@@ -61,8 +61,8 @@ export class Weapon {
       z: dir.x * Math.sin(angleOffset) + dir.z * Math.cos(angleOffset),
     };
 
-    // Raycast bullet trajectory (max range 120m)
-    const maxRange = 120;
+    // Raycast bullet trajectory (max range in meters)
+    const maxRange = WEAPON_MAX_EFFECTIVE_RANGE;
     const targetX = origin.x + finalDir.x * maxRange;
     const targetZ = origin.z + finalDir.z * maxRange;
 

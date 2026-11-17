@@ -229,6 +229,12 @@ export class Minimap {
     ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
     ctx.font = 'bold 9px system-ui, sans-serif';
     ctx.fillText('E', cx + Math.cos(eAngle) * (r - 10), cy + Math.sin(eAngle) * (r - 10));
+
+    // South and West Cardinal Indicators
+    const sAngle = nAngle + Math.PI;
+    ctx.fillText('S', cx + Math.cos(sAngle) * (r - 10), cy + Math.sin(sAngle) * (r - 10));
+    const wAngle = nAngle + (Math.PI * 3) / 2;
+    ctx.fillText('W', cx + Math.cos(wAngle) * (r - 10), cy + Math.sin(wAngle) * (r - 10));
   }
 }
 

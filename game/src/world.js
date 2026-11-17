@@ -17,6 +17,12 @@ export class CityWorld {
     this.palmTrees = [];
     this.parkedCars = [];
     this.flockBirds = [];
+    this.fireEscapes = [];
+    this.billboards = [];
+    this.waterTanks = [];
+    this.roadWear = [];
+    this.busShelters = [];
+    this.trafficLightTimer = 0;
     this.bounds = { ...CONFIG.world };
 
     this.initWorld();
@@ -28,6 +34,10 @@ export class CityWorld {
     this.generateDistantLandmarks();
     this.generateGantryCranes();
     this.generateProps();
+    this.generateFireEscapes();
+    this.generateBillboards();
+    this.generateWaterTanks();
+    this.generateRoadWear();
     this.generateParkedCars();
     this.generateHarbourBirds();
     this.buildTrafficWaypoints();
@@ -53,6 +63,14 @@ export class CityWorld {
         isMajor: z === 0,
       });
     }
+
+    // Ocean Promenade Seaside Boulevard along Marina & Beach
+    this.roads.push({
+      x1: -240, z1: 178, x2: 60, z2: 178,
+      width: 14,
+      isMajor: false,
+      isPromenade: true,
+    });
   }
 
   generateDistricts() {
@@ -557,6 +575,11 @@ export class CityWorld {
       this.palmTrees.push({ x, z: 18, scale: 1.0 + (Math.abs(x) % 5) * 0.05 });
       this.palmTrees.push({ x, z: 234, scale: 1.1 + (Math.abs(x) % 4) * 0.05 });
     }
+    // Ocean Promenade seaside boulevard palm avenue lining boardwalk
+    for (let x = -230; x <= 30; x += 18) {
+      this.palmTrees.push({ x, z: 185.5, scale: 1.25 + (Math.abs(x) % 3) * 0.06 });
+      this.palmTrees.push({ x, z: 170.5, scale: 1.15 + (Math.abs(x) % 4) * 0.05 });
+    }
     for (let z = 20; z <= 240; z += 18) {
       this.palmTrees.push({ x: -80, z, scale: 1.15 });
       this.palmTrees.push({ x: -18, z, scale: 1.05 });
@@ -610,14 +633,23 @@ export class CityWorld {
       this.props.push({ type: 'phonebox', x: 23, z: z - 18, rotation: 0 });
     }
 
-    // 5. Bus Shelters along major avenues
-    this.props.push({ type: 'bus_shelter', x: 22.5, z: -55, rotation: 0 });
-    this.props.push({ type: 'bus_shelter', x: -22.5, z: 65, rotation: Math.PI });
-    this.props.push({ type: 'bus_shelter', x: 82.5, z: -25, rotation: 0 });
+    // 5. Bus Shelters along major avenues with waiting spots
+    const shelterLocs = [
+      { x: 22.5, z: -55, rotation: 0, waitingCount: 2 },
+      { x: -22.5, z: 65, rotation: Math.PI, waitingCount: 3 },
+      { x: 82.5, z: -25, rotation: 0, waitingCount: 2 },
+      { x: -82.5, z: -55, rotation: Math.PI, waitingCount: 2 },
+      { x: -22.5, z: -145, rotation: 0, waitingCount: 2 },
+      { x: 142.5, z: 25, rotation: Math.PI, waitingCount: 2 },
+    ];
+    for (const bs of shelterLocs) {
+      this.busShelters.push(bs);
+      this.props.push({ type: 'bus_shelter', x: bs.x, z: bs.z, rotation: bs.rotation });
+    }
 
     // 6. Bollards along corner kerbs
-    for (const rx of [-60, 0, 60]) {
-      for (const rz of [-60, 0, 60]) {
+    for (const rx of [-140, -60, 0, 60, 140]) {
+      for (const rz of [-140, -60, 0, 60, 140]) {
         const hwX = (rx === 0 ? 18 : 14) / 2 + 1.2;
         const hwZ = (rz === 0 ? 18 : 14) / 2 + 1.2;
         this.props.push({ type: 'bollard', x: rx - hwX, z: rz - hwZ });
@@ -629,8 +661,8 @@ export class CityWorld {
 
     // 7. Manholes and Kerb Storm Drains
     for (const rx of grid) {
-      for (let z = -240; z <= 240; z += 50) {
-        this.props.push({ type: 'manhole', x: rx, z });
+      for (let z = -240; z <= 240; z += 40) {
+        this.props.push({ type: 'manhole', x: rx, z: z + 6 });
         const hw = (rx === 0 ? 18 : 14) / 2 - 0.4;
         this.props.push({ type: 'drain', x: rx - hw, z: z + 15 });
         this.props.push({ type: 'drain', x: rx + hw, z: z + 15 });
@@ -651,42 +683,187 @@ export class CityWorld {
     }
   }
 
+  generateFireEscapes() {
+    // Exterior steel zigzag fire escapes on multi-story historic & commercial brick facades
+    this.fireEscapes = [
+      // Old Market Quarter buildings
+      { x: -24, z: -20, y: 0.16, width: 2.8, depth: 1.4, floors: 4, floorHeight: 3.8, facing: 'S' },
+      { x: -42, z: -20, y: 0.16, width: 2.8, depth: 1.4, floors: 5, floorHeight: 3.8, facing: 'S' },
+      { x: -100, z: -20, y: 0.16, width: 3.2, depth: 1.4, floors: 5, floorHeight: 4.2, facing: 'S' },
+      { x: -180, z: -20, y: 0.16, width: 2.8, depth: 1.4, floors: 3, floorHeight: 3.8, facing: 'S' },
+      { x: -20, z: -100, y: 0.16, width: 1.4, depth: 2.8, floors: 5, floorHeight: 4.2, facing: 'E' },
+      { x: -180, z: -88, y: 0.16, width: 2.8, depth: 1.4, floors: 4, floorHeight: 3.8, facing: 'S' },
+      { x: -20, z: -180, y: 0.16, width: 1.4, depth: 2.8, floors: 4, floorHeight: 4.0, facing: 'E' },
+      // Downtown alleys
+      { x: 50, z: -48, y: 0.16, width: 1.4, depth: 3.0, floors: 8, floorHeight: 4.5, facing: 'E' },
+      { x: 120, z: -48, y: 0.16, width: 1.4, depth: 3.0, floors: 8, floorHeight: 4.5, facing: 'E' },
+      // Docks warehouse side
+      { x: 48, z: 34, y: 0.16, width: 1.4, depth: 2.8, floors: 3, floorHeight: 4.5, facing: 'E' },
+    ];
+  }
+
+  generateBillboards() {
+    // Large commercial advertising hoardings & illuminated rooftop billboards
+    this.billboards = [
+      {
+        x: 38, y: 55, z: -36, width: 14, height: 5.5, rotation: 0,
+        brand: 'NEO COLA', slogan: 'TASTE THE METROPOLIS',
+        color: [0.88, 0.12, 0.18, 1.0], accent: [1.0, 0.85, 0.2, 1.0]
+      },
+      {
+        x: -24, y: 19, z: -20, width: 10, height: 4.0, rotation: 0,
+        brand: 'BAY CITIZEN', slogan: 'VELA BAY DAILY NEWS',
+        color: [0.15, 0.42, 0.82, 1.0], accent: [0.95, 0.95, 0.95, 1.0]
+      },
+      {
+        x: 105, y: 70, z: -34, width: 16, height: 6.0, rotation: 0,
+        brand: 'SOLANO MOTORS', slogan: 'UNLEASH THE VELOCE GT',
+        color: [0.95, 0.72, 0.12, 1.0], accent: [0.12, 0.12, 0.14, 1.0]
+      },
+      {
+        x: -32, y: 28, z: 46, width: 14, height: 5.0, rotation: Math.PI / 2,
+        brand: 'VELA SHORES', slogan: 'OCEANFRONT LUXURY SUITES',
+        color: [0.12, 0.72, 0.65, 1.0], accent: [1.0, 0.92, 0.82, 1.0]
+      },
+      {
+        x: 100, y: 20, z: 20, width: 14, height: 4.5, rotation: 0,
+        brand: 'MERIDIAN LOGISTICS', slogan: 'SEAPORT FREIGHT & HAULAGE',
+        color: [0.22, 0.35, 0.55, 1.0], accent: [0.95, 0.82, 0.16, 1.0]
+      },
+      {
+        x: 180, y: 60, z: -86, width: 12, height: 5.0, rotation: 0,
+        brand: 'CLUB LUMINA', slogan: 'VIP NIGHTS OVER VELA BAY',
+        color: [0.75, 0.15, 0.65, 1.0], accent: [0.10, 0.92, 1.0, 1.0]
+      },
+    ];
+  }
+
+  generateWaterTanks() {
+    // Rooftop cedar stave water tanks on historic and industrial roofs
+    this.waterTanks = [
+      { x: -32, y: 26, z: -100, radius: 2.4, height: 4.2 },
+      { x: -180, y: 16, z: -32, radius: 2.1, height: 3.6 },
+      { x: -100, y: 22, z: -180, radius: 2.2, height: 3.8 },
+      { x: 34, y: 16, z: 100, radius: 2.6, height: 4.4 },
+      { x: 100, y: 20, z: 100, radius: 2.5, height: 4.2 },
+      { x: 180, y: 17, z: 100, radius: 2.4, height: 4.0 },
+      { x: -180, y: 17, z: -180, radius: 2.0, height: 3.5 },
+    ];
+  }
+
+  generateRoadWear() {
+    // Asphalt patches representing street repair tar patches, road wear, and tire skid marks
+    const grid = CONFIG.world.roadGrid;
+    for (const rx of grid) {
+      for (let z = -220; z <= 220; z += 55) {
+        this.roadWear.push({
+          x: rx + (Math.sin(rx + z) > 0 ? 2.5 : -2.5),
+          z: z + 8,
+          w: 3.2,
+          d: 4.5,
+          type: 'patch'
+        });
+      }
+    }
+    for (const rz of grid) {
+      for (let x = -220; x <= 220; x += 55) {
+        this.roadWear.push({
+          x: x + 8,
+          z: rz + (Math.cos(x + rz) > 0 ? 2.5 : -2.5),
+          w: 4.5,
+          d: 3.2,
+          type: 'patch'
+        });
+      }
+    }
+  }
+
   generateParkedCars() {
-    // Parked cars along kerbs to give streets life and realism
+    // Parked cars along kerbs to give streets life and realism (varied types and colors)
     this.parkedCars = [
       // Downtown Vela parking
       { x: 19.5, z: -40, angle: 1.57, type: 'sports', color: [0.85, 0.15, 0.15] }, // Red sports car
       { x: 19.5, z: -70, angle: 1.57, type: 'sedan', color: [0.20, 0.35, 0.85] },  // Blue sedan
+      { x: 19.5, z: -110, angle: 1.57, type: 'taxi', color: [0.95, 0.82, 0.10] },  // Downtown taxi
       { x: 92, z: -45, angle: 0, type: 'sports', color: [0.95, 0.75, 0.12] },      // Gold coupe
       { x: 92, z: -135, angle: 3.14, type: 'muscle', color: [0.15, 0.15, 0.18] },   // Dark muscle car
+      { x: 168, z: -45, angle: 0, type: 'sedan', color: [0.90, 0.90, 0.92] },     // White sedan
+      { x: 168, z: -125, angle: 3.14, type: 'sports', color: [0.12, 0.75, 0.85] },  // Azure sports
 
       // Old Market Quarter
       { x: -70, z: -40, angle: 1.57, type: 'muscle', color: [0.72, 0.35, 0.85] },  // Vane Nero GT!
       { x: -130, z: -70, angle: 0, type: 'sedan', color: [0.88, 0.45, 0.12] },
+      { x: -19.5, z: -60, angle: -1.57, type: 'truck', color: [0.35, 0.38, 0.42] }, // Old town delivery
+      { x: -19.5, z: -120, angle: -1.57, type: 'sedan', color: [0.22, 0.55, 0.32] }, // Forest green
+      { x: -92, z: -140, angle: 3.14, type: 'muscle', color: [0.85, 0.22, 0.18] },
 
       // Meridian Shipping Docks
       { x: 70, z: 40, angle: 0, type: 'truck', color: [0.45, 0.48, 0.52] },
       { x: 150, z: 70, angle: 1.57, type: 'truck', color: [0.25, 0.30, 0.35] },
       { x: 130, z: 130, angle: 0, type: 'muscle', color: [0.85, 0.15, 0.15] },
+      { x: 19.5, z: 75, angle: 1.57, type: 'truck', color: [0.88, 0.52, 0.12] },  // Freight orange
+      { x: 92, z: 160, angle: 0, type: 'sedan', color: [0.30, 0.32, 0.36] },
 
       // Ocean Promenade & Beach
       { x: -20.5, z: 45, angle: 1.57, type: 'sports', color: [0.15, 0.75, 0.55] }, // Teal roadster
       { x: -140, z: 25, angle: 1.57, type: 'taxi', color: [0.95, 0.82, 0.10] },
       { x: -210, z: 80, angle: 0, type: 'sports', color: [0.92, 0.92, 0.92] },
+      { x: -20.5, z: 120, angle: 1.57, type: 'sports', color: [0.95, 0.25, 0.60] }, // Magenta convertible
+      { x: -92, z: 45, angle: 0, type: 'sedan', color: [0.94, 0.88, 0.76] },      // Cream resort sedan
+      { x: -168, z: 120, angle: 3.14, type: 'muscle', color: [0.18, 0.18, 0.20] },
     ];
   }
 
   generateHarbourBirds() {
     // Flock of seagulls circling over the Docks harbour
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 12; i++) {
       this.flockBirds.push({
         baseX: 150,
         baseY: 26 + (i % 4) * 2.5,
         baseZ: 190,
         radius: 25 + (i % 5) * 6,
         speed: 0.6 + (i % 3) * 0.15,
+        phase: (i / 12) * Math.PI * 2,
+      });
+    }
+    // Coastal seagulls soaring along Ocean Promenade & beach
+    for (let i = 0; i < 10; i++) {
+      this.flockBirds.push({
+        baseX: -160,
+        baseY: 22 + (i % 3) * 2.5,
+        baseZ: 180,
+        radius: 35 + (i % 4) * 8,
+        speed: 0.5 + (i % 3) * 0.12,
         phase: (i / 10) * Math.PI * 2,
       });
+    }
+  }
+
+  update(dt) {
+    // Advance master traffic light simulation timer
+    this.trafficLightTimer += dt;
+  }
+
+  // Returns current light state ('green', 'amber', 'red') for traffic moving along NS or EW axis
+  getTrafficLightColor(axis = 'NS') {
+    const cycle = (CONFIG.trafficLights?.nsGreenDuration || 9.0) +
+                  (CONFIG.trafficLights?.nsAmberDuration || 2.5) +
+                  (CONFIG.trafficLights?.ewGreenDuration || 9.0) +
+                  (CONFIG.trafficLights?.ewAmberDuration || 2.5);
+    const t = this.trafficLightTimer % cycle;
+    const nsGreenEnd = CONFIG.trafficLights?.nsGreenDuration || 9.0;
+    const nsAmberEnd = nsGreenEnd + (CONFIG.trafficLights?.nsAmberDuration || 2.5);
+    const ewGreenEnd = nsAmberEnd + (CONFIG.trafficLights?.ewGreenDuration || 9.0);
+
+    if (axis === 'NS') {
+      if (t < nsGreenEnd) return 'green';
+      if (t < nsAmberEnd) return 'amber';
+      return 'red';
+    } else {
+      // EW axis
+      if (t < nsAmberEnd) return 'red';
+      if (t < ewGreenEnd) return 'green';
+      return 'amber';
     }
   }
 
