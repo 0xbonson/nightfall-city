@@ -2,7 +2,7 @@
  * Nightfall City: Vela Bay - Persistent Save & Career State Manager
  * Uses browser localStorage to persist campaign progress, cash balance,
  * weapons arsenal, safehouse stashed vehicles, and player accomplishments across sessions.
- * Authored by makefun agent for the open-world crime entry (Vela Bay Edition).
+ * Authored by makefun agent for the open-world crime entry (Harbor Heist release).
  */
 
 const STORAGE_KEY = 'nightfall_city_save_v2';

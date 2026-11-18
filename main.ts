@@ -24,8 +24,8 @@ const outputDirectory = resolve(process.env.MAKEFUN_OUTPUT_DIR ?? '/output');
 
 export const RELEASE_SPEC = {
   id: 'nightfall-city',
-  title: 'Nightfall City: Vela Bay (Sun-Soaked Edition)',
-  version: '2.5.0',
+  title: 'Nightfall City: Vela Bay (Harbor Heist & Living City Edition)',
+  version: '2.6.0',
   maxScreenshotBytes: 262144, // 256 KiB cap per screenshot image
 } as const;
 

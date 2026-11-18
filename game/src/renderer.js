@@ -1,6 +1,7 @@
 /**
  * Nightfall City: Vela Bay - High-Fidelity WebGL Renderer
  * Authored by makefun agent for the open-world crime game challenge.
+ * Harbor Heist & Living City Edition - WebGL rendering pipeline.
  *
  * Implements:
  * - Directional low-sun lighting with golden sunlit faces and cool blue-teal shade on back-faces

@@ -2,16 +2,16 @@
   {
     "name": "1-city-street.png",
     "query": "?shot=1",
-    "description": "Cover shot: wide street view from Downtown sidewalk with protagonist Rhea 'Rook' Solano in the foreground, vibrant colorful Mediterranean building facades with balconies, awnings, and rooftop water tanks, warm sunlit sky, active traffic and pedestrians, distant police cruiser on patrol, and complete HUD with rotating minimap, health/armor, cash stash, wanted stars, and active safehouse mission objective.",
+    "description": "Cover shot: city alive in motion and under pressure along Downtown Avenue. Protagonist Rhea 'Rook' Solano in the foreground on foot with a visible weapon, having just stepped out of an angled stolen sports car at the kerb; street active with moving traffic (taxi, sedan, oncoming hatchback), double-parked delivery hauler, and kerbside muscle car; pedestrians walking in pairs along sidewalks; responding police cruiser with flashing emergency lightbar in the mid-distance; warm late-afternoon sun and vibrant facades; complete HUD with minimap, wanted stars, money, health/armor bars, and mission objective banner.",
     "camera": {
-      "pos": [118.0, 2.1, -91.0],
-      "target": [123.0, 1.8, -128.0],
+      "pos": [118.0, 2.15, -91.0],
+      "target": [120.5, 1.85, -126.0],
       "fov": 63
     },
     "district": "Downtown Vela",
-    "wantedStars": 1,
+    "wantedStars": 2,
     "cash": 18450,
-    "objective": "DELIVER THE VELOCE GT TO DOWNTOWN SAFEHOUSE (140M)"
+    "objective": "DELIVER THE STOLEN VELOCE GT TO SAFEHOUSE (140M)"
   },
   {
     "name": "2-car-promenade.png",
@@ -44,15 +44,15 @@
   {
     "name": "4-dock-heist.png",
     "query": "?shot=4",
-    "description": "Meridian Cargo Docks heist operation: protagonist in foreground holding tactical carbine, contraband crates and target hauler van in mid ground with glowing 3D objective marker, towering 36m yellow container gantry crane and vivid container stacks framing Pier 7 in background, and full tactical HUD.",
+    "description": "Heist in progress at Meridian Cargo Docks Pier 7: protagonist in foreground visibly armed with a tactical carbine in two-handed ready stance; mid ground features contraband loot crates on wooden pallets with glowing cargo and hovering 3D golden objective beacon, target heist van with rear doors wide open, bollards along the quay lip, and a moored cargo barge in the water; background shows warehouse with roll-up shutter door, colourful multi-tier container stacks, dockside jib crane and 36m gantry crane against the sunset sky, gulls over the water basin, and far shore breakwater; complete HUD with mission banner, wanted stars, minimap, cash, and ammo.",
     "camera": {
-      "pos": [140.2, 1.95, 102.8],
-      "target": [148.0, 2.05, 118.0],
+      "pos": [142.2, 2.15, 104.5],
+      "target": [154.5, 2.25, 126.5],
       "fov": 62
     },
     "district": "Meridian Cargo Docks",
     "wantedStars": 3,
     "cash": 75000,
-    "objective": "SEIZE THE CONTRABAND CRATES AT PIER 7"
+    "objective": "SEIZE THE CONTRABAND CRATES AT PIER 7 (10M)"
   }
 ]

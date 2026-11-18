@@ -16,7 +16,7 @@
 import { clamp, normalizeAngle } from './math.js';
 
 export class Pedestrian {
-  constructor(x, y, z, rotY = 0) {
+  constructor(x, y, z, rotY = 0, walkCycle = null) {
     this.x = x;
     this.y = y;
     this.z = z;
@@ -25,7 +25,7 @@ export class Pedestrian {
     this.vx = 0;
     this.vz = 0;
     this.speed = 1.6 + Math.random() * 0.6;
-    this.walkCycle = Math.random() * Math.PI * 2;
+    this.walkCycle = walkCycle !== null ? walkCycle : Math.random() * Math.PI * 2;
 
     this.health = 30;
     this.alive = true;
@@ -309,7 +309,6 @@ export class PedestrianManager {
   }
 
   initCityPedestrians() {
-    // Populate downtown sidewalks, market quarter, and coastal promenade
     const sidewalkZones = [
       { xMin: 110, xMax: 160, zMin: -160, zMax: -80 }, // Downtown Vela sidewalks
       { xMin: -95, xMax: -30, zMin: -160, zMax: -70 },  // Old Market Quarter
@@ -326,8 +325,8 @@ export class PedestrianManager {
     }
   }
 
-  spawn(x, y, z, rot = 0) {
-    const p = new Pedestrian(x, y, z, rot);
+  spawn(x, y, z, rot = 0, walkCycle = null) {
+    const p = new Pedestrian(x, y, z, rot, walkCycle);
     this.pedestrians.push(p);
     return p;
   }
@@ -355,7 +354,6 @@ export class PedestrianManager {
       const p = this.pedestrians[i];
       p.update(dt, world, player, vehicles);
 
-      // If dead, drop cash
       if (!p.alive && !p.hasDroppedCash) {
         p.hasDroppedCash = true;
         this.pickups.push(new CashPickup(p.x, p.y, p.z, 25 + Math.floor(Math.random() * 75)));

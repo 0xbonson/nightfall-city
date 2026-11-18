@@ -12,7 +12,9 @@
  * - Street level detail: pavements with kerbs, zebra crossings with tactile paving, kerbside parked cars,
  *   lush palms and slender Italian cypresses, cast-iron lamp posts, park benches, litter bins, bus shelters,
  *   traffic lights, road markings, manhole covers, and puddles that catch the sky
- * - Marina, harbor suspension bridge, industrial cargo docks with 36m gantry crane, and distant Monte Sereno hills
+ * - Marina, harbor suspension bridge, working Meridian Cargo Docks with Pier 7 quay slabs, moored cargo barge,
+ *   far shore breakwater, harbour cranes, stacked containers, warehouse roller door, bollards, gulls,
+ *   and distant Monte Sereno hills
  */
 
 import { WORLD, DISTRICTS, LIGHTING } from './config.js';
@@ -599,103 +601,81 @@ export class World {
       { zMid: -82.5, length: 47 },
     ];
 
-    const facadeColors = [
-      [0.86, 0.42, 0.24, 1.0], // Terracotta Rust
-      [0.94, 0.76, 0.42, 1.0], // Mediterranean Ochre
-      [0.88, 0.82, 0.72, 1.0], // Travertine Cream
-      [0.58, 0.72, 0.52, 1.0], // Tuscan Sage Green
-      [0.82, 0.48, 0.42, 1.0], // Coral Rose
+    // Historic Mediterranean pastel facades: terracotta red, limewash yellow, warm sienna, olive plaster
+    const oldTownPalettes = [
+      { wall: [0.86, 0.44, 0.28, 1.0], roof: [0.72, 0.28, 0.18, 1.0], shutter: [0.22, 0.52, 0.42, 1.0] },
+      { wall: [0.94, 0.82, 0.48, 1.0], roof: [0.75, 0.32, 0.20, 1.0], shutter: [0.25, 0.35, 0.65, 1.0] },
+      { wall: [0.82, 0.58, 0.40, 1.0], roof: [0.68, 0.25, 0.16, 1.0], shutter: [0.32, 0.48, 0.28, 1.0] },
+      { wall: [0.92, 0.88, 0.80, 1.0], roof: [0.74, 0.30, 0.18, 1.0], shutter: [0.78, 0.38, 0.22, 1.0] },
     ];
 
-    let cIdx = 0;
+    let oIdx = 0;
     for (const bx of blockDefs) {
       for (const bz of rowDefs) {
         this.addBox(bx.xMid, 0, bz.zMid, bx.width, WORLD.CURB_HEIGHT, bz.length, sidewalkColor, [1, 1], false, true);
 
-        const subH1 = 18 + ((Math.abs(Math.floor(bx.xMid))) % 10);
-        const subH2 = 15 + ((Math.abs(Math.floor(bz.zMid))) % 8);
-        const col1 = facadeColors[(cIdx++) % facadeColors.length];
-        const col2 = facadeColors[(cIdx++) % facadeColors.length];
+        // Subdivide block into 4 charming historic tenements
+        const subW = (bx.width - 4) * 0.5;
+        const subL = (bz.length - 4) * 0.5;
 
-        // West townhouse
-        this.addBox(bx.xMid - bx.width * 0.22, WORLD.CURB_HEIGHT, bz.zMid, bx.width * 0.46, subH1, bz.length - 6, col1, [0.4, 0.4], true, true);
-        this.addGroundShadow(bx.xMid - bx.width * 0.22, bz.zMid, bx.width * 0.46, bz.length - 6, subH1);
+        for (let ix = 0; ix < 2; ix++) {
+          for (let iz = 0; iz < 2; iz++) {
+            const cx = bx.xMid - (bx.width - 4) * 0.25 + ix * subW;
+            const cz = bz.zMid - (bz.length - 4) * 0.25 + iz * subL;
+            const h = 14 + ((ix * 7 + iz * 11 + bx.xMid * 3) % 12);
+            const pal = oldTownPalettes[(oIdx++) % oldTownPalettes.length];
 
-        // East townhouse
-        this.addBox(bx.xMid + bx.width * 0.22, WORLD.CURB_HEIGHT, bz.zMid, bx.width * 0.46, subH2, bz.length - 6, col2, [0.4, 0.4], true, true);
-        this.addGroundShadow(bx.xMid + bx.width * 0.22, bz.zMid, bx.width * 0.46, bz.length - 6, subH2);
+            // Tenement building mass
+            this.addBox(cx, WORLD.CURB_HEIGHT, cz, subW - 1.2, h, subL - 1.2, pal.wall, [0.3, 0.3], true, true);
 
-        // Storefront striped awnings
-        this.addAwning(bx.xMid - bx.width * 0.22, WORLD.CURB_HEIGHT + 3.4, bz.zMid - bz.length * 0.5 + 2.5, bx.width * 0.42, 3.2, [0.22, 0.58, 0.38, 1.0], [0.96, 0.94, 0.88, 1.0]);
-        this.addAwning(bx.xMid + bx.width * 0.22, WORLD.CURB_HEIGHT + 3.4, bz.zMid - bz.length * 0.5 + 2.5, bx.width * 0.42, 3.2, [0.88, 0.26, 0.22, 1.0], [0.96, 0.94, 0.88, 1.0]);
+            // Terracotta barrel-tile sloping roof cap
+            this.addBox(cx, WORLD.CURB_HEIGHT + h, cz, subW - 0.6, 2.4, subL - 0.6, pal.roof, [1, 1], false, true);
 
-        // Wrought-iron balconies on upper floors
-        this.addBox(bx.xMid - bx.width * 0.22, WORLD.CURB_HEIGHT + 7.5, bz.zMid - bz.length * 0.5 + 0.8, bx.width * 0.36, 0.9, 1.4, [0.22, 0.24, 0.28, 1.0], [1, 1], false, true);
-        this.addBox(bx.xMid + bx.width * 0.22, WORLD.CURB_HEIGHT + 7.5, bz.zMid - bz.length * 0.5 + 0.8, bx.width * 0.36, 0.9, 1.4, [0.22, 0.24, 0.28, 1.0], [1, 1], false, true);
+            // Ground shadow
+            this.addGroundShadow(cx, cz, subW - 1.2, subL - 1.2, h);
 
-        // Terracotta flower boxes on balconies
-        this.addBox(bx.xMid - bx.width * 0.22, WORLD.CURB_HEIGHT + 8.1, bz.zMid - bz.length * 0.5 + 0.8, bx.width * 0.30, 0.35, 0.35, [0.82, 0.38, 0.22, 1.0], [1, 1], false, true);
-        this.addBox(bx.xMid - bx.width * 0.22, WORLD.CURB_HEIGHT + 8.4, bz.zMid - bz.length * 0.5 + 0.8, bx.width * 0.28, 0.20, 0.30, [0.96, 0.30, 0.35, 1.0], [1, 1], false, false);
+            // Shuttered windows and small balconies
+            for (let fY = WORLD.CURB_HEIGHT + 3.8; fY < h; fY += 3.8) {
+              this.addBox(cx, fY, cz - subL * 0.5 + 0.4, subW * 0.6, 1.4, 0.2, pal.shutter, [1, 1], false, false);
+              this.addBox(cx, fY - 0.2, cz - subL * 0.5 + 0.6, subW * 0.55, 0.25, 0.7, [0.18, 0.20, 0.22, 1.0], [1, 1], false, false);
+            }
 
-        // Rooftop terracotta tiles and chimneys
-        this.addBox(bx.xMid - bx.width * 0.22, WORLD.CURB_HEIGHT + subH1, bz.zMid, bx.width * 0.48, 1.2, bz.length - 5, [0.74, 0.34, 0.20, 1.0], [1, 1], false, true);
-        this.addBox(bx.xMid + bx.width * 0.22, WORLD.CURB_HEIGHT + subH2, bz.zMid, bx.width * 0.48, 1.2, bz.length - 5, [0.74, 0.34, 0.20, 1.0], [1, 1], false, true);
-
-        // Brick chimneys
-        this.addBox(bx.xMid - bx.width * 0.22 - 2.5, WORLD.CURB_HEIGHT + subH1 + 1.2, bz.zMid + 3, 1.2, 2.4, 1.2, [0.65, 0.32, 0.22, 1.0], [1, 1], false, true);
-        this.addBox(bx.xMid + bx.width * 0.22 + 2.5, WORLD.CURB_HEIGHT + subH2 + 1.2, bz.zMid - 3, 1.2, 2.4, 1.2, [0.65, 0.32, 0.22, 1.0], [1, 1], false, true);
+            // Striped sidewalk awning
+            this.addAwning(cx, WORLD.CURB_HEIGHT + 2.8, cz - subL * 0.5 + 0.2, subW * 0.75, 2.2, [0.92, 0.32, 0.22, 1.0], [0.95, 0.92, 0.85, 1.0]);
+          }
+        }
       }
     }
   }
 
   buildPromenade(sidewalkColor) {
-    const blockDefs = [
-      { xMid: -80.0, width: 32 },
-      { xMid: -27.5, width: 37 },
-    ];
+    // Seaside promenade luxury resorts and beachfront plazas
     const rowDefs = [
+      { zMid: -147.5, length: 47 },
+      { zMid: -82.5, length: 47 },
       { zMid: 52.5, length: 47 },
       { zMid: 117.5, length: 47 },
-      { zMid: 182.5, length: 47 },
     ];
 
-    // Art Deco Pastel Palettes: Brilliant white, coastal aqua mint, sunset peach, coral pink
-    const resortPalettes = [
-      { body: [0.96, 0.96, 0.98, 1.0], trim: [0.15, 0.85, 0.75, 1.0], name: 'HOTEL PALOMA' },
-      { body: [0.62, 0.90, 0.86, 1.0], trim: [0.98, 0.98, 1.0, 1.0], name: 'RIVIERA RESORT' },
-      { body: [0.98, 0.72, 0.66, 1.0], trim: [0.96, 0.92, 0.85, 1.0], name: 'SOLARIS INN' },
-      { body: [0.98, 0.88, 0.68, 1.0], trim: [0.20, 0.80, 0.72, 1.0], name: 'CLUB OCEANA' },
-    ];
+    const hotelColor = [0.95, 0.92, 0.86, 1.0]; // Mediterranean pearl white
+    const glassTeal = [0.18, 0.65, 0.75, 0.85];
 
-    let rIdx = 0;
-    for (const bx of blockDefs) {
-      for (const bz of rowDefs) {
-        this.addBox(bx.xMid, 0, bz.zMid, bx.width, WORLD.CURB_HEIGHT, bz.length, sidewalkColor, [1, 1], false, true);
+    for (const rz of rowDefs) {
+      const cx = -90;
+      const cz = rz.zMid;
+      this.addBox(cx, 0, cz, 34, WORLD.CURB_HEIGHT, rz.length, sidewalkColor, [1, 1], false, true);
 
-        const height = 30 + ((Math.abs(Math.floor(bx.xMid * 5 + bz.zMid * 7))) % 24);
-        const resort = resortPalettes[(rIdx++) % resortPalettes.length];
+      // Resort hotel stepped structure
+      this.addBox(cx + 4, WORLD.CURB_HEIGHT, cz, 22, 18, rz.length - 8, hotelColor, [0.4, 0.4], true, true);
+      this.addBox(cx + 6, WORLD.CURB_HEIGHT + 18, cz, 16, 10, rz.length - 14, hotelColor, [0.4, 0.4], true, true);
 
-        this.addBox(bx.xMid, WORLD.CURB_HEIGHT, bz.zMid, bx.width - 6, height, bz.length - 6, resort.body, [0.35, 0.35], true, true);
-        this.addGroundShadow(bx.xMid, bz.zMid, bx.width - 6, bz.length - 6, height);
-
-        // Tiered cantilevered white balcony ribbons with railings
-        const balconyWhite = [1.0, 1.0, 1.0, 1.0];
-        for (let y = WORLD.CURB_HEIGHT + 4.5; y < height; y += 4.5) {
-          const balZ = bz.zMid - bz.length * 0.5 + 2.5;
-          const balW = bx.width - 8;
-          // Balcony floor
-          this.addBox(bx.xMid, y, balZ, balW, 0.40, 2.0, balconyWhite, [1, 1], false, true);
-          // Balcony railing
-          this.addBox(bx.xMid, y + 0.45, balZ - 0.9, balW, 0.85, 0.1, [0.95, 0.95, 0.98, 1.0], [1, 1], false, false);
-        }
-
-        // Rooftop Art Deco spires and neon signs
-        this.addBox(bx.xMid, WORLD.CURB_HEIGHT + height, bz.zMid, 6.0, 4.0, 6.0, resort.trim, [1, 1], false, true);
-        this.addBox(bx.xMid, WORLD.CURB_HEIGHT + height + 4.0, bz.zMid, 1.0, 6.5, 1.0, [0.15, 0.85, 0.75, 1.0], [1, 1], false, false);
-
-        // Illuminated hotel facade signboard
-        this.addBox(bx.xMid, WORLD.CURB_HEIGHT + height - 2.5, bz.zMid - bz.length * 0.5 + 2.8, 9.5, 1.2, 0.35, [0.15, 0.88, 0.85, 1.0], [1, 1], false, false);
+      // Ribbon wrap-around balconies facing the sea (-X)
+      for (let bY = WORLD.CURB_HEIGHT + 4.5; bY < 18; bY += 4.5) {
+        this.addBox(cx - 7.5, bY, cz, 1.8, 0.35, rz.length - 10, hotelColor, [1, 1], false, true);
+        this.addBox(cx - 8.3, bY + 0.4, cz, 0.12, 0.85, rz.length - 10, glassTeal, [1, 1], false, false);
       }
+
+      this.addGroundShadow(cx + 4, cz, 22, rz.length - 8, 28);
     }
   }
 
@@ -777,51 +757,107 @@ export class World {
   }
 
   generateDocksAndCranes() {
-    // Meridian Cargo Docks in South-East district:
-    // Sun-drenched warm Mediterranean quayside concrete, never murky black
-    const dockApron = [0.72, 0.70, 0.65, 1.0];
-    this.addBox(140, 0.08, 140, 160, 0.16, 160, dockApron, [1, 1], false, true);
+    // =========================================================================
+    // Meridian Cargo Docks & Working Harbour at Pier 7 (South-East District)
+    // =========================================================================
+    // The working harbour quay spans X = 100 to X = 162, Z = 60 to 220.
+    // Water basin begins at X = 162, with quay wall dropping into harbour basin.
+    // Far shore breakwater and coastline across the water at X = 210..270.
 
-    // Safety yellow & black hazard boundary strip along wharf edge
-    const hazardYellow = [1.0, 0.82, 0.08, 1.0];
-    this.addBox(140, 0.18, 220, 160, 0.04, 1.8, hazardYellow, [1, 1], false, false);
-    this.addBox(220, 0.18, 140, 1.8, 0.04, 160, hazardYellow, [1, 1], false, false);
+    // 1. Sunlit Concrete Quayside Slab with etched expansion joints
+    const dockApron = [0.74, 0.72, 0.68, 1.0];      // Sun-warmed reinforced harbour concrete
+    const quayWidth = 62.0;                         // X = 100..162
+    const quayLength = 160.0;                       // Z = 60..220
+    const quayMidX = 131.0;
+    const quayMidZ = 140.0;
 
-    // Deep harbor ocean water basin
-    const harborColor = [0.06, 0.46, 0.62, 0.95];
-    const bMinX = 222, bMaxX = WORLD.HALF_SIZE + 80;
-    const bMinZ = 60, bMaxZ = WORLD.HALF_SIZE + 80;
-    const bPts = [
-      [bMinX, WORLD.SEA_LEVEL, bMinZ],
-      [bMaxX, WORLD.SEA_LEVEL, bMinZ],
-      [bMaxX, WORLD.SEA_LEVEL, bMaxZ],
-      [bMinX, WORLD.SEA_LEVEL, bMinZ],
-      [bMaxX, WORLD.SEA_LEVEL, bMaxZ],
-      [bMinX, WORLD.SEA_LEVEL, bMaxZ],
-    ];
-    for (let p = 0; p < 6; p++) {
-      this.waterPositions.push(bPts[p][0], bPts[p][1], bPts[p][2]);
-      this.waterNormals.push(0, 1, 0);
-      this.waterColors.push(harborColor[0], harborColor[1], harborColor[2], harborColor[3]);
-      this.waterUvs.push(bPts[p][0] * 0.04, bPts[p][2] * 0.04);
+    this.addBox(quayMidX, 0.08, quayMidZ, quayWidth, 0.16, quayLength, dockApron, [1, 1], false, true);
+
+    // Concrete slab grid expansion joints etched across quay surface
+    const jointColor = [0.52, 0.50, 0.46, 1.0];
+    for (let jx = 105; jx <= 160; jx += 9.0) {
+      this.addBox(jx, 0.165, quayMidZ, 0.12, 0.02, quayLength, jointColor, [1, 1], false, false);
+    }
+    for (let jz = 65; jz <= 215; jz += 10.0) {
+      this.addBox(quayMidX, 0.165, jz, quayWidth, 0.02, 0.12, jointColor, [1, 1], false, false);
     }
 
-    // Moored Cargo Container Ship
-    this.addBox(244, -1.0, 160, 24, 7.0, 80, [0.22, 0.24, 0.28, 1.0], [1, 1], true, true);
-    this.addBox(244, 6.0, 128, 16, 8.5, 20, [0.92, 0.92, 0.95, 1.0], [1, 1], true, true);
+    // 2. Heavy Industrial Crane Rails embedded in the quay along X = 143.0 and X = 158.5
+    const railSteel = [0.32, 0.34, 0.38, 1.0];
+    const railGripYellow = [0.98, 0.82, 0.10, 1.0];
+    this.addBox(143.0, 0.17, quayMidZ, 0.35, 0.06, quayLength - 10, railSteel, [1, 1], false, false);
+    this.addBox(143.0 - 0.45, 0.168, quayMidZ, 0.18, 0.02, quayLength - 10, railGripYellow, [1, 1], false, false);
+    this.addBox(158.5, 0.17, quayMidZ, 0.35, 0.06, quayLength - 10, railSteel, [1, 1], false, false);
+    this.addBox(158.5 + 0.45, 0.168, quayMidZ, 0.18, 0.02, quayLength - 10, railGripYellow, [1, 1], false, false);
 
-    // Cargo Warehouses along western edge of docks
-    const whColor = [0.55, 0.56, 0.58, 1.0];
-    const whRoof = [0.78, 0.38, 0.26, 1.0];
-    this.addBox(80, 0, 70, 38, 14, 32, whColor, [0.2, 0.2], true, true);
-    this.addBox(80, 14, 70, 40, 2.6, 34, whRoof, [1, 1], false, true);
+    // 3. Quayside Edge Yellow & Black Safety Hazard Chevrons along wharf edge (X = 160.5..162.0)
+    const hazardYellow = [1.0, 0.84, 0.08, 1.0];
+    const hazardBlack = [0.16, 0.16, 0.18, 1.0];
+    this.addBox(161.25, 0.17, quayMidZ, 1.5, 0.03, quayLength, hazardYellow, [1, 1], false, false);
+    // Alternating black diagonal hazard hash blocks
+    for (let hz = 62; hz < 218; hz += 4.0) {
+      this.addBox(161.25, 0.175, hz, 1.45, 0.035, 1.8, hazardBlack, [1, 1], false, false);
+    }
 
-    this.addBox(80, 0, 150, 38, 14, 32, whColor, [0.2, 0.2], true, true);
-    this.addBox(80, 14, 150, 40, 2.6, 34, whRoof, [1, 1], false, true);
+    // Granite quayside vertical drop wall (face +X) dropping into the water
+    const quayWallColor = [0.58, 0.56, 0.54, 1.0];
+    this.addBox(162.0, -1.8, quayMidZ, 0.8, 3.8, quayLength, quayWallColor, [1, 1], true, true);
 
-    // Multi-tier shipping container stacks in bold high-chroma primary colors.
-    // Staged along north perimeter and far eastern background to frame Pier 7 naturally
-    // without blocking the foreground player, crates, or target van!
+    // 4. Stenciled Painted Quay Markings (PIER 7, BAY 04, cargo bay rectangles)
+    const paintWhite = [0.94, 0.94, 0.96, 1.0];
+    // Pier 7 Large Stencil lettering on quay slab
+    this.addBox(151.0, 0.17, 102.0, 6.0, 0.02, 1.8, hazardYellow, [1, 1], false, false);
+    this.addBox(151.0, 0.17, 105.0, 8.0, 0.02, 1.8, paintWhite, [1, 1], false, false); // "PIER 7" zone
+    this.addBox(152.0, 0.17, 134.0, 7.5, 0.02, 1.6, paintWhite, [1, 1], false, false); // "BAY 04"
+    // Loading bay perimeter boxes
+    this.addBox(150.0, 0.17, 118.0, 16.0, 0.02, 0.25, paintWhite, [1, 1], false, false);
+    this.addBox(150.0, 0.17, 126.0, 16.0, 0.02, 0.25, paintWhite, [1, 1], false, false);
+    this.addBox(142.0, 0.17, 122.0, 0.25, 0.02, 8.0, paintWhite, [1, 1], false, false);
+    this.addBox(158.0, 0.17, 122.0, 0.25, 0.02, 8.0, paintWhite, [1, 1], false, false);
+
+    // 5. Heavy Cast-Iron Mooring Bollards along quay lip (X = 161.4)
+    const bollardDark = [0.20, 0.22, 0.25, 1.0];
+    const bollardZ = [75, 88, 101, 114, 127, 140, 153, 166, 179, 192, 205];
+    for (const bz of bollardZ) {
+      // Bollard base
+      this.addBox(161.35, 0.16, bz, 0.65, 0.20, 0.65, bollardDark, [1, 1], true, true);
+      // Bollard columnar post
+      this.addBox(161.35, 0.36, bz, 0.44, 0.75, 0.44, bollardDark, [1, 1], true, true);
+      // Bollard flared cap
+      this.addBox(161.35, 1.11, bz, 0.68, 0.18, 0.68, bollardDark, [1, 1], false, true);
+    }
+
+    // 6. Deep Harbour Water Basin (X = 162 to 280, Z = 60 to 220)
+    const harborWaterCol = [0.06, 0.46, 0.62, 0.95];
+    const hbMinX = 162.2, hbMaxX = WORLD.HALF_SIZE + 100;
+    const hbMinZ = 50, hbMaxZ = WORLD.HALF_SIZE + 100;
+    const hPts = [
+      [hbMinX, WORLD.SEA_LEVEL, hbMinZ],
+      [hbMaxX, WORLD.SEA_LEVEL, hbMinZ],
+      [hbMaxX, WORLD.SEA_LEVEL, hbMaxZ],
+      [hbMinX, WORLD.SEA_LEVEL, hbMinZ],
+      [hbMaxX, WORLD.SEA_LEVEL, hbMaxZ],
+      [hbMinX, WORLD.SEA_LEVEL, hbMaxZ],
+    ];
+    for (let p = 0; p < 6; p++) {
+      this.waterPositions.push(hPts[p][0], hPts[p][1], hPts[p][2]);
+      this.waterNormals.push(0, 1, 0);
+      this.waterColors.push(harborWaterCol[0], harborWaterCol[1], harborWaterCol[2], harborWaterCol[3]);
+      this.waterUvs.push(hPts[p][0] * 0.04, hPts[p][2] * 0.04);
+    }
+
+    // 7. Moored Working Harbour Cargo Barge / Feeder Vessel along Quay Wall
+    // Positioned right against Pier 7 quay wall at X = 166..177, Z = 110..144
+    this.buildMooredCargoBarge(171.5, -0.4, 126.0);
+
+    // 8. Far Shore & Breakwater across water in the background (X = 210..265, Z = 60..220)
+    this.buildFarShoreBreakwater();
+
+    // 9. Harbour Warehouse Wall with Roll-Up Shutter Door on West side of Pier 7 (X = 133..138, Z = 110..142)
+    this.buildDockWarehouseWall(133.5, 0.16, 126.0);
+
+    // 10. Multi-Tier Shipping Container Stacks in bold high-chroma primary colors
+    // Framing Pier 7 naturally along north perimeter and far eastern background
     const containerColors = [
       [0.90, 0.20, 0.16, 1.0], // Crimson Red
       [0.15, 0.52, 0.90, 1.0], // Ocean Blue
@@ -847,31 +883,267 @@ export class World {
       }
     }
 
-    // Eastern backdrop container stacks (X = 168..190, Z = 96..150)
-    for (let row = 0; row < 4; row++) {
-      for (let stackZ = 0; stackZ < 5; stackZ++) {
-        const cx = 168 + row * 5.4;
-        const cz = 96 + stackZ * 11.2;
+    // Background container stacks along northern/eastern edge
+    for (let row = 0; row < 2; row++) {
+      for (let stackZ = 0; stackZ < 4; stackZ++) {
+        const cx = 158 + row * 4.2;
+        const cz = 65 + stackZ * 9.5;
         const layers = 1 + ((row + stackZ) % 3);
-
         for (let l = 0; l < layers; l++) {
           const col = containerColors[(colIdx++) % containerColors.length];
           this.addBox(cx, 0.16 + l * cH, cz, cW, cH, cL, col, [1, 1], true, true);
         }
-        this.addGroundShadow(cx, cz, cW, cL, layers * cH);
       }
     }
 
-    // Contraband Heist Loot Crates on Pier 7 (Mid Ground Subject)
-    const crateWood = [0.80, 0.58, 0.36, 1.0];
-    const crateBands = [0.22, 0.22, 0.24, 1.0];
-    this.addBox(148.0, 0.16, 114.5, 1.8, 1.6, 1.8, crateWood, [1, 1], true, true);
-    this.addBox(148.0, 0.65, 114.5, 1.85, 0.22, 1.85, crateBands, [1, 1], false, false);
-    this.addBox(150.4, 0.16, 115.6, 1.5, 1.4, 1.5, crateWood, [1, 1], true, true);
-    this.addBox(149.2, 1.76, 115.0, 1.3, 1.2, 1.3, crateWood, [1, 1], false, true);
+    // 11. Contraband Heist Crates & Pallets on Pier 7 (Mid Ground Subject of Mission)
+    // Placed at [149.8, 0.16, 117.2] right in front of target van
+    this.buildContrabandLootStation(149.8, 0.16, 117.2);
 
-    // Massive 36m Industrial Gantry Crane towering in background
-    this.buildGantryCrane(150, 0.16, 155);
+    // 12. Harbour Jib Crane on the quayside rail (X = 158.5, Z = 94.0) with angled boom against sunset sky
+    this.buildDocksideJibCrane(158.5, 0.16, 94.0);
+
+    // 13. Massive 36m Industrial Gantry Crane towering in background
+    this.buildGantryCrane(148, 0.16, 168);
+
+    // 14. White Coastal Gulls in flight over water and perched on containers
+    this.buildHarbourGulls();
+  }
+
+  buildMooredCargoBarge(x, y, z) {
+    // Heavy duty steel cargo barge moored against Pier 7 quay wall
+    const hullSteel = [0.22, 0.24, 0.28, 1.0];
+    const redBottom = [0.72, 0.22, 0.18, 1.0];
+    const deckTimber = [0.65, 0.58, 0.50, 1.0];
+    const whiteSuper = [0.94, 0.94, 0.96, 1.0];
+    const railingSteel = [0.78, 0.80, 0.84, 1.0];
+
+    const bargeW = 9.5;
+    const bargeL = 34.0;
+    const bargeH = 2.4;
+
+    // Red anti-fouling lower hull in water
+    this.addBox(x, y + 0.4, z, bargeW, 1.0, bargeL, redBottom, [1, 1], true, true);
+    // Dark steel freeboard upper hull
+    this.addBox(x, y + 1.4, z, bargeW, 1.4, bargeL, hullSteel, [1, 1], true, true);
+    // Working deck
+    this.addBox(x, y + 2.1, z, bargeW - 0.6, 0.15, bargeL - 0.8, deckTimber, [1, 1], false, true);
+
+    // Raised cargo hatch coamings with tarpaulins
+    this.addBox(x, y + 2.4, z - 6.0, bargeW - 2.4, 0.9, 10.0, [0.18, 0.42, 0.58, 1.0], [1, 1], true, true);
+    this.addBox(x, y + 2.4, z + 6.0, bargeW - 2.4, 0.9, 10.0, [0.78, 0.38, 0.20, 1.0], [1, 1], true, true);
+
+    // Aft Wheelhouse / Deckhouse
+    this.addBox(x, y + 3.2, z - 13.0, 5.5, 2.2, 5.0, whiteSuper, [1, 1], true, true);
+    // Wheelhouse navigation bridge windows
+    this.addBox(x, y + 3.8, z - 13.0, 5.6, 0.7, 5.1, [0.12, 0.20, 0.30, 1.0], [1, 1], false, false);
+    // Exhaust stack funnel
+    this.addBox(x, y + 4.8, z - 14.5, 1.1, 2.2, 1.1, [0.85, 0.22, 0.18, 1.0], [1, 1], false, true);
+    // Radar mast
+    this.addBox(x, y + 5.2, z - 12.0, 0.25, 2.8, 0.25, [0.85, 0.88, 0.92, 1.0], [1, 1], false, false);
+    this.addBox(x, y + 6.6, z - 12.0, 1.8, 0.22, 0.4, [0.95, 0.95, 0.98, 1.0], [1, 1], false, false);
+
+    // Deck safety stanchions & railings
+    this.addBox(x + (bargeW * 0.5 - 0.2), y + 2.5, z, 0.15, 0.8, bargeL - 2, railingSteel, [1, 1], false, false);
+    this.addBox(x - (bargeW * 0.5 - 0.2), y + 2.5, z, 0.15, 0.8, bargeL - 2, railingSteel, [1, 1], false, false);
+
+    // Heavy mooring hawsers / lines stretching from barge deck to Pier 7 bollards
+    this.addBox(164.0, 0.85, 114.0, 5.5, 0.12, 0.12, [0.38, 0.34, 0.28, 1.0], [1, 1], false, false);
+    this.addBox(164.0, 0.85, 140.0, 5.5, 0.12, 0.12, [0.38, 0.34, 0.28, 1.0], [1, 1], false, false);
+  }
+
+  buildFarShoreBreakwater() {
+    // Breakwater rocks, far shoreline terrain, and distant Mediterranean coastal silhouettes
+    const breakwaterRock = [0.48, 0.46, 0.44, 1.0];
+    const farCoastGreen = [0.38, 0.48, 0.34, 1.0];
+    const farWarehouse = [0.70, 0.62, 0.52, 1.0];
+    const farRoof = [0.72, 0.35, 0.22, 1.0];
+
+    // Rip-rap granite breakwater jetty extending into the bay
+    for (let bz = 60; bz <= 210; bz += 16) {
+      this.addBox(228, -0.5, bz, 14, 2.8, 18, breakwaterRock, [1, 1], true, true);
+      this.addBox(222, -1.0, bz + 4, 10, 1.8, 12, breakwaterRock, [1, 1], true, true);
+    }
+
+    // Far shore elevated coastal terrace
+    this.addBox(246, 0.5, 140, 24, 5.5, 160, farCoastGreen, [1, 1], false, true);
+    this.addBox(258, 2.5, 140, 28, 10.0, 150, [0.62, 0.55, 0.44, 1.0], [1, 1], false, true);
+
+    // Distant coastal harbor structures and lighthouse on the far shore
+    this.addBox(244, 6.0, 95, 12, 6.0, 20, farWarehouse, [1, 1], false, true);
+    this.addBox(244, 12.0, 95, 13, 2.0, 21, farRoof, [1, 1], false, true);
+    this.addBox(244, 6.0, 155, 14, 7.0, 22, farWarehouse, [1, 1], false, true);
+    this.addBox(244, 13.0, 155, 15, 2.2, 23, farRoof, [1, 1], false, true);
+
+    // Slender Mediterranean cypresses along the far hillside
+    for (let cz = 80; cz <= 190; cz += 25) {
+      this.addCypressTree(242, 6.0, cz);
+    }
+  }
+
+  buildDockWarehouseWall(x, y, z) {
+    // Industrial corrugated steel warehouse facade facing Pier 7
+    const wallCol = [0.52, 0.55, 0.58, 1.0];       // Corrugated zinc-grey siding
+    const trimCol = [0.38, 0.40, 0.44, 1.0];
+    const doorCol = [0.24, 0.28, 0.32, 1.0];       // Segmented industrial roll-up door
+    const chevronYellow = [1.0, 0.82, 0.10, 1.0];
+    const lampGlow = [1.0, 0.95, 0.70, 1.0];
+
+    const wallW = 8.0;
+    const wallH = 16.0;
+    const wallL = 36.0;
+
+    // Main warehouse mass
+    this.addBox(x, y, z, wallW, wallH, wallL, wallCol, [1, 1], true, true);
+    // Roof eaves overhang
+    this.addBox(x + 0.4, y + wallH, z, wallW + 0.8, 1.2, wallL + 1.2, trimCol, [1, 1], false, true);
+
+    // Massive Roll-Up Shutter Roller Door (facing Pier 7 at +X face)
+    const doorX = x + wallW * 0.5 + 0.15;
+    const doorH = 7.5;
+    const doorL = 10.5;
+    this.addBox(doorX, y, z - 2.0, 0.3, doorH, doorL, doorCol, [1, 1], false, true);
+
+    // Horizontal rolling slat ribs across roller door
+    for (let slatY = y + 0.6; slatY < y + doorH; slatY += 0.75) {
+      this.addBox(doorX + 0.08, slatY, z - 2.0, 0.12, 0.15, doorL - 0.2, [0.35, 0.38, 0.42, 1.0], [1, 1], false, false);
+    }
+
+    // Heavy yellow/black hazard chevron lintel bar above roller door
+    this.addBox(doorX, y + doorH + 0.35, z - 2.0, 0.45, 0.7, doorL + 0.8, chevronYellow, [1, 1], false, true);
+    for (let chZ = z - 2.0 - doorL * 0.45; chZ < z - 2.0 + doorL * 0.45; chZ += 2.0) {
+      this.addBox(doorX + 0.05, y + doorH + 0.35, chZ, 0.48, 0.68, 0.9, [0.15, 0.15, 0.16, 1.0], [1, 1], false, false);
+    }
+
+    // High gooseneck industrial vapor lamp above roller door with warm cone glow
+    this.addBox(doorX + 0.8, y + doorH + 1.8, z - 2.0, 1.6, 0.15, 0.15, trimCol, [1, 1], false, false);
+    this.addBox(doorX + 1.6, y + doorH + 1.6, z - 2.0, 0.75, 0.35, 0.65, lampGlow, [1, 1], false, false);
+
+    // Industrial ventilation louvers on warehouse upper facade
+    this.addBox(doorX, y + 11.5, z - 8.0, 0.25, 2.4, 4.0, [0.28, 0.30, 0.34, 1.0], [1, 1], false, true);
+    this.addBox(doorX, y + 11.5, z + 6.0, 0.25, 2.4, 4.0, [0.28, 0.30, 0.34, 1.0], [1, 1], false, true);
+  }
+
+  buildContrabandLootStation(x, y, z) {
+    // Contraband Heist Crates staged on wooden cargo pallets
+    const woodSlat = [0.78, 0.58, 0.38, 1.0];
+    const woodDark = [0.55, 0.40, 0.25, 1.0];
+    const steelBand = [0.22, 0.24, 0.28, 1.0];
+    const lootGold = [1.0, 0.88, 0.22, 1.0];
+    const lootGlow = [0.20, 0.95, 0.85, 1.0];
+
+    // Heavy wooden cargo pallet base (standard Euro-pallet 1.2m x 1.6m footprint)
+    this.addBox(x, y, z, 3.4, 0.18, 3.4, woodDark, [1, 1], true, true);
+    // Forklift slot stringers
+    this.addBox(x, y + 0.18, z, 3.4, 0.14, 0.35, woodDark, [1, 1], false, true);
+    this.addBox(x, y + 0.18, z - 1.2, 3.4, 0.14, 0.35, woodDark, [1, 1], false, true);
+    this.addBox(x, y + 0.18, z + 1.2, 3.4, 0.14, 0.35, woodDark, [1, 1], false, true);
+    // Top deck deckboards
+    this.addBox(x, y + 0.32, z, 3.4, 0.08, 3.4, woodSlat, [1, 1], true, true);
+
+    // Main contraband crate #1 (large wooden military crate with steel corner brackets)
+    const c1X = x - 0.45;
+    const c1Y = y + 0.40;
+    const c1Z = z - 0.35;
+    this.addBox(c1X, c1Y, c1Z, 1.8, 1.5, 1.8, woodSlat, [1, 1], true, true);
+    // Tension steel bands
+    this.addBox(c1X, c1Y + 0.4, c1Z, 1.84, 0.12, 1.84, steelBand, [1, 1], false, false);
+    this.addBox(c1X, c1Y + 1.0, c1Z, 1.84, 0.12, 1.84, steelBand, [1, 1], false, false);
+
+    // Stenciled contraband markings on crate
+    this.addBox(c1X + 0.92, c1Y + 0.7, c1Z, 0.02, 0.4, 0.9, [0.98, 0.22, 0.18, 1.0], [1, 1], false, false);
+
+    // Contraband crate #2 (stacked beside #1)
+    const c2X = x + 0.85;
+    const c2Y = y + 0.40;
+    const c2Z = z + 0.45;
+    this.addBox(c2X, c2Y, c2Z, 1.4, 1.3, 1.4, woodSlat, [1, 1], true, true);
+    this.addBox(c2X, c2Y + 0.65, c2Z, 1.44, 0.10, 1.44, steelBand, [1, 1], false, false);
+
+    // Open wooden loot crate #3 with glowing contraband cargo inside!
+    const c3X = x - 0.25;
+    const c3Y = c1Y + 1.5;
+    const c3Z = z - 0.25;
+    // Lower crate box
+    this.addBox(c3X, c3Y, c3Z, 1.25, 0.9, 1.25, woodDark, [1, 1], true, true);
+    // Glowing contraband loot inside the open crate (bars & cybertech cache)
+    this.addBox(c3X, c3Y + 0.75, c3Z, 0.95, 0.25, 0.95, lootGold, [1, 1], false, false);
+    this.addBox(c3X, c3Y + 0.85, c3Z, 0.65, 0.15, 0.65, lootGlow, [1, 1], false, false);
+
+    // Propped open wooden crate lid
+    this.addBox(c3X + 0.6, c3Y + 1.1, c3Z, 0.1, 0.85, 1.25, woodSlat, [1, 1], false, true);
+
+    // Hovering 3D Golden Diamond Mission Objective Beacon above the crates!
+    const beaconY = c3Y + 2.4;
+    this.addBox(x, beaconY, z, 0.55, 0.95, 0.55, lootGold, [1, 1], false, false);
+    this.addBox(x, beaconY, z, 0.75, 0.45, 0.75, [1.0, 0.96, 0.45, 1.0], [1, 1], false, false);
+    // Pulsing light shaft down to the crates
+    this.addBox(x, beaconY - 1.2, z, 0.08, 1.6, 0.08, [1.0, 0.85, 0.25, 0.8], [1, 1], false, false);
+  }
+
+  buildDocksideJibCrane(x, y, z) {
+    // Quayside rail-mounted luffing jib crane with boom reaching into the sunset sky
+    const craneOrange = [0.98, 0.52, 0.10, 1.0];   // High-vis maritime orange
+    const craneDark = [0.24, 0.26, 0.30, 1.0];
+    const cableSteel = [0.75, 0.78, 0.82, 1.0];
+
+    // Crane rail portal gantry base
+    this.addBox(x, y, z, 5.5, 5.0, 5.5, craneOrange, [1, 1], true, true);
+    // Portal arch opening for rail passage
+    this.addBox(x, y, z, 3.8, 3.8, 5.8, [0.15, 0.15, 0.15, 1.0], [1, 1], false, false);
+
+    // Slewing ring turntable
+    this.addBox(x, y + 5.0, z, 4.2, 0.8, 4.2, craneDark, [1, 1], false, true);
+
+    // Operator cab & machinery housing
+    this.addBox(x, y + 5.8, z - 1.0, 3.6, 3.2, 4.8, craneOrange, [1, 1], true, true);
+    // Cab glass window facing water (+X)
+    this.addBox(x + 1.8, y + 7.0, z - 0.5, 0.15, 1.4, 2.4, [0.15, 0.35, 0.55, 1.0], [1, 1], false, false);
+
+    // Counterweight at crane rear
+    this.addBox(x - 2.8, y + 6.2, z - 1.0, 2.2, 2.4, 3.4, craneDark, [1, 1], false, true);
+
+    // Angled latticework crane boom reaching high into the sky towards the harbour water (+X, +Y)
+    const boomLen = 22.0;
+    const boomX = x + 8.5;
+    const boomY = y + 14.5;
+    const boomZ = z + 1.5;
+    this.addBox(boomX, boomY, boomZ, 16.0, 1.2, 1.2, craneOrange, [1, 1], false, true);
+    // Secondary upper tie boom
+    this.addBox(boomX - 2.0, boomY + 2.8, boomZ, 12.0, 0.8, 0.8, craneOrange, [1, 1], false, true);
+
+    // Hoist cable dropping down toward the water
+    this.addBox(boomX + 6.5, y + 8.0, boomZ, 0.08, 12.0, 0.08, cableSteel, [1, 1], false, false);
+    // Cargo hoist spreader / hook
+    this.addBox(boomX + 6.5, y + 2.0, boomZ, 1.8, 0.6, 1.2, craneDark, [1, 1], false, true);
+  }
+
+  buildHarbourGulls() {
+    // Coastal white gulls wheeling in flight over the water and perched on containers
+    const gullWhite = [0.98, 0.98, 1.0, 1.0];
+    const gullGrey = [0.72, 0.74, 0.78, 1.0];
+    const gullBeak = [1.0, 0.75, 0.10, 1.0];
+
+    const gullPosList = [
+      // Flying over the water basin
+      { x: 178.0, y: 8.5, z: 122.0, span: 1.4 },
+      { x: 188.0, y: 12.0, z: 135.0, span: 1.5 },
+      { x: 172.0, y: 6.8, z: 145.0, span: 1.3 },
+      { x: 195.0, y: 14.5, z: 110.0, span: 1.6 },
+      { x: 168.0, y: 9.2, z: 98.0, span: 1.2 },
+      // Perched on container top at Pier 7
+      { x: 144.5, y: 8.2, z: 80.0, span: 0.9 },
+    ];
+
+    for (const g of gullPosList) {
+      // Body
+      this.addBox(g.x, g.y, g.z, 0.25, 0.18, 0.45, gullWhite, [1, 1], false, false);
+      // Yellow beak
+      this.addBox(g.x, g.y - 0.02, g.z + 0.26, 0.08, 0.08, 0.14, gullBeak, [1, 1], false, false);
+      // Angled wings (V-shape)
+      this.addBox(g.x - g.span * 0.4, g.y + 0.12, g.z, g.span * 0.75, 0.04, 0.28, gullGrey, [1, 1], false, false);
+      this.addBox(g.x + g.span * 0.4, g.y + 0.12, g.z, g.span * 0.75, 0.04, 0.28, gullGrey, [1, 1], false, false);
+    }
   }
 
   buildGantryCrane(x, y, z) {
@@ -1055,13 +1327,16 @@ export class World {
 
   generateParkedCars() {
     // Adds realistic kerbside parked civilian vehicles along avenues to make the city feel alive
+    // Downtown Avenue road is at rx = 115, road width 22 (X = 104..126).
+    // East kerbside is at X = 123.8..124.5; West kerbside is at X = 105.5..106.2.
     const parkedDefs = [
-      // Downtown Avenue (X = 120 kerbside)
-      { type: 'sedan', x: 121.2, z: -108.0, rot: Math.PI },
-      { type: 'sports', x: 121.2, z: -130.0, rot: Math.PI },
-      { type: 'taxi', x: 121.2, z: -150.0, rot: Math.PI },
-      { type: 'hatchback', x: 140.8, z: -104.0, rot: 0 },
-      { type: 'muscle', x: 140.8, z: -128.0, rot: 0 },
+      // Downtown Avenue East Kerbside (X = 124.0, facing North/South)
+      { type: 'sedan', x: 124.0, z: -108.0, rot: Math.PI },
+      { type: 'sports', x: 124.0, z: -130.0, rot: Math.PI },
+      { type: 'taxi', x: 124.0, z: -150.0, rot: Math.PI },
+      // Downtown Avenue West Kerbside (X = 106.0)
+      { type: 'hatchback', x: 106.0, z: -104.0, rot: 0 },
+      { type: 'muscle', x: 106.0, z: -128.0, rot: 0 },
 
       // Ocean Promenade (X = -112 kerbside)
       { type: 'sports', x: -111.5, z: 92.0, rot: 0 },

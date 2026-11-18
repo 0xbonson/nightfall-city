@@ -97,19 +97,17 @@ export class Minimap {
     }
 
     // 4. District Area Shading
-    // Industrial Docks (South-West)
-    const docksX0 = toRadarX(-120);
-    const docksZ0 = toRadarY(60);
-    const docksW = 90 * this.scale;
-    const docksH = 160 * this.scale;
+    const docksX0 = toRadarX(10);
+    const docksZ0 = toRadarY(10);
+    const docksW = 250 * this.scale;
+    const docksH = 250 * this.scale;
     ctx.fillStyle = 'rgba(60, 45, 30, 0.25)';
     ctx.fillRect(docksX0, docksZ0, docksW, docksH);
 
-    // Downtown (Central high-rise grid)
-    const dtX0 = toRadarX(-30);
-    const dtZ0 = toRadarY(-80);
-    const dtW = 120 * this.scale;
-    const dtH = 140 * this.scale;
+    const dtX0 = toRadarX(10);
+    const dtZ0 = toRadarY(-260);
+    const dtW = 250 * this.scale;
+    const dtH = 250 * this.scale;
     ctx.fillStyle = 'rgba(30, 60, 90, 0.22)';
     ctx.fillRect(dtX0, dtZ0, dtW, dtH);
 

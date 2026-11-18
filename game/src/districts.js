@@ -7,7 +7,7 @@
  * - Downtown Vela: Towering glass curtain skyscrapers and financial plazas
  * - Ocean Promenade: Art Deco pastel beachfront hotels, cedar boardwalk, and palm boulevards
  * - Old Market Quarter: Mediterranean terracotta townhouses, narrow alleys, and artisanal markets
- * - Meridian Cargo Docks: Industrial quays, multi-tier shipping containers, and 36m gantry crane
+ * - Meridian Cargo Docks: Industrial quays, multi-tier shipping containers, Pier 7, and 36m gantry crane
  * - Marina San Vento: Weathered wooden pier slips, motor yachts, and breakwater channels
  * - Skyway Expressway: Elevated multi-lane concrete expressway spanning over the metropolis
  * - Monte Sereno Foothills: Scenic sunlit coastal ridge framing the northern horizon
@@ -37,7 +37,7 @@ export const DISTRICT_REGISTRY = [
   {
     id: 'docks',
     name: 'Meridian Cargo Docks',
-    tagline: 'Heavy Industrial Quays & Container Terminal',
+    tagline: 'Pier 7 Quays, Container Terminal & Working Harbour',
     bounds: { minX: 10, maxX: 260, minZ: 10, maxZ: 260 },
     accentColor: [0.95, 0.58, 0.12], // Industrial amber
     hudColor: '#f59e0b',
@@ -94,13 +94,11 @@ export class DistrictManager {
     let z = 0;
 
     if (typeof arg4 === 'number') {
-      // update(x, y, z, dt)
       x = arg1;
       y = arg2;
       z = arg3;
       dt = arg4;
     } else {
-      // update(dt, x, z) or update(dt, x, y, z)
       dt = arg1 || 0.016;
       x = arg2 || 0;
       if (typeof arg4 === 'number') {
@@ -128,7 +126,6 @@ export class DistrictManager {
   }
 
   findDistrictAt(x, y, z) {
-    // Check elevated skyway first if above deck elevation threshold
     if (y >= 7.0) {
       const sky = DISTRICT_REGISTRY.find((d) => d.id === 'skyway');
       if (sky && x >= sky.bounds.minX && x <= sky.bounds.maxX && z >= sky.bounds.minZ && z <= sky.bounds.maxZ) {
@@ -136,12 +133,10 @@ export class DistrictManager {
       }
     }
 
-    // Check marina waterfront
     if (x < -125) {
       return DISTRICT_REGISTRY.find((d) => d.id === 'marina') || DISTRICT_REGISTRY[3];
     }
 
-    // Standard ground districts
     for (const d of DISTRICT_REGISTRY) {
       if (d.id === 'skyway' || d.id === 'marina') continue;
       const b = d.bounds;

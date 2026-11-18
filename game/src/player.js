@@ -3,7 +3,8 @@
  * Rhea "Rook" Solano: Sculpted 3D character silhouette with athletic proportions,
  * rolled-sleeve jacket over contrasting tee, tactical utility belt, denim,
  * multi-weapon geometries (carbine, shotgun, smg, pistol), articulated gait kinematics,
- * vehicle entry/exit transitions, directional ground shadows, and health/armor systems.
+ * two-handed tactical combat ready stance, vehicle entry/exit transitions,
+ * directional ground shadows, and health/armor systems.
  * Authored by makefun agent for the open-world crime entry.
  */
 
@@ -230,6 +231,7 @@ export class Player {
     const shadesCol = [0.08, 0.10, 0.12, 1.0];  // Dark aviator shades
     const gunSteel = [0.16, 0.17, 0.20, 1.0];   // Blued weapon steel
     const gunWood = [0.38, 0.22, 0.14, 1.0];    // Walnut rifle stock
+    const opticLens = [0.15, 0.85, 0.95, 1.0];  // Holo sight reflex optic lens
 
     const addBoxRot = (bx, by, bz, sx, sy, sz, color) => {
       const hx = sx * 0.5, hy = sy * 0.5, hz = sz * 0.5;
@@ -310,42 +312,68 @@ export class Player {
     addBoxRot(0, y + 0.84, 0, 0.48, 0.65, 0.26, jacketCol);
     addBoxRot(0, y + 0.88, 0.09, 0.22, 0.52, 0.12, teeCol); // Open chest shirt showing
 
-    // 5. Arms & Hands
-    addBoxRot(-0.31, y + 0.88, -swing * 0.20, 0.15, 0.42, 0.15, jacketCol); // Upper arm
-    addBoxRot(-0.31, y + 0.68, -swing * 0.20 + 0.06, 0.13, 0.22, 0.13, skinCol); // Forearm
-    addBoxRot(-0.31, y + 0.58, -swing * 0.20 + 0.06, 0.10, 0.12, 0.10, skinCol); // Hand
-
-    addBoxRot(0.31, y + 0.88, 0.14, 0.15, 0.42, 0.15, jacketCol);
-    addBoxRot(0.31, y + 0.68, 0.24, 0.13, 0.22, 0.13, skinCol);
-    addBoxRot(0.31, y + 0.58, 0.28, 0.10, 0.12, 0.10, skinCol);
-
-    // 6. Head, Hair & Aviator Sunglasses
+    // 5. Head, Hair & Aviator Sunglasses
     addBoxRot(0, y + 1.48, 0, 0.28, 0.28, 0.27, skinCol);
     addBoxRot(0, y + 1.62, -0.02, 0.30, 0.15, 0.29, hairCol); // Hair crop
     addBoxRot(0, y + 1.54, 0.14, 0.26, 0.09, 0.06, shadesCol); // Sunglasses
 
-    // 7. Weapon Models
-    if (this.currentWeapon === 'carbine' || this.currentWeapon === 'rifle') {
-      // Tactical Carbine with receiver, curved magazine, barrel, stock
-      addBoxRot(0.24, y + 1.14, 0.30, 0.08, 0.14, 0.34, gunSteel); // Receiver
-      addBoxRot(0.24, y + 1.12, 0.54, 0.05, 0.06, 0.42, gunSteel); // Extended barrel
-      addBoxRot(0.24, y + 1.02, 0.34, 0.06, 0.18, 0.10, gunSteel); // Curved magazine
-      addBoxRot(0.24, y + 1.16, 0.08, 0.07, 0.12, 0.22, gunWood);  // Ergonomic stock
-    } else if (this.currentWeapon === 'shotgun') {
-      // Heavy Pump-Action Shotgun
-      addBoxRot(0.24, y + 1.14, 0.12, 0.08, 0.14, 0.32, gunWood);  // Walnut stock
-      addBoxRot(0.24, y + 1.15, 0.42, 0.09, 0.12, 0.42, gunSteel); // Receiver
-      addBoxRot(0.24, y + 1.16, 0.68, 0.06, 0.07, 0.48, gunSteel); // Blued barrel
-      addBoxRot(0.24, y + 1.08, 0.52, 0.08, 0.08, 0.22, gunWood);  // Pump slide
-    } else if (this.currentWeapon === 'smg') {
-      // Compact Submachine Gun
-      addBoxRot(0.24, y + 1.15, 0.28, 0.08, 0.13, 0.36, gunSteel);
-      addBoxRot(0.24, y + 1.00, 0.28, 0.05, 0.22, 0.07, [0.08, 0.08, 0.09, 1.0]); // Long stick magazine
-      addBoxRot(0.24, y + 1.16, 0.50, 0.04, 0.05, 0.22, gunSteel); // Short barrel
+    // 6. Tactical Two-Handed Combat Weapon Stance vs Sidearm Stance
+    const isTwoHanded = this.currentWeapon === 'carbine' || this.currentWeapon === 'rifle' ||
+                        this.currentWeapon === 'shotgun' || this.currentWeapon === 'smg';
+
+    if (isTwoHanded) {
+      // TWO-HANDED TACTICAL COMBAT STANCE:
+      // The protagonist holds the long gun raised at low-ready / tactical patrol aim,
+      // right arm at the trigger grip, left arm reaching across supporting the handguard/barrel.
+      // Immediately legible in screenshots as combat-ready action!
+
+      // Right arm (Trigger hand)
+      addBoxRot(0.26, y + 1.05, 0.10, 0.14, 0.28, 0.14, jacketCol); // Right shoulder
+      addBoxRot(0.24, y + 1.00, 0.22, 0.12, 0.14, 0.22, skinCol);    // Right forearm forward
+      addBoxRot(0.22, y + 1.02, 0.32, 0.10, 0.12, 0.12, skinCol);    // Right trigger hand
+
+      // Left arm (Support hand reaching forward to barrel)
+      addBoxRot(-0.24, y + 1.05, 0.06, 0.14, 0.26, 0.14, jacketCol); // Left shoulder
+      addBoxRot(-0.08, y + 0.98, 0.24, 0.12, 0.13, 0.28, skinCol);   // Left forearm reaching forward-right
+      addBoxRot(0.08, y + 1.02, 0.44, 0.10, 0.11, 0.12, skinCol);    // Left support hand grasping handguard
+
+      if (this.currentWeapon === 'carbine' || this.currentWeapon === 'rifle') {
+        // Tactical M4/AR Carbine with receiver, magazine, barrel, stock, holo sight
+        addBoxRot(0.18, y + 1.08, 0.30, 0.08, 0.15, 0.36, gunSteel);  // Receiver
+        addBoxRot(0.18, y + 1.07, 0.58, 0.05, 0.06, 0.44, gunSteel);  // Free-float handguard & barrel
+        addBoxRot(0.18, y + 1.06, 0.82, 0.06, 0.07, 0.10, [0.10, 0.10, 0.12, 1.0]); // Flash hider / muzzle brake
+        addBoxRot(0.18, y + 0.93, 0.34, 0.06, 0.20, 0.11, gunSteel);  // Curved STANAG 30-rnd magazine
+        addBoxRot(0.18, y + 1.10, 0.06, 0.07, 0.13, 0.24, gunWood);   // Adjustable tactical stock
+        // Holographic reflex optic sight
+        addBoxRot(0.18, y + 1.18, 0.30, 0.07, 0.08, 0.14, [0.10, 0.10, 0.12, 1.0]);
+        addBoxRot(0.18, y + 1.18, 0.38, 0.05, 0.06, 0.02, opticLens);
+      } else if (this.currentWeapon === 'shotgun') {
+        // Heavy Combat Shotgun
+        addBoxRot(0.18, y + 1.08, 0.12, 0.08, 0.14, 0.32, gunWood);   // Walnut stock
+        addBoxRot(0.18, y + 1.09, 0.42, 0.09, 0.13, 0.42, gunSteel);  // Heavy receiver
+        addBoxRot(0.18, y + 1.10, 0.70, 0.06, 0.07, 0.50, gunSteel);  // 12-gauge blued barrel & mag tube
+        addBoxRot(0.18, y + 1.02, 0.54, 0.08, 0.08, 0.24, gunWood);   // Ribbed pump fore-end
+      } else {
+        // Tactical SMG
+        addBoxRot(0.18, y + 1.08, 0.28, 0.08, 0.14, 0.36, gunSteel);
+        addBoxRot(0.18, y + 0.92, 0.28, 0.05, 0.24, 0.07, [0.10, 0.10, 0.12, 1.0]); // Stick magazine
+        addBoxRot(0.18, y + 1.09, 0.52, 0.04, 0.05, 0.24, gunSteel); // Suppressed barrel
+      }
     } else {
-      // Heavy Caliber Tactical Pistol
-      addBoxRot(0.24, y + 1.14, 0.26, 0.07, 0.11, 0.26, gunSteel); // Slide
-      addBoxRot(0.24, y + 1.04, 0.22, 0.06, 0.14, 0.08, gunSteel); // Grip
+      // Tactical Handgun / Pistol stance:
+      // Right arm extended forward holding pistol at ready, left arm poised
+      addBoxRot(0.28, y + 1.02, 0.12, 0.14, 0.28, 0.14, jacketCol);
+      addBoxRot(0.26, y + 1.00, 0.24, 0.12, 0.14, 0.22, skinCol);
+      addBoxRot(0.24, y + 1.02, 0.34, 0.10, 0.11, 0.12, skinCol);
+
+      // Left arm balanced
+      addBoxRot(-0.28, y + 0.92, -swing * 0.18, 0.14, 0.36, 0.14, jacketCol);
+      addBoxRot(-0.28, y + 0.68, -swing * 0.18 + 0.06, 0.12, 0.20, 0.12, skinCol);
+      addBoxRot(-0.28, y + 0.56, -swing * 0.18 + 0.06, 0.10, 0.12, 0.10, skinCol);
+
+      // Blued steel semi-automatic combat pistol
+      addBoxRot(0.24, y + 1.09, 0.38, 0.07, 0.11, 0.26, gunSteel); // Slide & barrel
+      addBoxRot(0.24, y + 0.99, 0.32, 0.06, 0.14, 0.08, [0.12, 0.12, 0.14, 1.0]); // Grip
     }
   }
 }

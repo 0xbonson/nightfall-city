@@ -144,7 +144,6 @@ export class PoliceSystem {
         this.helicopter.targetZ = player.z;
       }
 
-      // Searchlight beam only engages when helicopter is actually tracking directly over the player
       const distToPlayer = Math.hypot(this.helicopter.x - player.x, this.helicopter.z - player.z);
       this.helicopter.searchlightActive = distToPlayer < 24.0;
     } else {
@@ -272,23 +271,20 @@ export class PoliceSystem {
     const hy = h.y;
     const hz = h.z;
 
-    // Searchlight target on the ground (defaults to player or slightly ahead)
     const gx = h.targetX !== undefined ? h.targetX : hx;
     const gz = h.targetZ !== undefined ? h.targetZ : hz;
     const gy = 0.06;
 
-    // Pale amber-white palette with soft opacity falloff
-    const apexCol = [1.0, 0.92, 0.74, 0.10];         // Faint warm glow near lamp
-    const midBeamCol = [1.0, 0.88, 0.68, 0.035];     // Falling off towards ground
-    const groundBeamCol = [0.98, 0.84, 0.60, 0.012]; // Soft transparent base
-    const edgeBeamCol = [0.95, 0.80, 0.52, 0.0];     // Completely feathered outer rim
+    const apexCol = [1.0, 0.92, 0.74, 0.10];
+    const midBeamCol = [1.0, 0.88, 0.68, 0.035];
+    const groundBeamCol = [0.98, 0.84, 0.60, 0.012];
+    const edgeBeamCol = [0.95, 0.80, 0.52, 0.0];
 
-    // 1. Soft Elliptical Ground Footprint (feathered concentric rings)
     const rx = 5.2;
     const rz = 7.0;
-    const groundCenterCol = [1.0, 0.90, 0.70, 0.16]; // Soft warm pool on asphalt
+    const groundCenterCol = [1.0, 0.90, 0.70, 0.16];
     const groundMidCol = [0.98, 0.85, 0.62, 0.07];
-    const groundEdgeCol = [0.95, 0.78, 0.50, 0.0];   // Completely fades out at rim
+    const groundEdgeCol = [0.95, 0.78, 0.50, 0.0];
 
     const radialSegments = 24;
     for (let i = 0; i < radialSegments; i++) {
@@ -298,7 +294,6 @@ export class PoliceSystem {
       const cos1 = Math.cos(a1), sin1 = Math.sin(a1);
       const cos2 = Math.cos(a2), sin2 = Math.sin(a2);
 
-      // Inner disc
       const pCenter = [gx, gy, gz];
       const pMid1 = [gx + cos1 * rx * 0.45, gy, gz + sin1 * rz * 0.45];
       const pMid2 = [gx + cos2 * rx * 0.45, gy, gz + sin2 * rz * 0.45];
@@ -310,7 +305,6 @@ export class PoliceSystem {
       positions.push(pMid2[0], pMid2[1], pMid2[2]);
       colors.push(...groundMidCol);
 
-      // Outer feather skirt
       const pOut1 = [gx + cos1 * rx, gy, gz + sin1 * rz];
       const pOut2 = [gx + cos2 * rx, gy, gz + sin2 * rz];
 
@@ -329,8 +323,6 @@ export class PoliceSystem {
       colors.push(...groundEdgeCol);
     }
 
-    // 2. Faint Volumetric Atmospheric Beam
-    // Cone from helicopter lamp to ground with soft feathered boundary
     const lampY = hy - 1.2;
     const rTop = 0.45;
     const rBase = 4.8;
@@ -350,7 +342,6 @@ export class PoliceSystem {
       const skirt1 = [gx + cos1 * rSkirt, gy + 0.08, gz + sin1 * rSkirt];
       const skirt2 = [gx + cos2 * rSkirt, gy + 0.08, gz + sin2 * rSkirt];
 
-      // Inner beam body: top -> bot (opacity falls off towards ground)
       positions.push(top1[0], top1[1], top1[2]);
       colors.push(...apexCol);
       positions.push(bot1[0], bot1[1], bot1[2]);
@@ -365,7 +356,6 @@ export class PoliceSystem {
       positions.push(bot2[0], bot2[1], bot2[2]);
       colors.push(...groundBeamCol);
 
-      // Outer soft feathered rim: fades to 0 opacity
       positions.push(top1[0], top1[1], top1[2]);
       colors.push(...midBeamCol);
       positions.push(skirt1[0], skirt1[1], skirt1[2]);

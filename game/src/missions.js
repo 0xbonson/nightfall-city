@@ -26,6 +26,7 @@ export class MissionManager {
 
     this.markerRotation = 0;
     this.customTarget = null;
+    this.customObjectiveText = null;
     this.loadMission(0);
   }
 
@@ -35,6 +36,10 @@ export class MissionManager {
 
   setCustomTarget(target) {
     this.customTarget = target;
+  }
+
+  setCustomObjective(text) {
+    this.customObjectiveText = text;
   }
 
   loadMission(index) {
@@ -72,6 +77,10 @@ export class MissionManager {
   }
 
   getObjectiveText() {
+    if (this.customObjectiveText) {
+      return this.customObjectiveText;
+    }
+
     if (this.taxiMode && this.taxiFare) {
       return `TAXI FARE: Deliver passenger to destination ($${this.taxiFare.reward})`;
     }

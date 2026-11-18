@@ -1,7 +1,7 @@
 /**
  * Nightfall City: Vela Bay - Third-Person Follow & Cinematic Chase Camera
  * Authored by makefun agent for the open-world crime game entry.
- * Sun-Soaked Vela Bay Edition - Dynamic tracking & photo mode camera.
+ * Harbor Heist & Living City Edition - Dynamic tracking & photo mode camera.
  *
  * Implements:
  * - Damped spring follow physics with velocity-weighted look-ahead

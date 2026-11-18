@@ -35,7 +35,6 @@ export class CashDrop {
     const cy = this.y + yOff;
     const cz = this.z;
 
-    // Green currency stack mesh with white paper band
     const rot = this.bobTimer * 1.5;
     const cosR = Math.cos(rot), sinR = Math.sin(rot);
     const w = 0.22, h = 0.08, d = 0.12;
@@ -148,18 +147,10 @@ export class Bullet {
       const d = Math.hypot(nextX - v.x, nextZ - v.z);
       if (d < v.spec.length * 0.45 && Math.abs(nextY - (v.y + 0.6)) < 1.1) {
         v.takeDamage(this.damage);
-        combat.spawnImpactParticles(nextX, nextY, nextZ, [0.95, 0.85, 0.25]); // Sparks
+        combat.spawnImpactParticles(nextX, nextY, nextZ, [0.95, 0.75, 0.15]);
         this.alive = false;
         return;
       }
-    }
-
-    // Hit check against static buildings and obstacles
-    const col = world.checkCollision(nextX, nextZ, 0.2);
-    if (col.collided) {
-      combat.spawnImpactParticles(nextX, nextY, nextZ, [0.85, 0.82, 0.78]); // Concrete dust
-      this.alive = false;
-      return;
     }
 
     this.x = nextX;
@@ -169,13 +160,12 @@ export class Bullet {
 }
 
 export class Enemy {
-  constructor(x, y, z, rotY = 0) {
+  constructor(x, y, z, rot = 0) {
     this.x = x;
     this.y = y;
     this.z = z;
-    this.rotY = rotY;
-
-    this.health = 70;
+    this.rotY = rot;
+    this.health = 55;
     this.alive = true;
     this.shootTimer = 1.0 + Math.random() * 1.5;
     this.weapon = 'carbine';
@@ -195,13 +185,11 @@ export class Enemy {
   update(dt, player, combat, audio) {
     if (!this.alive) return;
 
-    // Target player orientation
     const dx = player.x - this.x;
     const dz = player.z - this.z;
     const dist = Math.hypot(dx, dz);
     this.rotY = Math.atan2(dx, dz);
 
-    // Suppressive fire when player is detected within tactical perimeter
     if (dist < 58.0 && player.alive) {
       this.shootTimer -= dt;
       if (this.shootTimer <= 0) {
@@ -392,6 +380,10 @@ export class CombatSystem {
     this.cashDrops.push(new CashDrop(x, y, z, amount));
   }
 
+  spawnTracer(x, y, z, dx, dy, dz, damage = 25) {
+    this.bullets.push(new Bullet(x, y, z, dx, dy, dz, damage, 195, 80, false));
+  }
+
   spawnImpactParticles(x, y, z, color) {
     for (let i = 0; i < 7; i++) {
       this.particles.push({
@@ -449,18 +441,15 @@ export class CombatSystem {
   }
 
   update(dt, world, player, pedestrians, vehicles, police, camera, audio) {
-    // Update bullets
     for (let i = 0; i < this.bullets.length; i++) {
       this.bullets[i].update(dt, world, player, this.enemies, pedestrians, vehicles, this);
     }
     this.bullets = this.bullets.filter((b) => b.alive);
 
-    // Update enemies
     for (let i = 0; i < this.enemies.length; i++) {
       this.enemies[i].update(dt, player, this, audio);
     }
 
-    // Update explosions
     for (let i = 0; i < this.explosions.length; i++) {
       const exp = this.explosions[i];
       exp.update(dt);
@@ -477,7 +466,6 @@ export class CombatSystem {
     }
     this.explosions = this.explosions.filter((e) => e.alive);
 
-    // Update particles
     for (let i = 0; i < this.particles.length; i++) {
       const p = this.particles[i];
       p.life -= dt;
@@ -488,7 +476,6 @@ export class CombatSystem {
     }
     this.particles = this.particles.filter((p) => p.life > 0);
 
-    // Update collectible cash drops
     for (let i = 0; i < this.cashDrops.length; i++) {
       this.cashDrops[i].update(dt, player, audio);
     }

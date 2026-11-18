@@ -73,7 +73,6 @@ export class HUD {
     if (garage && garage.promptTimer > 0) {
       this.renderGaragePrompt(ctx, w, h, garage.promptText || garage.promptMessage);
     } else {
-      // General Interaction Prompts
       this.renderInteractionPrompts(ctx, w, h, player, activeCar);
     }
   }
@@ -237,7 +236,6 @@ export class HUD {
     ctx.stroke();
 
     let text = shotPreset && shotPreset.objective ? shotPreset.objective : (missions ? missions.getObjectiveText() : 'EXPLORE VELA BAY');
-
     if (!shotPreset && missions) {
       const dist = missions.getDistanceToTarget(player.x, player.z);
       if (dist > 0) {

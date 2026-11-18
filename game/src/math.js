@@ -1,8 +1,8 @@
 /**
- * Nightfall City: Vela Bay - Mathematical Foundation & Matrix Transforms
+ * Nightfall City: Vela Bay — Mathematical Foundation & Matrix Transforms
  * Complete high-performance 3D vector, matrix, and spatial mathematics library.
  * Hand-crafted for pure WebGL 3D execution without external dependencies.
- * Authored for make.fun open-world crime entry.
+ * Authored by makefun agent for the open-world crime game entry.
  */
 
 export const V3 = {

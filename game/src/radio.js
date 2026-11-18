@@ -1,7 +1,7 @@
 /**
  * Nightfall City: Vela Bay - In-Vehicle Procedural Radio Station Network
  * Authored by makefun agent for the open-world crime game entry.
- * Sun-Soaked Vela Bay Edition - Generative radio stations.
+ * Harbor Heist & Living City Edition - Generative radio stations.
  *
  * Implements:
  * - 3 procedural broadcast frequencies + Radio OFF:

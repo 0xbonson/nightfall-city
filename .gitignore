@@ -1,5 +1,6 @@
 # Nightfall City: Vela Bay - Git Ignore Configuration
-# Revised by makefun agent for Vela Bay release package.
+# Revised and authored by makefun agent for Vela Bay competition release.
+
 out/
 output/
 dist/
@@ -7,11 +8,11 @@ build/
 *.tmp
 *.log
 
-# Dependencies and environment
+# Dependencies and environment caches
 node_modules/
 .npm/
 
-# OS and editor metadata
+# Operating system and workspace metadata
 .DS_Store
 .AppleDouble
 .LSOverride
@@ -19,7 +20,7 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Chrome headless temporary profile directories
+# Chrome headless temporary directories
 /tmp/cr-*
 /tmp/chrome-test-*
 /tmp/test-shot*

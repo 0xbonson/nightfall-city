@@ -8,7 +8,7 @@
 
 The game world spans an expansive coordinate area (-280m to +280m in X and Z) featuring 6 named districts, an elevated skyway, a harbor suspension bridge, distant mountain foothills, and Mediterranean oceanfront bathed in warm late-afternoon sunlight:
 
-- **Warm Sun Low in the Sky**: Direct sun positioned low to the northwest (`[-0.65, 0.45, -0.62]`), projecting long directional shadows across streets, sidewalks, building blocks, and props.
+- **Warm Sun Low in the Sky**: Direct sun positioned low to the northwest (`[-0.68, 0.32, -0.65]`), projecting long directional shadows across streets, sidewalks, building blocks, and props.
 - **Per-Face Façade Lighting**: Strong color contrast between sunward building facets (warm golden sand and peach ochre) and shadow facets (cool atmospheric blue-teal shade), making blocks immediately read as three-dimensional solids with defined architectural corners.
 - **Lived-In Façades & Rooftops**: Multi-level balconies with wrought-iron railings and flowering planter boxes, colorful fabric shopfront awnings, painted street signage, rooftop clutter (water tanks on wood/steel stilts, communications aerials, satellite dishes, air-conditioning condenser units, fire escapes), and varied illuminated multi-pane windows.
 - **Street-Level Urban Detail**: Raised granite kerbs, pedestrian crossings with tactile yellow paving pads, kerbside parked civilian cars, Mediterranean date palms and Italian pencil cypresses, ornate lamp posts, wooden benches, green litter bins, glass-backed bus shelters, traffic light gantries, cast-iron manhole covers, and procedural rain puddles reflecting the sky.
@@ -16,7 +16,7 @@ The game world spans an expansive coordinate area (-280m to +280m in X and Z) fe
 - **Distinct Districts**:
   1. **Downtown Vela**: High-rise glass skyscrapers, corporate plazas, rooftop HVAC clutter, and safehouse garage.
   2. **Old Market Quarter**: Mediterranean terracotta roofs, sandstone ochre townhouses, arched alleys, and market stalls.
-  3. **Meridian Cargo Docks**: Heavy industrial quays, warm sunlit concrete apron, multi-tier container stacks, breakwater quays, contraband crates, target heist van, and a 36m yellow container gantry crane.
+  3. **Meridian Cargo Docks**: Working harbor at Pier 7 with concrete quay slabs, etched expansion joints, crane rails, hazard markings, moored cargo barge, far shore breakwater, warehouse wall with roll-up shutter door, bollards, gulls, contraband crates on pallets, target getaway van with open doors, dockside jib crane, and a towering 36m yellow container gantry crane.
   4. **Ocean Promenade & Marina San Vento**: Art Deco pastel resorts, beachfront boardwalk, palm avenues, and marina boat slips.
   5. **Skyway Boulevard Expressway**: Multi-lane elevated concrete expressway spanning over the metropolis.
   6. **Harbor Suspension Bridge & Monte Sereno Foothills**: Twin-tower suspension bridge spanning the bay, framed by rolling northern mountain ridges.
@@ -27,6 +27,7 @@ The game world spans an expansive coordinate area (-280m to +280m in X and Z) fe
 
 ### 2.1 Character Traversal & Physics (`player.js`, `math.js`)
 - Protagonist **Rhea "Rook" Solano** rendered with distinct athletic silhouette: dark leather boots with thick rubber soles, deep indigo denim jeans, brown leather utility belt with steel buckle, rolled-sleeve terracotta jacket over dark crewneck tee, aviator sunglasses, and equipped firearms.
+- **Two-Handed Combat Ready Stance**: When holding a carbine, shotgun, or SMG, Rook raises the weapon in a combat-ready firing stance with the right hand on the trigger grip and left arm extended forward supporting the barrel and handguard.
 - Directional ground shadow cast along the sun vector under the character's feet.
 - Traversal states: walk, sprint (`Shift`), jump, strafe, reverse, weapon aim, and car enter/exit (`F`/`E`).
 - Sliding collision resolution against static city architecture.
@@ -36,11 +37,11 @@ The game world spans an expansive coordinate area (-280m to +280m in X and Z) fe
 - 7 vehicle chassis classes:
   1. *Veloce GT*: Aerodynamic sports coupe with low roofline, side intake vents, and rear wing spoiler.
   2. *Stallion 428*: Aggressive classic muscle car with raised hood induction scoop and wide rear haunches.
-  3. *Metro Interceptor*: High-contrast black-and-white police cruiser with steel bullbar push-bumper and dual-tone flashing lightbar.
+  3. *Metro Interceptor*: High-contrast black-and-white police cruiser with white doors, blue police shield emblems, steel bullbar push-bumper, and dual-tone flashing LED lightbar.
   4. *Meridian Executive*: Premium luxury 4-door executive sedan with chrome grille and tinted privacy glass.
   5. *Cobra City Cab*: Vibrant sunshine yellow taxi with checkerboard side rub-strip and illuminated rooftop sign box.
   6. *Piccolo Sport*: Agile European 3-door hot hatchback with steep hatch and sporty stance.
-  7. *Meridian Hauler*: Heavy industrial box cargo truck with corrugated cargo bay.
+  7. *Meridian Hauler*: Heavy industrial box cargo truck/van with corrugated cargo bay and openable rear doors displaying an illuminated interior cargo deck.
 - Directional ground shadow cast under each vehicle along the sun vector.
 - True vehicle anatomy: bonnet, cabin, roof, boot, dark glass with pillar frames, headlights, ruby taillights, side mirrors, wheels with rubber tires and alloy rims.
 - Arcade handbrake drift mechanics (`Space`): rear slip friction drop, counter-steering slides, and burnout screech audio.
@@ -49,6 +50,7 @@ The game world spans an expansive coordinate area (-280m to +280m in X and Z) fe
 
 ### 2.3 Pedestrian Population & Reactive Citizen AI (`pedestrians.js`)
 - Procedural civilian population with Mediterranean skin tones, varied attire (terracotta, coral, washed ochre, seafoam teal, linen cream, navy), hair styles, sunglasses, fedoras, and shopping bags.
+- Dynamic gait animation with articulated arm and leg swing kinematics.
 - Directional ground shadow cast under each pedestrian along the sun vector.
 - Dynamic panic AI: civilians scatter, yell, and sprint away from speeding cars, hit-and-run incidents, horn honks, and weapon fire.
 - Defeated pedestrians drop glowing green cash bundles ($25–$100).
@@ -60,14 +62,13 @@ The game world spans an expansive coordinate area (-280m to +280m in X and Z) fe
   - **3 Stars**: Coordinated cruiser pursuit with aggressive pit maneuvers and roadblock barricades.
   - **4 Stars**: Police tactical helicopter deployed with rotating rotors and atmospheric searchlight beam.
   - **5 Stars**: Full citywide tactical lockdown with relentless cruiser waves and airborne suppression.
-- **Volumetric Atmospheric Searchlight Beam**: Rendered with additive alpha blending (`SRC_ALPHA, ONE`), no depth mask writes, and multi-layered translucent amber-white pyramids (`[1.0, 0.90..0.92, 0.70..0.74]`). Opacity falls off towards the ground and sides, leaving street asphalt, cars, and building facades clearly visible behind the beam.
+- **Volumetric Atmospheric Searchlight Beam**: Rendered with additive alpha blending (`SRC_ALPHA, ONE`), no depth mask writes, and multi-layered translucent amber-white pyramids. Opacity falls off towards the ground and sides, leaving street asphalt, cars, and building facades clearly visible behind the beam.
 - **Ground Footprint Ellipse**: Feathered concentric amber rings illuminating the pavement beneath the beam.
-- Helicopter only appears and beams down when searchlight is actively over player target.
 - Evasion mechanics: breaking line of sight initiates heat cooldown with flashing stars; losing the police awards cash escape bonuses. Pulling into the Safehouse Garage immediately purges police heat.
 
 ### 2.5 Combat & Ballistics (`combat.js`)
 - Real-time third-person weapon combat with mouse aiming and Pointer Lock.
-- Weapon roster: Pistol, SMG, Shotgun (multi-pellet fan spread), and Tactical Carbine Rifle with dedicated specs, recoil spread, and reload cycles (`R`).
+- Weapon roster: Viper .45 Pistol, Stiletto 9mm SMG, Bravado 12G Shotgun (multi-pellet fan spread), and Vane Carbine Rifle with dedicated specs, recoil spread, and reload cycles (`R`).
 - High-visibility golden glowing tracer rounds.
 - Hostile Syndicate enforcer squads with tactical search-and-destroy combat AI and return fire.
 - Expanding fireball explosions with radius damage and dynamic light flashes.
@@ -75,14 +76,14 @@ The game world spans an expansive coordinate area (-280m to +280m in X and Z) fe
 
 ### 2.6 Syndicate Campaign & Side Activities (`missions.js`)
 - Connected 8-mission narrative storyline tracking Rook's campaign against the Vela Bay Syndicate:
-  1. *The Marina Drop*: Retrieve encrypted flash drive from Marina pier and deliver to safehouse.
-  2. *Repo on Vane Turf*: Steal back stolen sports car from Old Town compound.
-  3. *Market Shakedown*: Protect local shopkeepers by eliminating Syndicate extortionists.
-  4. *Vela Bay Grand Prix*: 8-checkpoint street race across ocean boulevard and highway.
-  5. *Munitions Depot Raid*: Infiltrate fortified dockside weapons depot and seize carbines.
-  6. *Pier 7 Ambush*: Ambush corrupt Captain Reynolds and eliminate Syndicate lieutenants.
-  7. *Skyway Interception*: Intercept armoured bullion convoy on the elevated skyway.
-  8. *Take Down the Syndicate*: Final showdown at Meridian Docks and high-speed escape.
+  1. *The Vela Arrival*: Secure the Downtown safehouse garage on 4th Street.
+  2. *Wheels for the Crew*: Boost a pristine Veloce GT from the Ocean Promenade hotel valet.
+  3. *Old Town Shakedown*: Clear the Leone enforcers out of the Old Market Quarter.
+  4. *Skyway Interception*: Intercept a cartel courier on the elevated Skyway Boulevard.
+  5. *Harbour Bridge Run*: Break through the police dragnet across the Vela Bay Suspension Bridge.
+  6. *Casino Takedown*: Infiltrate the Downtown Casino penthouse vault.
+  7. *Dock Heist Ambush*: Ambush Pier 7 contraband hardware shipment at Meridian Cargo Docks.
+  8. *Vela Bay Finale: The Clean Break*: Final vault breach, $50,000 bond recovery, and marina getaway.
 - Taxi Driver side jobs: press `K` while driving a taxi to pick up fares and navigate passengers across districts.
 - 3D rotating golden octahedron diamond mission beacon marking current target.
 

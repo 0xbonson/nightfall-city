@@ -7,11 +7,11 @@
  * - 7 distinct vehicle chassis classes:
  *   1. Veloce GT (sleek sports coupe with rear wing & side scoops)
  *   2. Stallion 428 (aggressive classic muscle with hood induction scoop)
- *   3. Metro Interceptor (high-contrast black/white police cruiser with push-bar & strobe lightbar)
+ *   3. Metro Interceptor (high-contrast black/white police cruiser with push-bar, door shields & strobe lightbar)
  *   4. Meridian Executive (premium executive 4-door luxury sedan)
  *   5. Cobra City Cab (yellow taxi with checkerboard livery & illuminated rooftop sign)
  *   6. Piccolo Sport (agile European 3-door hot hatchback)
- *   7. Meridian Hauler (industrial box truck/van with cargo bay)
+ *   7. Meridian Hauler (industrial box truck/van with cargo bay and openable rear doors)
  * - Directional ground shadows cast under chassis along the low sun vector
  * - True vehicle anatomy: bonnet, cabin, roof, boot, dark glass with pillar frames,
  *   headlights, ruby taillights, side mirrors, wheels with rubber tires and alloy rims
@@ -54,6 +54,7 @@ export class Vehicle {
     this.bodyRoll = 0;
     this.bodyPitch = 0;
     this.headlightsOn = true;
+    this.rearDoorsOpen = false; // For heist trucks/vans
 
     // AI navigation properties
     this.targetNode = null;
@@ -427,13 +428,25 @@ export class Vehicle {
     }
 
     if (this.isPolice) {
-      // Heavy Steel Push-Bumper Bullbar
+      // High-contrast police interceptor livery:
+      // White driver and passenger door panels
+      const doorWhite = [0.96, 0.96, 0.98, 1.0];
+      const doorL = l * 0.36;
+      addBoxRot(-w * 0.505, y + 0.20, cabinZ, 0.02, h * 0.42, doorL, doorWhite);
+      addBoxRot(w * 0.505, y + 0.20, cabinZ, 0.02, h * 0.42, doorL, doorWhite);
+
+      // Gold & blue "POLICE" crest star emblem on doors
+      const shieldBlue = [0.12, 0.35, 0.85, 1.0];
+      addBoxRot(-w * 0.512, y + 0.38, cabinZ, 0.015, 0.22, 0.32, shieldBlue);
+      addBoxRot(w * 0.512, y + 0.38, cabinZ, 0.015, 0.22, 0.32, shieldBlue);
+
+      // Heavy Steel Push-Bumper Bullbar on front
       addBoxRot(0, y + 0.36, frontZ + 0.26, w * 0.70, 0.44, 0.22, [0.12, 0.12, 0.14, 1.0]);
       // Dual A-pillar searchlights
       addBoxRot(-w * 0.48, y + 0.95, cabinZ + cabinL * 0.40, 0.12, 0.18, 0.14, [0.15, 0.15, 0.18, 1.0]);
       addBoxRot(w * 0.48, y + 0.95, cabinZ + cabinL * 0.40, 0.12, 0.18, 0.14, [0.15, 0.15, 0.18, 1.0]);
 
-      // Dual-Tone LED Emergency Lightbar on roof
+      // Dual-Tone LED Emergency Lightbar on roof (red left, blue right, flashing)
       const flash = Math.sin(this.sirenTimer * 2) > 0;
       const redLight = flash ? [2.8, 0.25, 0.25, 1.0] : [0.5, 0.1, 0.1, 1.0];
       const blueLight = !flash ? [0.25, 0.8, 2.8, 1.0] : [0.1, 0.15, 0.5, 1.0];
@@ -441,6 +454,10 @@ export class Vehicle {
       addBoxRot(-w * 0.24, y + 0.18 + h * 0.36 + cabinH + 0.08, cabinZ, w * 0.34, 0.18, 0.32, redLight);
       addBoxRot(w * 0.24, y + 0.18 + h * 0.36 + cabinH + 0.08, cabinZ, w * 0.34, 0.18, 0.32, blueLight);
       addBoxRot(0, y + 0.18 + h * 0.36 + cabinH + 0.06, cabinZ, 0.22, 0.14, 0.32, [0.95, 0.95, 0.98, 1.0]);
+
+      // Front grille wig-wag LED strobes
+      addBoxRot(-w * 0.18, y + 0.40, frontZ + 0.10, 0.16, 0.10, 0.06, flash ? redLight : blueLight);
+      addBoxRot(w * 0.18, y + 0.40, frontZ + 0.10, 0.16, 0.10, 0.06, !flash ? redLight : blueLight);
     }
 
     if (this.isTaxi) {
@@ -457,9 +474,29 @@ export class Vehicle {
       const boxW = w * 1.04;
       const boxH = h * 0.92;
       const boxZ = -l * 0.15;
-      addBoxRot(0, y + 0.18 + h * 0.38, boxZ, boxW, boxH, boxL, [0.88, 0.88, 0.90, 1.0]);
-      // Cargo roll-up rear door
-      addBoxRot(0, y + 0.18 + h * 0.38, boxZ - boxL * 0.5 - 0.04, boxW * 0.88, boxH * 0.88, 0.08, [0.35, 0.38, 0.42, 1.0]);
+
+      // Outer hauler cargo container body
+      addBoxRot(0, y + 0.18 + h * 0.38, boxZ, boxW, boxH, boxL, [0.90, 0.90, 0.92, 1.0]);
+
+      if (this.rearDoorsOpen) {
+        // TARGET HEIST VAN: Open rear doors swung wide open showing illuminated interior cargo deck!
+        const rearFaceZ = boxZ - boxL * 0.5;
+
+        // Dark interior cargo bay hollow
+        addBoxRot(0, y + 0.18 + h * 0.38, boxZ - boxL * 0.25, boxW * 0.84, boxH * 0.82, boxL * 0.45, [0.18, 0.20, 0.24, 1.0]);
+        // Warm interior cargo dome lamp glow
+        addBoxRot(0, y + 0.18 + h * 0.38 + boxH * 0.40, boxZ - boxL * 0.30, 0.35, 0.12, 0.35, [1.0, 0.92, 0.65, 1.0]);
+        // Interior metal floor bed
+        addBoxRot(0, y + 0.18 + h * 0.02, boxZ - boxL * 0.25, boxW * 0.82, 0.08, boxL * 0.45, [0.35, 0.38, 0.42, 1.0]);
+
+        // Left rear door swung open at 90 degrees pointing backwards (-Z)
+        addBoxRot(-boxW * 0.48, y + 0.18 + h * 0.38, rearFaceZ - boxW * 0.22, 0.08, boxH * 0.85, boxW * 0.45, [0.88, 0.88, 0.90, 1.0]);
+        // Right rear door swung open at 90 degrees pointing backwards (-Z)
+        addBoxRot(boxW * 0.48, y + 0.18 + h * 0.38, rearFaceZ - boxW * 0.22, 0.08, boxH * 0.85, boxW * 0.45, [0.88, 0.88, 0.90, 1.0]);
+      } else {
+        // Closed cargo roll-up rear door
+        addBoxRot(0, y + 0.18 + h * 0.38, boxZ - boxL * 0.5 - 0.04, boxW * 0.88, boxH * 0.88, 0.08, [0.35, 0.38, 0.42, 1.0]);
+      }
     }
   }
 }

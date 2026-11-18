@@ -1,6 +1,6 @@
 /**
  * Nightfall City: Vela Bay - Game Coordinator & Main Loop
- * Authored by makefun agent for the open-world crime game entry.
+ * Authored by makefun agent for the open-world crime game challenge.
  *
  * Coordinates:
  * - Pure WebGL 3D rendering pipeline (world mesh, dynamic entities, atmosphere)
@@ -143,6 +143,14 @@ export class Game {
       this.missions.setCustomTarget(preset.targetPos);
     }
 
+    if (preset.objective) {
+      this.missions.setCustomObjective(preset.objective);
+    }
+
+    if (preset.cash !== undefined) {
+      this.player.cash = preset.cash;
+    }
+
     if (preset.wantedStars !== undefined) {
       this.police.setWantedStars(preset.wantedStars);
     }
@@ -151,12 +159,18 @@ export class Game {
       for (const tr of preset.traffic) {
         const v = this.vehicles.spawn(tr.type, tr.pos[0], tr.pos[1], tr.pos[2], tr.rot);
         v.speed = (tr.speedMph || 0) / 2.237;
+        if (tr.sirenActive) {
+          v.sirenActive = true;
+        }
+        if (tr.rearDoorsOpen) {
+          v.rearDoorsOpen = true;
+        }
       }
     }
 
     if (preset.pedestrians) {
       for (const pd of preset.pedestrians) {
-        this.pedestrians.spawn(pd.pos[0], pd.pos[1], pd.pos[2], pd.rot);
+        this.pedestrians.spawn(pd.pos[0], pd.pos[1], pd.pos[2], pd.rot, pd.walkCycle || 0);
       }
     }
 

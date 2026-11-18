@@ -380,7 +380,6 @@ export class AudioEngine {
       if (this.currentStationId === 'radio_off') return;
 
       if (this.currentStationId === 'police_scanner') {
-        // Occasional dispatch chatter tone beep
         if (Math.random() < 0.25) {
           const osc = this.ctx.createOscillator();
           const gain = this.ctx.createGain();
