@@ -1,7 +1,7 @@
 /**
  * Nightfall City: Vela Bay - Input Manager (Keyboard & Mouse Controls)
  * Captures raw DOM keyboard, mouse buttons, pointer lock, and relative motion deltas.
- * Authored for make.fun GTA 6 bounty challenge.
+ * Authored for make.fun open-world crime entry.
  */
 
 export class InputManager {
@@ -12,6 +12,8 @@ export class InputManager {
     this.mouseDelta = { x: 0, y: 0 };
     this.isMouseDown = false;
     this.isJustClicked = false;
+    this.isRightMouseDown = false;
+    this.isJustRightClicked = false;
     this.pointerLocked = false;
 
     this.setupListeners();
@@ -24,7 +26,6 @@ export class InputManager {
       }
       this.keys.add(e.code);
 
-      // Prevent page scrolling on standard gaming keys
       if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.code)) {
         e.preventDefault();
       }
@@ -49,13 +50,22 @@ export class InputManager {
         if (document.pointerLockElement !== this.canvas && this.canvas.requestPointerLock) {
           this.canvas.requestPointerLock();
         }
+      } else if (e.button === 2) {
+        this.isRightMouseDown = true;
+        this.isJustRightClicked = true;
       }
     });
 
     window.addEventListener('mouseup', (e) => {
       if (e.button === 0) {
         this.isMouseDown = false;
+      } else if (e.button === 2) {
+        this.isRightMouseDown = false;
       }
+    });
+
+    window.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
     });
 
     document.addEventListener('pointerlockchange', () => {
@@ -66,6 +76,7 @@ export class InputManager {
       this.keys.clear();
       this.justPressedKeys.clear();
       this.isMouseDown = false;
+      this.isRightMouseDown = false;
     });
   }
 
@@ -82,5 +93,6 @@ export class InputManager {
     this.mouseDelta.x = 0;
     this.mouseDelta.y = 0;
     this.isJustClicked = false;
+    this.isJustRightClicked = false;
   }
 }

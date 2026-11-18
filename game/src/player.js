@@ -1,8 +1,9 @@
 /**
  * Nightfall City: Vela Bay - Protagonist Character Controller
  * Rhea "Rook" Solano: articulated 3D character with walk/sprint kinetics,
- * dynamic weapon handling, car entry/exit transitions, and damage modeling.
- * Authored for make.fun GTA 6 bounty challenge.
+ * multi-weapon tactical handling (pistol, SMG, shotgun, carbine),
+ * vehicle entry/exit transitions, safehouse garage interaction, and health/armor modeling.
+ * Authored for make.fun open-world crime entry.
  */
 
 import { PLAYER, WEAPONS } from './config.js';
@@ -25,11 +26,15 @@ export class Player {
     this.inVehicle = false;
     this.vehicle = null;
 
-    // Weapons
-    this.currentWeapon = 'rifle';
+    // Arsenal
+    this.currentWeapon = 'carbine';
+    this.weaponList = ['pistol', 'smg', 'shotgun', 'carbine'];
     this.ammo = {
-      pistol: { clip: WEAPONS.pistol.clipSize, reserve: 60 },
-      rifle: { clip: WEAPONS.rifle.clipSize, reserve: 150 },
+      pistol: { clip: WEAPONS.pistol.clipSize, reserve: 72 },
+      smg: { clip: WEAPONS.smg.clipSize, reserve: 150 },
+      shotgun: { clip: WEAPONS.shotgun.clipSize, reserve: 36 },
+      carbine: { clip: WEAPONS.carbine.clipSize, reserve: 180 },
+      rifle: { clip: WEAPONS.rifle.clipSize, reserve: 180 },
     };
     this.lastFireTime = 0;
     this.isReloading = false;
@@ -43,6 +48,10 @@ export class Player {
     // Audio step trigger flag
     this.stepTrigger = false;
     this.lastStepPhase = 0;
+  }
+
+  addMoney(amount) {
+    this.cash = Math.max(0, this.cash + amount);
   }
 
   takeDamage(amount) {
@@ -72,8 +81,8 @@ export class Player {
     car.isPlayerControlled = false;
     car.driver = null;
 
-    // Exit onto left side
-    const exitDist = car.spec.width * 0.5 + 1.2;
+    // Exit onto driver side
+    const exitDist = car.spec.width * 0.5 + 1.25;
     const exX = car.x - Math.cos(car.rotY) * exitDist;
     const exZ = car.z + Math.sin(car.rotY) * exitDist;
 
@@ -117,9 +126,13 @@ export class Player {
 
     // Weapon Switching
     if (input.isJustPressed('Digit1')) this.currentWeapon = 'pistol';
-    if (input.isJustPressed('Digit2')) this.currentWeapon = 'rifle';
+    if (input.isJustPressed('Digit2')) this.currentWeapon = 'smg';
+    if (input.isJustPressed('Digit3')) this.currentWeapon = 'shotgun';
+    if (input.isJustPressed('Digit4')) this.currentWeapon = 'carbine';
     if (input.isJustPressed('KeyQ')) {
-      this.currentWeapon = this.currentWeapon === 'pistol' ? 'rifle' : 'pistol';
+      const idx = this.weaponList.indexOf(this.currentWeapon);
+      const nextIdx = (idx + 1) % this.weaponList.length;
+      this.currentWeapon = this.weaponList[nextIdx];
     }
 
     // Weapon Reloading
@@ -156,23 +169,19 @@ export class Player {
     const targetSpeed = this.isMoving ? (this.isSprinting ? PLAYER.SPRINT_SPEED : PLAYER.WALK_SPEED) : 0;
 
     if (this.isMoving) {
-      // Orient relative to camera yaw
       const camYaw = camera ? camera.yaw : 0;
       const moveAngle = Math.atan2(strafe, fwd) + camYaw;
 
-      // Face forward motion direction
       this.rotY = lerp(this.rotY, moveAngle, dt * PLAYER.ROT_SPEED);
       this.rotY = normalizeAngle(this.rotY);
 
       this.vx = Math.sin(this.rotY) * targetSpeed;
       this.vz = Math.cos(this.rotY) * targetSpeed;
 
-      // Update footstep animation
       const prevPhase = Math.sin(this.walkCycle);
       this.walkCycle += dt * (this.isSprinting ? 12.0 : 8.0);
       const currPhase = Math.sin(this.walkCycle);
 
-      // Foot contact detection
       if (prevPhase < 0 && currPhase >= 0) {
         this.stepTrigger = true;
       }
@@ -208,12 +217,12 @@ export class Player {
 
     const swing = Math.sin(this.walkCycle) * (this.isMoving ? 0.45 : 0);
 
-    const jacketCol = [0.18, 0.20, 0.25, 1.0]; // Black leather jacket
+    const jacketCol = [0.18, 0.20, 0.25, 1.0]; // Charcoal jacket
     const shirtCol = [0.94, 0.35, 0.22, 1.0];  // Sunset orange inner tee
-    const pantsCol = [0.16, 0.22, 0.35, 1.0];  // Dark navy tactical jeans
+    const pantsCol = [0.16, 0.22, 0.35, 1.0];  // Dark navy jeans
     const skinCol = [0.88, 0.72, 0.58, 1.0];
     const bootsCol = [0.12, 0.12, 0.14, 1.0];
-    const gunCol = [0.15, 0.15, 0.18, 1.0];
+    const gunCol = [0.14, 0.14, 0.16, 1.0];
 
     const addBoxRot = (bx, by, bz, sx, sy, sz, color) => {
       const hx = sx * 0.5, hy = sy * 0.5, hz = sz * 0.5;
@@ -267,17 +276,23 @@ export class Player {
 
     // Arms
     addBoxRot(-0.30, y + 0.85, -swing * 0.2, 0.14, 0.58, 0.14, jacketCol);
-    addBoxRot(0.30, y + 0.85, 0.18, 0.14, 0.58, 0.14, jacketCol); // Right arm forward aiming
+    addBoxRot(0.30, y + 0.85, 0.18, 0.14, 0.58, 0.14, jacketCol);
 
     // Head & Aviator shades
     addBoxRot(0, y + 1.48, 0, 0.28, 0.28, 0.28, skinCol);
     addBoxRot(0, y + 1.54, 0.14, 0.26, 0.08, 0.08, [0.1, 0.1, 0.1, 1.0]);
 
     // Active Weapon Held in Hands
-    if (this.currentWeapon === 'rifle') {
-      addBoxRot(0.24, y + 1.15, 0.38, 0.10, 0.16, 0.72, gunCol);
+    if (this.currentWeapon === 'carbine') {
+      addBoxRot(0.24, y + 1.15, 0.38, 0.09, 0.15, 0.74, gunCol);
+    } else if (this.currentWeapon === 'shotgun') {
+      addBoxRot(0.24, y + 1.14, 0.40, 0.10, 0.16, 0.82, [0.28, 0.16, 0.10, 1.0]); // Walnut stock & steel barrel
+      addBoxRot(0.24, y + 1.16, 0.55, 0.06, 0.06, 0.55, gunCol);
+    } else if (this.currentWeapon === 'smg') {
+      addBoxRot(0.24, y + 1.15, 0.30, 0.08, 0.14, 0.42, gunCol);
+      addBoxRot(0.24, y + 1.04, 0.28, 0.05, 0.18, 0.06, [0.08, 0.08, 0.08, 1.0]); // Extended mag
     } else {
-      addBoxRot(0.24, y + 1.15, 0.28, 0.08, 0.12, 0.32, gunCol);
+      addBoxRot(0.24, y + 1.15, 0.26, 0.07, 0.11, 0.30, gunCol);
     }
   }
 }

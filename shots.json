@@ -2,35 +2,35 @@
   {
     "name": "1-city-street.png",
     "query": "?shot=1",
-    "description": "Downtown Vela Bay on foot from behind player: towering glass skyscrapers bathed in warm golden twilight, active avenue traffic, pedestrians on sidewalks, crisp road markings, long cast shadows, and full HUD with minimap and objective banner.",
+    "description": "Cover shot: wide street view from Downtown sidewalk with protagonist Rhea 'Rook' Solano in the foreground, vibrant colorful Mediterranean building facades, warm sunlit sky, active traffic and pedestrians, distant police cruiser on patrol, and complete HUD with rotating minimap, health/armor, cash stash, wanted stars, and active safehouse mission objective.",
     "camera": {
       "pos": [118.0, 2.1, -91.0],
       "target": [123.0, 1.8, -128.0],
       "fov": 63
     },
     "district": "Downtown Vela",
-    "wantedStars": 0,
+    "wantedStars": 1,
     "cash": 18450,
     "objective": "DELIVER THE VELOCE GT TO DOWNTOWN SAFEHOUSE (140M)"
   },
   {
     "name": "2-car-promenade.png",
     "query": "?shot=2",
-    "description": "Veloce GT sports car at high speed (151 MPH) drifting down the Ocean Promenade coastal ribbon: glistening open bay waters, low golden sun over the horizon, palms along the boardwalk, and high-RPM speedometer readout.",
+    "description": "High-speed coastal cruise in a stolen Veloce GT along Ocean Promenade: open turquoise bay waters, sun sinking on horizon, swaying palm trees and cypress grove, pedestrians along the promenade curb, full tactical HUD with speedometer showing 151 MPH and mission waypoint diamond on the radar minimap.",
     "camera": {
       "pos": [-106.5, 1.55, 71.0],
       "target": [-112.0, 1.35, 112.0],
       "fov": 65
     },
     "district": "Ocean Promenade",
-    "wantedStars": 0,
+    "wantedStars": 1,
     "cash": 26800,
     "objective": "COASTAL TIME TRIAL: PASS CHECKPOINT 4/6 (0:34)"
   },
   {
     "name": "3-police-chase.png",
     "query": "?shot=3",
-    "description": "Full-blown 5-star police pursuit on Skyway Boulevard: player Stallion 428 muscle car flanked by interceptor cruisers with intense red and blue emergency strobe lighting, helicopter spotlight beam from above, elevated expressway in background, and wanted stars blazing on HUD.",
+    "description": "Intense 5-star police chase down Skyway Boulevard: player muscle car pursued bumper-to-bumper by three police cruisers with blazing red and blue emergency lightbars washing the asphalt, tactical police chopper overhead, elevated expressway structure, and full HUD showing 5 wanted stars and flashing radar blips.",
     "camera": {
       "pos": [46.5, 2.6, -19.0],
       "target": [45.0, 1.7, -50.0],
@@ -44,7 +44,7 @@
   {
     "name": "4-dock-heist.png",
     "query": "?shot=4",
-    "description": "Meridian Cargo Docks during sunset heist: colorful stacked shipping containers, towering 36m yellow gantry crane, armed syndicate enforcers in tactical standoff, water basin and moored freighter beyond, tactical carbine equipped.",
+    "description": "Meridian Cargo Docks heist operation: tactical carbine in hand, target contraband truck and gold-banded loot crate at Pier 7, towering 36m yellow container gantry cranes, cargo ship and bay water in background, rotating mission objective beacon, and full tactical radar HUD.",
     "camera": {
       "pos": [127.0, 5.9, 97.0],
       "target": [172.0, 4.3, 148.0],

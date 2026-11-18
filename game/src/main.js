@@ -1,11 +1,12 @@
 /**
  * Nightfall City: Vela Bay - Game Coordinator & Main Loop
- * Authored by makefun agent for the GTA 6 bounty challenge.
+ * Authored by makefun agent for the open-world crime game entry.
  *
  * Coordinates:
  * - Pure WebGL 3D rendering pipeline (world mesh, dynamic entities, atmosphere)
  * - 2D HUD canvas overlay (status bars, wanted stars, speedometer, radar minimap, menus)
- * - Systems orchestration: Player, Vehicles, Pedestrians, Police AI, Missions, Combat, Audio Synth
+ * - Systems orchestration: Player, Vehicles, Pedestrians, Police AI, Missions, Combat, Audio Synth,
+ *   District Manager, Safehouse Garage, Generative Multi-Station Radio System
  * - Deterministic Photo Mode presets (?shot=1..4) with camera choreography and world staging
  * - Persistent save/load synchronization
  */
@@ -26,6 +27,9 @@ import { AudioEngine } from './audio.js';
 import { MenuManager } from './menus.js';
 import { SaveSystem } from './save.js';
 import { InputManager } from './input.js';
+import { DistrictManager } from './districts.js';
+import { GarageSystem } from './garage.js';
+import { RadioSystem } from './radio.js';
 
 export class Game {
   constructor() {
@@ -36,6 +40,10 @@ export class Game {
     this.audio = new AudioEngine();
     this.saveSystem = new SaveSystem();
     this.menuManager = new MenuManager();
+
+    this.districts = new DistrictManager();
+    this.garage = new GarageSystem();
+    this.radio = new RadioSystem(this.audio);
 
     this.world = new World();
     this.renderer = new Renderer(this.glCanvas);
@@ -63,7 +71,7 @@ export class Game {
     this.totalTime = 0;
     this.activeCar = null;
 
-    // Check for photo mode presets (?shot=1..4)
+    // Detect photo mode (?shot=1..4)
     this.shotPreset = this.detectShotPreset();
 
     this.handleResize();
@@ -73,7 +81,7 @@ export class Game {
     if (this.shotPreset) {
       this.applyShotPreset(this.shotPreset);
     } else {
-      this.saveSystem.load(this.player, this.missions);
+      this.saveSystem.load(this.player, this.missions, this.police, this.garage, this.radio);
     }
 
     // Dynamic mesh buffers
@@ -197,7 +205,7 @@ export class Game {
 
   update(dt) {
     // Menu navigation & pause check
-    this.menuManager.handleInput(this.input, this.missions, this.player, this.audio, this.saveSystem);
+    this.menuManager.handleInput(this.input, this.missions, this.player, this.audio, this.saveSystem, this.radio);
 
     if (this.menuManager.isPaused() && !this.shotPreset) {
       return;
@@ -205,23 +213,37 @@ export class Game {
 
     // Toggle taxi side gig
     if (this.input.isJustPressed('KeyK')) {
-      this.missions.toggleTaxiMode(this.player);
+      this.missions.toggleTaxiMode(this.player, this.audio);
     }
 
     // Active vehicle check
     this.activeCar = this.player.inVehicle ? this.player.vehicle : null;
 
-    // Shooting input
+    // Vehicle horn
+    if (this.activeCar && (this.input.isJustPressed('KeyH') || this.input.isJustPressed('KeyE'))) {
+      this.activeCar.honkHorn(this.audio, this.pedestrians);
+    }
+
+    // Radio cycling inside vehicle
+    if (this.activeCar && this.input.isJustPressed('KeyR')) {
+      this.radio.nextStation();
+    }
+
+    // Shooting input on foot
     if (this.input.isMouseDown && !this.player.inVehicle && !this.shotPreset) {
       this.combat.playerShoot(this.player, this.camera, this.police, this.audio);
     }
 
-    // Entity simulation updates
+    // Subsystem updates
+    this.districts.update(dt, this.player.x, this.player.z);
+    this.garage.update(dt, this.player, this.vehicles, this.police, this.input, this.audio, this.saveSystem);
+    this.radio.update(dt, this.player.inVehicle, this.input, this.audio);
+
     this.player.update(dt, this.input, this.camera, this.world, this.vehicles);
     this.vehicles.update(dt, this.input, this.world);
-    this.pedestrians.update(dt, this.world, this.player, this.vehicles);
-    this.police.update(dt, this.player, this.vehicles, this.world);
-    this.missions.update(dt, this.player, this.vehicles, this.police, this.combat, this.saveSystem);
+    this.pedestrians.update(dt, this.world, this.player, this.vehicles, this.audio);
+    this.police.update(dt, this.player, this.vehicles, this.world, this.audio);
+    this.missions.update(dt, this.player, this.vehicles, this.police, this.combat, this.saveSystem, this.audio);
     this.combat.update(dt, this.world, this.player, this.pedestrians, this.vehicles, this.police, this.camera, this.audio);
     this.camera.update(dt, this.player, this.activeCar, this.input);
 
@@ -244,6 +266,7 @@ export class Game {
     this.vehicles.buildMesh(this.dynPositions, this.dynNormals, this.dynColors, this.dynUvs);
     this.pedestrians.buildMesh(this.dynPositions, this.dynNormals, this.dynColors, this.dynUvs);
     this.police.buildMesh(this.dynPositions, this.dynNormals, this.dynColors, this.dynUvs);
+    this.garage.buildMesh(this.dynPositions, this.dynNormals, this.dynColors, this.dynUvs);
     this.missions.buildMesh(this.dynPositions, this.dynNormals, this.dynColors, this.dynUvs);
     this.combat.buildMesh(this.dynPositions, this.dynNormals, this.dynColors, this.dynUvs);
 
@@ -262,15 +285,41 @@ export class Game {
     const hudCtx = this.hud.ctx;
     const h = this.hudCanvas.height;
 
-    // Tactical HUD (health, armor, cash, stars, ammo, objective, speedometer)
-    this.hud.render(this.player, this.missions, this.police, this.activeCar, this.shotPreset);
+    // Tactical HUD (health, armor, cash, stars, ammo, objective, radio, districts, speedometer)
+    this.hud.render(
+      this.player,
+      this.missions,
+      this.police,
+      this.activeCar,
+      this.shotPreset,
+      this.radio,
+      this.districts,
+      this.garage
+    );
 
     // Tactical GPS Minimap
-    this.minimap.render(hudCtx, h, this.player, this.vehicles, this.police, this.missions, this.combat);
+    this.minimap.render(
+      hudCtx,
+      h,
+      this.player,
+      this.vehicles,
+      this.police,
+      this.missions,
+      this.combat,
+      this.garage
+    );
 
     // Pause menu & modal dialogues
     if (this.menuManager.isPaused() && !this.shotPreset) {
-      this.menuManager.render(hudCtx, this.hudCanvas.width, h, this.missions, this.player, this.audio);
+      this.menuManager.render(
+        hudCtx,
+        this.hudCanvas.width,
+        h,
+        this.missions,
+        this.player,
+        this.audio,
+        this.garage
+      );
     }
   }
 }

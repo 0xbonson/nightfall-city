@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Nightfall City: Vela Bay</title>
+  <title>Nightfall City: Vela Bay — Open-World Crime Odyssey</title>
+  <meta name="description" content="An original open-world WebGL crime game set in the sun-soaked Mediterranean metropolis of Vela Bay. Drive, shoot, evade police, and build your syndicate empire.">
   <style>
     * {
       box-sizing: border-box;
@@ -53,6 +54,8 @@
       justify-content: center;
       color: #ffffff;
       transition: opacity 0.35s ease;
+      text-align: center;
+      padding: 24px;
     }
     #start-overlay.hidden {
       opacity: 0;
@@ -72,13 +75,21 @@
       margin-bottom: 4px;
     }
     .game-sub {
-      font-size: 21px;
+      font-size: 20px;
       font-weight: 800;
       color: #00d2ff;
       letter-spacing: 7px;
       text-transform: uppercase;
-      margin-bottom: 32px;
+      margin-bottom: 18px;
       text-shadow: 0 2px 14px rgba(0, 210, 255, 0.45);
+    }
+    .story-premise {
+      max-width: 620px;
+      font-size: 14px;
+      line-height: 1.5;
+      color: rgba(220, 235, 250, 0.85);
+      margin-bottom: 28px;
+      font-weight: 500;
     }
     .play-btn {
       padding: 15px 48px;
@@ -99,7 +110,7 @@
       box-shadow: 0 6px 26px rgba(255, 170, 0, 0.75);
     }
     .controls-hint {
-      margin-top: 28px;
+      margin-top: 26px;
       font-size: 13px;
       font-weight: 500;
       color: rgba(220, 235, 250, 0.7);
@@ -115,14 +126,17 @@
     <div id="start-overlay">
       <h1 class="game-logo">Nightfall City</h1>
       <div class="game-sub">Vela Bay</div>
+      <p class="story-premise">
+        Welcome to Vela Bay — a sun-drenched Mediterranean metropolis of high-stakes crime, oceanfront boulevards, and rooftop empires. Step into the boots of Rhea "Rook" Solano as you carve your path through 8 syndicate operations, evade relentless police heat, and claim the city.
+      </p>
       <button id="play-button" class="play-btn">Launch Game</button>
-      <div class="controls-hint">[W/A/S/D] Drive & Move &bull; [F] Enter/Exit Car &bull; [LMB] Shoot &bull; [Space] Handbrake Drift &bull; [Esc] Pause</div>
+      <div class="controls-hint">[W/A/S/D] Drive & Move &bull; [F/E] Enter/Exit Car &bull; [LMB] Shoot &bull; [Space] Drift &bull; [H] Horn &bull; [Esc] Pause</div>
     </div>
   </div>
 
   <script type="module" src="./src/main.js"></script>
   <script>
-    // Bypass overlay if ?shot= parameter is active for screenshot automation
+    // Bypass start overlay if ?shot= parameter is active for screenshot automation
     const overlay = document.getElementById('start-overlay');
     const playBtn = document.getElementById('play-button');
     const params = new URLSearchParams(window.location.search);

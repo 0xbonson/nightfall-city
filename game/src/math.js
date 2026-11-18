@@ -2,6 +2,7 @@
  * Nightfall City: Vela Bay - Mathematical Foundation & Matrix Transforms
  * Complete high-performance 3D vector, matrix, and spatial mathematics library.
  * Hand-written for pure WebGL 3D execution without external dependencies.
+ * Authored for make.fun open-world crime entry.
  */
 
 export const V3 = {
@@ -352,7 +353,6 @@ export const M4 = {
   },
 };
 
-// General interpolation & numerical helpers
 export function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
 }

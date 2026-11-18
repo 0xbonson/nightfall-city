@@ -2,7 +2,7 @@
  * Nightfall City: Vela Bay - Narrative Mission Engine & Objective Tracking
  * 8-part story arc (Courier deliveries, vehicle repo, street racing, depot sabotage,
  * overpass pursuit, marina heist) plus interactive Taxi Driver side hustle.
- * Authored for make.fun GTA 6 bounty challenge.
+ * Authored for make.fun open-world crime entry.
  */
 
 import { MISSIONS } from './config.js';
@@ -48,10 +48,9 @@ export class MissionManager {
     this.bannerTimer = duration;
   }
 
-  toggleTaxiMode(player) {
+  toggleTaxiMode(player, audio) {
     this.taxiMode = !this.taxiMode;
     if (this.taxiMode) {
-      // Generate random fare across town
       const destX = (Math.random() - 0.5) * 320;
       const destZ = (Math.random() - 0.5) * 320;
       this.taxiFare = {
@@ -59,7 +58,8 @@ export class MissionManager {
         destZ,
         reward: 350 + Math.floor(Math.random() * 450),
       };
-      this.showBanner('TAXI SHIFT STARTED', `Deliver fare to marked destination ($${this.taxiFare.reward})`, 3.5);
+      this.showBanner('TAXI SHIFT STARTED', `Deliver passenger to marked destination ($${this.taxiFare.reward})`, 3.5);
+      if (audio) audio.playCashChime();
     } else {
       this.taxiFare = null;
       this.showBanner('TAXI SHIFT ENDED', 'Off duty. Resuming standard operations.', 3.0);
@@ -103,7 +103,7 @@ export class MissionManager {
     return Math.round(Math.hypot(playerX - target[0], playerZ - target[2]));
   }
 
-  update(dt, player, vehicles, police, combat, saveSystem) {
+  update(dt, player, vehicles, police, combat, saveSystem, audio) {
     this.markerRotation += dt * 2.5;
 
     if (this.bannerTimer > 0) {
@@ -113,9 +113,10 @@ export class MissionManager {
     // Taxi Fare Completion Check
     if (this.taxiMode && this.taxiFare) {
       const d = Math.hypot(player.x - this.taxiFare.destX, player.z - this.taxiFare.destZ);
-      if (d < 8.0) {
-        player.cash += this.taxiFare.reward;
+      if (d < 8.5) {
+        player.addMoney(this.taxiFare.reward);
         this.showBanner('FARE DELIVERED!', `Earned $${this.taxiFare.reward} cash fare + tip!`, 3.5);
+        if (audio) audio.playCashChime();
         this.taxiFare = null;
         this.taxiMode = false;
         if (saveSystem) saveSystem.save(player, this, police);
@@ -126,7 +127,7 @@ export class MissionManager {
     const m = this.getCurrentMission();
     if (!m || this.status !== 'active') return;
 
-    // Update timed countdown
+    // Timed countdown
     if (m.timeLimit && this.missionTimer > 0) {
       this.missionTimer -= dt;
       if (this.missionTimer <= 0) {
@@ -145,43 +146,43 @@ export class MissionManager {
       if (d < 14.0) {
         this.checkpointIdx++;
         if (this.checkpointIdx >= m.checkpoints.length) {
-          // Race complete!
-          this.completeMission(player, police, saveSystem);
+          this.completeMission(player, police, saveSystem, audio);
         } else {
           this.showBanner('CHECKPOINT CLEARED', `${this.checkpointIdx}/${m.checkpoints.length} passed!`, 1.5);
+          if (audio) audio.playCashChime();
         }
       }
     } else if (m.targetType === 'vehicle_drop') {
       if (d < 10.0 && player.inVehicle) {
-        this.completeMission(player, police, saveSystem);
+        this.completeMission(player, police, saveSystem, audio);
       }
     } else if (m.targetType === 'pickup') {
-      if (d < 4.0) {
+      if (d < 4.5) {
         if (m.wantedLevelOnPickup) police.setWantedStars(m.wantedLevelOnPickup);
-        this.completeMission(player, police, saveSystem);
+        this.completeMission(player, police, saveSystem, audio);
       }
     } else if (m.targetType === 'combat_repo' || m.targetType === 'combat_elimination') {
-      if (d < 12.0) {
+      if (d < 14.0) {
         const aliveEnemies = combat.enemies.filter((e) => e.alive);
         if (aliveEnemies.length === 0) {
-          this.completeMission(player, police, saveSystem);
+          this.completeMission(player, police, saveSystem, audio);
         }
       }
     } else if (m.targetType === 'chase_intercept' || m.targetType === 'sabotage_escape' || m.targetType === 'heist_finale') {
-      if (d < 8.0) {
-        this.completeMission(player, police, saveSystem);
+      if (d < 8.5) {
+        this.completeMission(player, police, saveSystem, audio);
       }
     }
   }
 
-  completeMission(player, police, saveSystem) {
+  completeMission(player, police, saveSystem, audio) {
     const m = this.getCurrentMission();
     this.status = 'passed';
-    player.cash += m.rewardCash;
+    player.addMoney(m.rewardCash);
 
     this.showBanner('MISSION PASSED!', `${m.title} — Earned $${m.rewardCash.toLocaleString()}`, 4.5);
+    if (audio) audio.playMissionPassed();
 
-    // Advance to next mission
     setTimeout(() => {
       if (this.currentIdx < this.missions.length - 1) {
         this.loadMission(this.currentIdx + 1);

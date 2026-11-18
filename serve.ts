@@ -1,7 +1,8 @@
 /**
  * Nightfall City: Vela Bay — Lightweight Static Dev Server
- * Built with Node.js 22 standard library (zero external dependencies).
- * Serves the offline 3D WebGL engine and assets on port 8080.
+ * Built with Node.js standard library (zero external runtime dependencies).
+ * Serves the offline 3D WebGL engine and assets with strict MIME mapping.
+ * Authored for make.fun open-world crime entry.
  */
 
 import { createReadStream, existsSync, statSync } from 'node:fs';
@@ -110,7 +111,6 @@ server.listen(designatedPort, '0.0.0.0', () => {
   console.log(`[Nightfall City] Dev server active at: ${url}`);
   console.log(`[Nightfall City] Serving game directory: ${baseDir}`);
 
-  // Open browser page if requested or interactive
   if (process.argv.includes('--open')) {
     const openerCmd = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
     exec(`${openerCmd} ${url}`, () => {});

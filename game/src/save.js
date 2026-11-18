@@ -1,11 +1,11 @@
 /**
  * Nightfall City: Vela Bay - Persistent Save & Career State Manager
  * Uses browser localStorage to persist campaign progress, cash balance,
- * weapons arsenal, and player accomplishments across sessions.
- * Authored for make.fun GTA 6 bounty challenge.
+ * weapons arsenal, safehouse stashed vehicles, and player accomplishments across sessions.
+ * Authored for make.fun open-world crime entry.
  */
 
-const STORAGE_KEY = 'nightfall_city_save_v1';
+const STORAGE_KEY = 'nightfall_city_save_v2';
 
 export class SaveSystem {
   hasSave() {
@@ -16,16 +16,18 @@ export class SaveSystem {
     }
   }
 
-  save(player, missions, police) {
+  save(player, missions, police, garage, radio) {
     try {
       const payload = {
-        version: '1.3.0',
+        version: '2.0.0',
         missionIdx: missions ? missions.currentIdx : 0,
         cash: player ? player.cash : 1500,
         health: player ? player.health : 100,
         armor: player ? player.armor : 50,
-        currentWeapon: player ? player.currentWeapon : 'rifle',
+        currentWeapon: player ? player.currentWeapon : 'carbine',
         wantedStars: police ? police.wantedStars : 0,
+        storedVehicles: garage ? garage.storedVehicles : [],
+        radioIdx: radio ? radio.currentStationIdx : 0,
         savedAt: Date.now(),
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -36,7 +38,7 @@ export class SaveSystem {
     }
   }
 
-  load(player, missions, police) {
+  load(player, missions, police, garage, radio) {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return false;
@@ -59,6 +61,12 @@ export class SaveSystem {
       }
       if (data.wantedStars !== undefined && police) {
         police.setWantedStars(data.wantedStars);
+      }
+      if (data.storedVehicles !== undefined && garage) {
+        garage.storedVehicles = data.storedVehicles;
+      }
+      if (data.radioIdx !== undefined && radio) {
+        radio.setStation(data.radioIdx);
       }
       return true;
     } catch (err) {

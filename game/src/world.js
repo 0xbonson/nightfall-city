@@ -2,21 +2,22 @@
  * Nightfall City: Vela Bay - Procedural Open World & District Generator
  * Authored by makefun agent for the GTA 6 bounty challenge.
  *
- * Generates an expansive, high-density coastal metropolis:
- * - Downtown Financial District: Soaring glass curtain skyscrapers, setbacks, illuminated crowns, helipads, antennas
- * - Ocean Promenade: Vibrant Art Deco coastal resorts, tiered pastel balconies, beachfront boardwalk, palm boulevards
+ * Generates an expansive Mediterranean coastal metropolis bathed in warm golden light:
+ * - Downtown Financial District: Soaring glass curtain skyscrapers, setbacks, illuminated crowns, rooftop HVAC & antennas
+ * - Ocean Promenade: Vibrant Art Deco coastal resorts, tiered pastel balconies, beachfront boardwalk, tropical palms
  * - Old Town Quarter: Warm terracotta and sandstone facades, storefront awnings, historic arches, pedestrian plazas
- * - Meridian Cargo Docks: Heavy industrial concrete aprons, vivid multicolored shipping container stacks, 36m gantry crane
- * - Marina Waterfront: Weathered timber piers, moored luxury motor yachts, shoreline wave breaks
- * - Elevated Skyway: Multi-lane elevated concrete expressway with overpass ramps and overhanging highway signs
- * - Verdant Parks: Lush green lawns, tropical palm groves, street furniture, fire hydrants, decorative lampposts
+ * - Meridian Cargo Docks: Industrial quays, vivid shipping container stacks, 36m gantry crane, and contraband loot crates
+ * - Marina San Vento: Weathered timber piers, moored luxury motor yachts, and breakwater channel
+ * - Harbour Suspension Bridge: Steel suspension towers and cables spanning across the coastal waterway
+ * - Monte Sereno Coastal Ridge: Distant rolling hills framing the horizon in warm atmospheric gradients
+ * - Verdant Parks & Mediterranean Flora: Cypress columns, palm groves, reflecting fountains, street furniture, and lampposts
  */
 
 import { WORLD, DISTRICTS } from './config.js';
 
 export class World {
   constructor() {
-    this.colliders = []; // AABB array: { minX, maxX, minZ, maxZ, height, type }
+    this.colliders = []; // AABB array: { minX, maxX, minZ, maxZ, height, yBottom, type }
     this.roadNodes = []; // Traffic navigation graph nodes
     this.roadSegments = [];
     this.props = [];
@@ -43,8 +44,10 @@ export class World {
 
   generate() {
     this.generateTerrainAndSea();
+    this.generateDistantHills();
     this.generateRoadGrid();
     this.generateElevatedSkyway();
+    this.generateHarbourBridge();
     this.generateCityBlocks();
     this.generateParksAndPlazas();
     this.generateMarinaAndWaterfront();
@@ -140,8 +143,8 @@ export class World {
   // --- Generation Procedures ---
 
   generateTerrainAndSea() {
-    // City ground base slab - clean light asphalt/concrete foundation
-    const groundColor = [0.26, 0.28, 0.32, 1.0];
+    // City ground base slab - clean warm asphalt foundation
+    const groundColor = [0.28, 0.30, 0.34, 1.0];
     this.addQuad(
       [WORLD.COAST_X, 0, -WORLD.HALF_SIZE],
       [WORLD.HALF_SIZE, 0, -WORLD.HALF_SIZE],
@@ -151,14 +154,14 @@ export class World {
     );
 
     // Turquoise & Azure Ocean Water Mesh
-    const oceanColor = [0.08, 0.48, 0.68, 0.94];
-    const waterMinX = -WORLD.HALF_SIZE - 200;
+    const oceanColor = [0.08, 0.50, 0.70, 0.94];
+    const waterMinX = -WORLD.HALF_SIZE - 220;
     const waterMaxX = WORLD.COAST_X + 2;
-    const waterMinZ = -WORLD.HALF_SIZE - 100;
-    const waterMaxZ = WORLD.HALF_SIZE + 100;
+    const waterMinZ = -WORLD.HALF_SIZE - 120;
+    const waterMaxZ = WORLD.HALF_SIZE + 120;
 
-    const segsX = 26;
-    const segsZ = 26;
+    const segsX = 28;
+    const segsZ = 28;
     const dx = (waterMaxX - waterMinX) / segsX;
     const dz = (waterMaxZ - waterMinZ) / segsZ;
 
@@ -188,8 +191,39 @@ export class World {
     }
 
     // Coastal Seawall & Granite Revetment along shoreline
-    const seawallColor = [0.52, 0.54, 0.58, 1.0];
-    this.addBox(WORLD.COAST_X, -2.5, 0, 3.4, 5.0, WORLD.SIZE, seawallColor, [1, 1], true);
+    const seawallColor = [0.54, 0.56, 0.60, 1.0];
+    this.addBox(WORLD.COAST_X, -2.5, 0, 3.6, 5.0, WORLD.SIZE, seawallColor, [1, 1], true);
+  }
+
+  generateDistantHills() {
+    // Monte Sereno Foothills: Scenic sunlit ridges framing the northern and eastern horizon
+    const hillColNear = [0.58, 0.62, 0.48, 1.0]; // Mediterranean olive ridge
+    const hillColFar = [0.68, 0.58, 0.52, 1.0];  // Sun-washed terracotta bluffs
+
+    // Northern Ridge
+    const numHillsN = 9;
+    const spanN = WORLD.SIZE + 80;
+    const stepN = spanN / numHillsN;
+    for (let i = 0; i < numHillsN; i++) {
+      const hx = -WORLD.HALF_SIZE + i * stepN;
+      const hz = -WORLD.HALF_SIZE - 75;
+      const hHeight = 45 + Math.sin(i * 1.7) * 22;
+      const hWidth = stepN * 1.45;
+      this.addBox(hx, 0, hz, hWidth, hHeight, 55, hillColFar, [1, 1], false);
+      // Secondary foreground ridge
+      this.addBox(hx + stepN * 0.5, 0, hz + 35, hWidth * 0.85, hHeight * 0.65, 40, hillColNear, [1, 1], false);
+    }
+
+    // Eastern Mountain Flank
+    const numHillsE = 7;
+    const spanE = WORLD.SIZE;
+    const stepE = spanE / numHillsE;
+    for (let i = 0; i < numHillsE; i++) {
+      const hx = WORLD.HALF_SIZE + 65;
+      const hz = -WORLD.HALF_SIZE + i * stepE;
+      const hHeight = 52 + Math.cos(i * 2.1) * 20;
+      this.addBox(hx, 0, hz, 60, hHeight, stepE * 1.4, hillColFar, [1, 1], false);
+    }
   }
 
   generateRoadGrid() {
@@ -197,7 +231,7 @@ export class World {
     const eastWestRoads = [-180, -115, -50, 20, 85, 150, 215];
 
     // Rich warm asphalt (bright enough to reflect golden sunlight, never murky black)
-    const asphaltColor = [0.28, 0.29, 0.33, 1.0];
+    const asphaltColor = [0.29, 0.31, 0.35, 1.0];
     const markingYellow = [1.0, 0.85, 0.15, 1.0]; // High-vis golden amber centerline
     const markingWhite = [0.96, 0.96, 0.98, 1.0]; // Bright white lane boundaries
     const sidewalkColor = [0.76, 0.78, 0.82, 1.0]; // Clean sunlit concrete sidewalks
@@ -313,6 +347,31 @@ export class World {
     this.addBox(WORLD.OVERPASS_X, overpassY * 0.5, WORLD.OVERPASS_Z_END + rampLen * 0.5, overpassW, overpassY, rampLen, concreteDeck, [1, 1], true);
   }
 
+  generateHarbourBridge() {
+    // Grand Vela Bay Suspension Bridge connecting Old Town to the Western Maritime Peninsula
+    const bridgeX = -130;
+    const bridgeZ = -180;
+    const bridgeLen = 85;
+    const bridgeW = 12;
+    const bridgeH = 14;
+
+    const steelColor = [0.72, 0.38, 0.28, 1.0]; // International rust orange
+    const roadwayColor = [0.32, 0.34, 0.38, 1.0];
+
+    // Bridge road deck spanning west across the bay
+    this.addBox(bridgeX - bridgeLen * 0.5, 6.0, bridgeZ, bridgeLen, 1.2, bridgeW, roadwayColor, [1, 1], true);
+
+    // Twin suspension towers
+    const towerH = 34;
+    this.addBox(bridgeX - 18, 0, bridgeZ - 5.5, 2.2, towerH, 2.2, steelColor, [1, 1], true);
+    this.addBox(bridgeX - 18, 0, bridgeZ + 5.5, 2.2, towerH, 2.2, steelColor, [1, 1], true);
+    this.addBox(bridgeX - 18, towerH - 2, bridgeZ, 2.4, 2.2, bridgeW, steelColor, [1, 1], false);
+
+    // Suspension cables
+    this.addBox(bridgeX - 35, 14.0, bridgeZ - 5.4, 32, 0.4, 0.4, steelColor, [1, 1], false);
+    this.addBox(bridgeX - 35, 14.0, bridgeZ + 5.4, 32, 0.4, 0.4, steelColor, [1, 1], false);
+  }
+
   generateCityBlocks() {
     const sidewalkColor = [0.76, 0.78, 0.82, 1.0];
 
@@ -362,6 +421,10 @@ export class World {
         // Main tower body
         this.addBox(bx.xMid, WORLD.CURB_HEIGHT + 6.0, bz.zMid, bx.width - 7, height - 6.0, bz.length - 7, pal.body, [0.25, 0.25], true);
 
+        // Rooftop clutter: HVAC chiller units and elevator penthouses
+        this.addBox(bx.xMid - 4, WORLD.CURB_HEIGHT + height, bz.zMid - 3, 5.0, 2.8, 6.0, [0.45, 0.48, 0.52, 1.0], [1, 1], false);
+        this.addBox(bx.xMid + 4, WORLD.CURB_HEIGHT + height, bz.zMid + 3, 3.5, 2.2, 3.5, [0.38, 0.40, 0.44, 1.0], [1, 1], false);
+
         // Illuminated architectural setback crown
         if (height > 65) {
           const tierH = 24;
@@ -377,6 +440,9 @@ export class World {
 
         // Grand glass entrance portico / canopy
         this.addBox(bx.xMid, WORLD.CURB_HEIGHT + 4.2, bz.zMid - bz.length * 0.5 + 2.8, Math.min(22, bx.width - 8), 0.45, 5.0, [0.20, 0.25, 0.32, 1.0], [1, 1], false);
+
+        // Illuminated street-level shopfront signage
+        this.addBox(bx.xMid, WORLD.CURB_HEIGHT + 5.2, bz.zMid - bz.length * 0.5 + 0.3, 10.0, 0.9, 0.25, [0.15, 0.85, 0.95, 1.0], [1, 1], false);
       }
     }
   }
@@ -393,11 +459,11 @@ export class World {
     ];
 
     const facadeColors = [
-      [0.82, 0.38, 0.25, 1.0], // Terracotta Rust
-      [0.90, 0.72, 0.42, 1.0], // Mediterranean Ochre
-      [0.85, 0.82, 0.72, 1.0], // Cream Travertine
-      [0.55, 0.68, 0.52, 1.0], // Tuscan Sage Green
-      [0.78, 0.45, 0.40, 1.0], // Coral Rose
+      [0.84, 0.40, 0.24, 1.0], // Terracotta Rust
+      [0.92, 0.74, 0.44, 1.0], // Mediterranean Ochre
+      [0.86, 0.82, 0.74, 1.0], // Cream Travertine
+      [0.56, 0.70, 0.54, 1.0], // Tuscan Sage Green
+      [0.80, 0.46, 0.42, 1.0], // Coral Rose
     ];
 
     let cIdx = 0;
@@ -416,9 +482,18 @@ export class World {
         this.addBox(bx.xMid + bx.width * 0.22, WORLD.CURB_HEIGHT, bz.zMid, bx.width * 0.46, subH2, bz.length - 6, col2, [0.4, 0.4], true);
 
         // Storefront awnings & decorative roof cornices
-        const awningCol = [0.22, 0.55, 0.35, 1.0];
-        this.addBox(bx.xMid - bx.width * 0.22, WORLD.CURB_HEIGHT + 3.4, bz.zMid - bz.length * 0.5 + 2.5, bx.width * 0.42, 0.35, 3.2, awningCol, [1, 1], false);
-        this.addBox(bx.xMid + bx.width * 0.22, WORLD.CURB_HEIGHT + 3.4, bz.zMid - bz.length * 0.5 + 2.5, bx.width * 0.42, 0.35, 3.2, [0.85, 0.22, 0.20, 1.0], [1, 1], false);
+        const awningCol1 = [0.22, 0.58, 0.38, 1.0];
+        const awningCol2 = [0.88, 0.26, 0.22, 1.0];
+        this.addBox(bx.xMid - bx.width * 0.22, WORLD.CURB_HEIGHT + 3.4, bz.zMid - bz.length * 0.5 + 2.5, bx.width * 0.42, 0.35, 3.2, awningCol1, [1, 1], false);
+        this.addBox(bx.xMid + bx.width * 0.22, WORLD.CURB_HEIGHT + 3.4, bz.zMid - bz.length * 0.5 + 2.5, bx.width * 0.42, 0.35, 3.2, awningCol2, [1, 1], false);
+
+        // Decorative wrought-iron style balconies on upper floors
+        this.addBox(bx.xMid - bx.width * 0.22, WORLD.CURB_HEIGHT + 7.5, bz.zMid - bz.length * 0.5 + 0.8, bx.width * 0.36, 0.9, 1.4, [0.22, 0.24, 0.28, 1.0], [1, 1], false);
+        this.addBox(bx.xMid + bx.width * 0.22, WORLD.CURB_HEIGHT + 7.5, bz.zMid - bz.length * 0.5 + 0.8, bx.width * 0.36, 0.9, 1.4, [0.22, 0.24, 0.28, 1.0], [1, 1], false);
+
+        // Rooftop terracotta tiles and chimneys
+        this.addBox(bx.xMid - bx.width * 0.22, WORLD.CURB_HEIGHT + subH1, bz.zMid, bx.width * 0.48, 1.2, bz.length - 5, [0.72, 0.32, 0.20, 1.0], [1, 1], false);
+        this.addBox(bx.xMid + bx.width * 0.22, WORLD.CURB_HEIGHT + subH2, bz.zMid, bx.width * 0.48, 1.2, bz.length - 5, [0.72, 0.32, 0.20, 1.0], [1, 1], false);
       }
     }
   }
@@ -434,7 +509,7 @@ export class World {
       { zMid: 182.5, length: 47 },
     ];
 
-    // Miami Art Deco Pastel Palettes
+    // Art Deco Pastel Palettes
     const resortPalettes = [
       [0.96, 0.96, 0.98, 1.0], // Brilliant White
       [0.60, 0.88, 0.84, 1.0], // Coastal Aqua Mint
@@ -457,13 +532,17 @@ export class World {
         for (let y = WORLD.CURB_HEIGHT + 4.5; y < height; y += 4.5) {
           this.addBox(bx.xMid, y, bz.zMid - bz.length * 0.5 + 2.5, bx.width - 8, 0.40, 2.0, balconyWhite, [1, 1], false);
         }
+
+        // Rooftop Art Deco spires and neon hotel names
+        this.addBox(bx.xMid, WORLD.CURB_HEIGHT + height, bz.zMid, 6.0, 4.0, 6.0, [0.96, 0.88, 0.65, 1.0], [1, 1], false);
+        this.addBox(bx.xMid, WORLD.CURB_HEIGHT + height + 4.0, bz.zMid, 1.0, 6.0, 1.0, [0.15, 0.85, 0.75, 1.0], [1, 1], false);
       }
     }
   }
 
   generateParksAndPlazas() {
     // Lush central green park plaza at X = 80, Z = 52.5
-    const grassGreen = [0.26, 0.68, 0.30, 1.0];
+    const grassGreen = [0.28, 0.70, 0.32, 1.0];
     const fountainBlue = [0.15, 0.55, 0.75, 1.0];
 
     // Park lawn pad
@@ -473,11 +552,11 @@ export class World {
     this.addBox(80.0, WORLD.CURB_HEIGHT + 0.3, 52.5, 14, 0.65, 14, [0.75, 0.78, 0.82, 1.0], [1, 1], true);
     this.addBox(80.0, WORLD.CURB_HEIGHT + 0.6, 52.5, 12, 0.35, 12, fountainBlue, [1, 1], false);
 
-    // Palm trees in park corners
+    // Palm and Cypress trees in park
     this.addPalmTree(65, WORLD.CURB_HEIGHT, 38);
     this.addPalmTree(95, WORLD.CURB_HEIGHT, 38);
-    this.addPalmTree(65, WORLD.CURB_HEIGHT, 67);
-    this.addPalmTree(95, WORLD.CURB_HEIGHT, 67);
+    this.addCypressTree(65, WORLD.CURB_HEIGHT, 67);
+    this.addCypressTree(95, WORLD.CURB_HEIGHT, 67);
   }
 
   generateMarinaAndWaterfront() {
@@ -488,7 +567,7 @@ export class World {
     // Main boardwalk along coast
     this.addBox(-122, 0.28, 0, 15, 0.55, WORLD.SIZE * 0.92, timberColor, [1, 2], false);
 
-    // Chrome / white promenade pedestrian safety railing
+    // Promenade pedestrian safety railing
     this.addBox(-128.5, 0.95, 0, 0.3, 0.85, WORLD.SIZE * 0.92, railingColor, [1, 1], true);
 
     // Marina boat slips & wooden jetties
@@ -528,7 +607,7 @@ export class World {
     this.addBox(220, 0.18, 140, 1.8, 0.04, 160, hazardYellow, [1, 1], false);
 
     // Deep harbor ocean water basin
-    const harborColor = [0.06, 0.42, 0.58, 0.95];
+    const harborColor = [0.06, 0.44, 0.60, 0.95];
     const bMinX = 222, bMaxX = WORLD.HALF_SIZE + 80;
     const bMinZ = 60, bMaxZ = WORLD.HALF_SIZE + 80;
     const bPts = [
@@ -583,6 +662,14 @@ export class World {
       }
     }
 
+    // Contraband Heist Loot Crates near Pier 7
+    const crateWood = [0.75, 0.55, 0.32, 1.0];
+    const crateBands = [0.22, 0.22, 0.24, 1.0];
+    this.addBox(146.0, 0.08, 114.0, 1.6, 1.5, 1.6, crateWood, [1, 1], true);
+    this.addBox(146.0, 0.45, 114.0, 1.65, 0.2, 1.65, crateBands, [1, 1], false);
+    this.addBox(148.0, 0.08, 115.0, 1.4, 1.3, 1.4, crateWood, [1, 1], true);
+    this.addBox(147.0, 1.58, 114.5, 1.2, 1.1, 1.2, crateWood, [1, 1], false);
+
     // Massive 36m Industrial Gantry Crane
     this.buildGantryCrane(150, 0, 155);
   }
@@ -624,7 +711,13 @@ export class World {
       this.addPalmTree(-90, 0.2, z);
     }
 
-    // 2. Modern Street Lampposts with warm glowing fixtures
+    // 2. Mediterranean Slender Cypress Trees along Downtown plazas and Old Town
+    for (let z = -220; z <= -20; z += 35) {
+      this.addCypressTree(18, 0.22, z);
+      this.addCypressTree(-12, 0.22, z);
+    }
+
+    // 3. Modern Street Lampposts with warm glowing fixtures
     const postColor = [0.42, 0.44, 0.48, 1.0];
     const lampGlow = [1.0, 0.92, 0.65, 1.0];
 
@@ -637,7 +730,7 @@ export class World {
       }
     }
 
-    // 3. Fire Hydrants
+    // 4. Fire Hydrants
     const hydrantRed = [0.96, 0.22, 0.18, 1.0];
     for (let z = -200; z <= 200; z += 65) {
       this.addBox(9.4, 0, z, 0.45, 0.95, 0.45, hydrantRed, [1, 1], true);
@@ -662,6 +755,18 @@ export class World {
       const fz = z + Math.sin(ang) * (frondLen * 0.45);
       this.addBox(fx, topY - 0.4, fz, frondW, 0.16, frondLen * 0.92, frondColor, [1, 1], false);
     }
+  }
+
+  addCypressTree(x, y, z) {
+    const trunkColor = [0.38, 0.28, 0.20, 1.0];
+    const foliageColor = [0.18, 0.48, 0.24, 1.0]; // Deep evergreen cypress green
+
+    // Trunk
+    this.addBox(x, y, z, 0.45, 2.0, 0.45, trunkColor, [1, 1], true);
+    // Slender tapered columnar foliage
+    this.addBox(x, y + 1.8, z, 1.8, 4.0, 1.8, foliageColor, [1, 1], false);
+    this.addBox(x, y + 5.6, z, 1.3, 3.8, 1.3, foliageColor, [1, 1], false);
+    this.addBox(x, y + 9.2, z, 0.8, 2.5, 0.8, foliageColor, [1, 1], false);
   }
 
   // --- Collision Query ---

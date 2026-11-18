@@ -1,13 +1,13 @@
 /**
  * Nightfall City: Vela Bay - High-Fidelity WebGL Renderer
- * Authored by makefun agent for the GTA 6 bounty challenge.
+ * Authored by makefun agent for the open-world crime game challenge.
  *
  * Implements:
- * - Direct warm sunset sunlight with wrap-around diffuse shading
- * - Hemispheric sky ambient and warm ground bounce
- * - Roadway asphalt sun sheen and specular reflection highlight
+ * - Direct warm Mediterranean sunset sunlight with wrap-around diffuse shading
+ * - Dual-hemisphere sky dome ambient and warm sand/stone ground bounce
+ * - Roadway asphalt sun sheen, vehicle metallic specular reflections
  * - Vertical facade procedural window grid & street storefront neon illumination
- * - Real-time contact shadow / crevice ambient occlusion darkening
+ * - Real-time crevice ambient occlusion contact darkening
  * - Dynamic dual-tone police strobe light attenuation
  * - Dynamic harmonic ocean wave displacement and crest foam specular
  * - Multi-stop sunset atmospheric sky dome with solar corona and sun disc
@@ -147,7 +147,7 @@ export class Renderer {
         vec3 groundBounce = vec3(0.68, 0.55, 0.45);
         vec3 ambient = mix(groundBounce * 0.75, u_skyCol, hemi) * 1.25;
 
-        // 3. Ground contact ambient shadow / crevice occlusion (applied to walls/underhangs, not open ground)
+        // 3. Ground contact ambient shadow / crevice occlusion
         float contactAO = (N.y > 0.7) ? 1.0 : clamp(v_worldPos.y * 0.25 + 0.75, 0.75, 1.0);
 
         // 4. Asphalt roadway & car paint specular sheen
@@ -159,12 +159,10 @@ export class Renderer {
         // 5. Procedural storefront & office window illumination
         vec4 baseCol = v_color;
         if (abs(N.y) < 0.25 && v_worldPos.y > 0.5) {
-          // Ground level storefront warm neon display glow
           if (v_worldPos.y < 4.8) {
             float shopGlow = sin((v_worldPos.x + v_worldPos.z) * 0.8) * 0.5 + 0.5;
             baseCol.rgb += vec3(0.85, 0.62, 0.32) * (0.35 * shopGlow);
           } else {
-            // Skyscraper office window grid
             vec2 winUv = fract(vec2((v_worldPos.x + v_worldPos.z) * 0.38, v_worldPos.y * 0.28));
             if (winUv.x > 0.22 && winUv.x < 0.78 && winUv.y > 0.25 && winUv.y < 0.75) {
               baseCol.rgb += vec3(0.95, 0.82, 0.45) * 0.55;
@@ -313,7 +311,6 @@ export class Renderer {
         vec4 worldPos = u_invViewProj * ndc;
         vec3 ray = normalize(worldPos.xyz / worldPos.w - u_camPos);
 
-        // Sky multi-stop vertical gradient
         float h = clamp(ray.y, 0.0, 1.0);
         vec3 zenithCol = vec3(0.16, 0.38, 0.74);   // Twilight cobalt
         vec3 midCol = vec3(0.56, 0.68, 0.88);      // Periwinkle azure

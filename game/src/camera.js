@@ -1,8 +1,14 @@
 /**
  * Nightfall City: Vela Bay - Third-Person Follow & Cinematic Chase Camera
- * Features dynamic speed-dependent FOV expansion, corner banking roll,
- * spring-damped target tracking, screen shake, and locked photo presets.
- * Authored for make.fun GTA 6 bounty challenge.
+ * Authored by makefun agent for the GTA 6 bounty challenge.
+ *
+ * Implements:
+ * - Damped spring follow physics with velocity-weighted look-ahead
+ * - Dynamic high-speed FOV expansion (62 deg up to 78 deg at top speed)
+ * - Corner banking body roll compensation
+ * - Screen shake impulse on recoil, collisions, and explosions
+ * - Smooth mouse orbit on foot with vertical pitch clamps
+ * - Deterministic camera lock for competition photo presets (?shot=1..4)
  */
 
 import { V3, lerp, clamp } from './math.js';
@@ -79,14 +85,14 @@ export class Camera {
     if (activeCar) {
       // In-vehicle high-speed chase camera
       const carSpeed = activeCar.speed;
-      const speedNorm = clamp(Math.abs(carSpeed) / 45.0, 0, 1.0);
+      const speedNorm = clamp(Math.abs(carSpeed) / 46.0, 0, 1.0);
 
       // Dynamic FOV rush with velocity
-      const targetFov = lerp(62, 76, speedNorm);
-      this.fov = lerp(this.fov, targetFov, dt * 4.0);
+      const targetFov = lerp(62, 78, speedNorm);
+      this.fov = lerp(this.fov, targetFov, dt * 4.2);
 
-      const chaseDist = lerp(6.8, 9.6, speedNorm);
-      const chaseHeight = lerp(2.8, 3.5, speedNorm);
+      const chaseDist = lerp(6.8, 9.8, speedNorm);
+      const chaseHeight = lerp(2.8, 3.6, speedNorm);
 
       // Follow car orientation
       const heading = activeCar.rotY;
@@ -95,13 +101,13 @@ export class Camera {
       const desiredY = activeCar.y + chaseHeight;
 
       // Smooth camera position damp
-      const followRate = 6.5;
+      const followRate = 6.8;
       this.pos[0] = lerp(this.pos[0], desiredX, dt * followRate) + shakeX;
       this.pos[1] = lerp(this.pos[1], desiredY, dt * followRate) + shakeY;
       this.pos[2] = lerp(this.pos[2], desiredZ, dt * followRate);
 
       // Target ahead of the vehicle
-      const lookAhead = lerp(3.5, 7.5, speedNorm);
+      const lookAhead = lerp(3.8, 8.0, speedNorm);
       const targetX = activeCar.x + Math.sin(heading) * lookAhead;
       const targetZ = activeCar.z + Math.cos(heading) * lookAhead;
       const targetY = activeCar.y + 1.25;
@@ -117,7 +123,7 @@ export class Camera {
       // Mouse look controls
       if (input && input.mouseDelta) {
         this.yaw -= input.mouseDelta.x * 0.0032;
-        this.pitch = clamp(this.pitch - input.mouseDelta.y * 0.0028, -0.2, 0.65);
+        this.pitch = clamp(this.pitch - input.mouseDelta.y * 0.0028, -0.22, 0.68);
       }
 
       // Camera position orbit relative to player
@@ -133,7 +139,7 @@ export class Camera {
       const desiredY = player.y + offsetY;
       const desiredZ = player.z - offsetZ;
 
-      const damp = 10.0;
+      const damp = 10.5;
       this.pos[0] = lerp(this.pos[0], desiredX, dt * damp) + shakeX;
       this.pos[1] = lerp(this.pos[1], desiredY, dt * damp) + shakeY;
       this.pos[2] = lerp(this.pos[2], desiredZ, dt * damp);

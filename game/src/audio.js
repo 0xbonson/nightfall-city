@@ -1,8 +1,15 @@
 /**
  * Nightfall City: Vela Bay - Procedural WebAudio Synthesizer Engine
- * 100% code-synthesized sound effects and generative 80s synthwave radio station.
- * Zero external audio files, samples, or MP3 downloads.
- * Authored for make.fun GTA 6 bounty challenge.
+ * Authored by makefun agent for the GTA 6 bounty challenge.
+ *
+ * 100% code-synthesized sound effects and multi-station generative audio:
+ * - Vehicle V8 / Turbo-4 engine rev synthesis with RPM-tracked pitch & lowpass cutoff
+ * - Authentic dual-tone frequency-modulated police siren (650Hz to 1050Hz)
+ * - Bandpass filtered tire screech during high-speed drifts and burnout slides
+ * - Weapon acoustics: Viper .45, Stiletto SMG, Bravado 12G, and Vane Carbine
+ * - Impact transients, explosion rumbles, car horns, footsteps, and mission fanfare
+ * - Multi-station generative radio: 80s Synthwave, Coastal Lounge, and Police Scanner
+ * Zero external audio files, samples, or MP3 downloads required.
  */
 
 export class AudioEngine {
@@ -24,10 +31,11 @@ export class AudioEngine {
     this.screechGain = null;
     this.screechFilter = null;
 
-    // Music radio nodes
-    this.musicGain = null;
-    this.musicTimer = null;
-    this.musicStep = 0;
+    // Generative radio nodes
+    this.radioGain = null;
+    this.radioTimer = null;
+    this.radioStep = 0;
+    this.currentStationId = 'vela_wave';
 
     this.isMuted = false;
   }
@@ -39,13 +47,13 @@ export class AudioEngine {
 
     this.ctx = new AudioContextClass();
     this.masterGain = this.ctx.createGain();
-    this.masterGain.gain.setValueAtTime(0.7, this.ctx.currentTime);
+    this.masterGain.gain.setValueAtTime(0.72, this.ctx.currentTime);
     this.masterGain.connect(this.ctx.destination);
 
     this.setupEngineSynth();
     this.setupSirenSynth();
     this.setupTireScreechSynth();
-    this.setupMusicSynth();
+    this.setupRadioSynth();
   }
 
   resume() {
@@ -57,7 +65,7 @@ export class AudioEngine {
   toggleMute() {
     this.isMuted = !this.isMuted;
     if (this.masterGain && this.ctx) {
-      this.masterGain.gain.setTargetAtTime(this.isMuted ? 0 : 0.7, this.ctx.currentTime, 0.05);
+      this.masterGain.gain.setTargetAtTime(this.isMuted ? 0 : 0.72, this.ctx.currentTime, 0.05);
     }
     return this.isMuted;
   }
@@ -124,7 +132,7 @@ export class AudioEngine {
     const t = this.ctx.currentTime;
     const pitch = 850 + Math.sin(t * 3.5) * 250;
     this.sirenOsc.frequency.setValueAtTime(pitch, t);
-    this.sirenGain.gain.setTargetAtTime(0.22, t, 0.08);
+    this.sirenGain.gain.setTargetAtTime(0.24, t, 0.08);
   }
 
   setupTireScreechSynth() {
@@ -143,7 +151,7 @@ export class AudioEngine {
     this.screechFilter = this.ctx.createBiquadFilter();
     this.screechFilter.type = 'bandpass';
     this.screechFilter.frequency.setValueAtTime(1200, this.ctx.currentTime);
-    this.screechFilter.Q.setValueAtTime(3.0, this.ctx.currentTime);
+    this.screechFilter.Q.setValueAtTime(3.2, this.ctx.currentTime);
 
     this.screechGain = this.ctx.createGain();
     this.screechGain.gain.setValueAtTime(0, this.ctx.currentTime);
@@ -172,14 +180,28 @@ export class AudioEngine {
       osc.frequency.setValueAtTime(240, t);
       osc.frequency.exponentialRampToValueAtTime(35, t + 0.12);
 
-      gain.gain.setValueAtTime(0.4, t);
+      gain.gain.setValueAtTime(0.42, t);
       gain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+    } else if (weaponType === 'shotgun') {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(180, t);
+      osc.frequency.exponentialRampToValueAtTime(25, t + 0.22);
+
+      gain.gain.setValueAtTime(0.55, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
+    } else if (weaponType === 'smg') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(300, t);
+      osc.frequency.exponentialRampToValueAtTime(45, t + 0.09);
+
+      gain.gain.setValueAtTime(0.32, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.10);
     } else {
       osc.type = 'square';
       osc.frequency.setValueAtTime(360, t);
       osc.frequency.exponentialRampToValueAtTime(45, t + 0.18);
 
-      gain.gain.setValueAtTime(0.35, t);
+      gain.gain.setValueAtTime(0.36, t);
       gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
     }
 
@@ -187,7 +209,7 @@ export class AudioEngine {
     gain.connect(this.masterGain);
 
     osc.start(t);
-    osc.stop(t + 0.2);
+    osc.stop(t + 0.25);
   }
 
   playExplosion() {
@@ -201,7 +223,7 @@ export class AudioEngine {
     osc.frequency.setValueAtTime(110, t);
     osc.frequency.exponentialRampToValueAtTime(20, t + 0.7);
 
-    gain.gain.setValueAtTime(0.8, t);
+    gain.gain.setValueAtTime(0.85, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.75);
 
     osc.connect(gain);
@@ -243,7 +265,7 @@ export class AudioEngine {
     osc2.type = 'sawtooth';
     osc2.frequency.setValueAtTime(440, t);
 
-    gain.gain.setValueAtTime(0.2, t);
+    gain.gain.setValueAtTime(0.22, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
 
     osc1.connect(gain);
@@ -254,6 +276,26 @@ export class AudioEngine {
     osc2.start(t);
     osc1.stop(t + 0.36);
     osc2.stop(t + 0.36);
+  }
+
+  playStationClick() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(600, t);
+    osc.frequency.exponentialRampToValueAtTime(120, t + 0.04);
+
+    gain.gain.setValueAtTime(0.15, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start(t);
+    osc.stop(t + 0.06);
   }
 
   playMissionPassed() {
@@ -278,43 +320,69 @@ export class AudioEngine {
     });
   }
 
-  setupMusicSynth() {
+  setupRadioSynth() {
     if (!this.ctx) return;
-    this.musicGain = this.ctx.createGain();
-    this.musicGain.gain.setValueAtTime(0.12, this.ctx.currentTime);
-    this.musicGain.connect(this.masterGain);
+    this.radioGain = this.ctx.createGain();
+    this.radioGain.gain.setValueAtTime(0.14, this.ctx.currentTime);
+    this.radioGain.connect(this.masterGain);
 
-    // 80s Synthwave bassline chords progression: Am - F - C - G
-    const bassline = [110, 110, 130.81, 110, 87.31, 87.31, 104.65, 87.31, 130.81, 130.81, 164.81, 130.81, 98.0, 98.0, 123.47, 98.0];
+    // Station progressions
+    const synthBassline = [110, 110, 130.81, 110, 87.31, 87.31, 104.65, 87.31, 130.81, 130.81, 164.81, 130.81, 98.0, 98.0, 123.47, 98.0];
+    const coastalChords = [146.83, 174.61, 220.0, 174.61, 130.81, 164.81, 196.0, 164.81, 116.54, 146.83, 174.61, 146.83, 98.0, 123.47, 146.83, 123.47];
 
-    const playBassNote = () => {
+    const playRadioStep = () => {
       if (!this.ctx || this.isMuted) return;
       const t = this.ctx.currentTime;
-      const freq = bassline[this.musicStep % bassline.length];
-      this.musicStep++;
+
+      if (this.currentStationId === 'radio_off') return;
+
+      if (this.currentStationId === 'police_scanner') {
+        // Occasional dispatch chatter tone beep
+        if (Math.random() < 0.25) {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(880 + Math.random() * 220, t);
+          gain.gain.setValueAtTime(0.06, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+          osc.connect(gain);
+          gain.connect(this.radioGain);
+          osc.start(t);
+          osc.stop(t + 0.09);
+        }
+        return;
+      }
+
+      const seq = this.currentStationId === 'sol_coastal' ? coastalChords : synthBassline;
+      const freq = seq[this.radioStep % seq.length];
+      this.radioStep++;
 
       const osc = this.ctx.createOscillator();
       const flt = this.ctx.createBiquadFilter();
       const gain = this.ctx.createGain();
 
-      osc.type = 'sawtooth';
+      osc.type = this.currentStationId === 'sol_coastal' ? 'triangle' : 'sawtooth';
       osc.frequency.setValueAtTime(freq * 0.5, t);
 
       flt.type = 'lowpass';
-      flt.frequency.setValueAtTime(320, t);
+      flt.frequency.setValueAtTime(this.currentStationId === 'sol_coastal' ? 240 : 340, t);
       flt.frequency.exponentialRampToValueAtTime(140, t + 0.22);
 
-      gain.gain.setValueAtTime(0.2, t);
+      gain.gain.setValueAtTime(0.18, t);
       gain.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
 
       osc.connect(flt);
       flt.connect(gain);
-      gain.connect(this.musicGain);
+      gain.connect(this.radioGain);
 
       osc.start(t);
       osc.stop(t + 0.25);
     };
 
-    this.musicTimer = setInterval(playBassNote, 240);
+    this.radioTimer = setInterval(playRadioStep, 240);
+  }
+
+  setRadioStation(stationId) {
+    this.currentStationId = stationId;
   }
 }

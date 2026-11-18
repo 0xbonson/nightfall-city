@@ -1,5 +1,6 @@
-# Build and compilation outputs
+# Nightfall City: Vela Bay - Git Ignore Rules
 out/
+output/
 dist/
 build/
 *.tmp
@@ -17,6 +18,7 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Chrome test profile temp dirs
+# Chrome headless test profile directories
 /tmp/cr-*
+/tmp/chrome-test-*
 /tmp/test-shot*

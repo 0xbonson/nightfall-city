@@ -1,11 +1,78 @@
 /**
- * Nightfall City: Vela Bay - Combat Engine, Ballistics & Tactical Enemies
- * Implements high-velocity glowing tracers, muzzle flashes, blood/spark impacts,
- * hostile Syndicate enforcer AI with tactical return fire, and expanding explosive fireballs.
- * Authored for make.fun GTA 6 bounty challenge.
+ * Nightfall City: Vela Bay - Combat Engine, Ballistics, Explosives & Tactical AI
+ * Implements glowing multi-caliber tracers, muzzle flash bursts, blood/spark/dust particle dynamics,
+ * shotgun pellet fan spread, collectible contraband cash drops, and hostile Syndicate enforcer AI.
+ * Authored for make.fun GTA-inspired open-world entry.
  */
 
 import { WEAPONS } from './config.js';
+
+export class CashDrop {
+  constructor(x, y, z, amount = 50) {
+    this.x = x;
+    this.y = y;
+    this.z = z;
+    this.amount = amount;
+    this.alive = true;
+    this.bobTimer = Math.random() * Math.PI * 2;
+  }
+
+  update(dt, player, audio) {
+    if (!this.alive) return;
+    this.bobTimer += dt * 3.5;
+    const dist = Math.hypot(this.x - player.x, this.z - player.z);
+    if (dist < 1.4 && Math.abs(this.y - player.y) < 2.0) {
+      player.addMoney(this.amount);
+      if (audio) audio.playCashChime();
+      this.alive = false;
+    }
+  }
+
+  buildMesh(positions, normals, colors, uvs) {
+    if (!this.alive) return;
+    const yOff = Math.sin(this.bobTimer) * 0.12 + 0.18;
+    const cx = this.x;
+    const cy = this.y + yOff;
+    const cz = this.z;
+
+    // Green currency stack mesh with white paper band
+    const rot = this.bobTimer * 1.5;
+    const cosR = Math.cos(rot), sinR = Math.sin(rot);
+    const w = 0.22, h = 0.08, d = 0.12;
+
+    const corners = [
+      [-w, -h, -d], [w, -h, -d], [w, -h, d], [-w, -h, d],
+      [-w,  h, -d], [w,  h, -d], [w,  h, d], [-w,  h, d],
+    ];
+
+    const rotCorners = corners.map(([x, y, z]) => [
+      cx + x * cosR + z * sinR,
+      cy + y,
+      cz - x * sinR + z * cosR,
+    ]);
+
+    const faces = [
+      [4, 5, 6, 7, [0, 1, 0]],
+      [3, 2, 1, 0, [0, -1, 0]],
+      [7, 6, 2, 3, [sinR, 0, cosR]],
+      [5, 4, 0, 1, [-sinR, 0, -cosR]],
+      [6, 5, 1, 2, [cosR, 0, -sinR]],
+      [4, 7, 3, 0, [-cosR, 0, sinR]],
+    ];
+
+    const col = [0.22, 0.72, 0.38, 1.0]; // Mint cash green
+    for (const [i1, i2, i3, i4, norm] of faces) {
+      const p1 = rotCorners[i1], p2 = rotCorners[i2], p3 = rotCorners[i3], p4 = rotCorners[i4];
+      const pts = [p1, p2, p3, p1, p3, p4];
+      for (let p = 0; p < 6; p++) {
+        positions.push(pts[p][0], pts[p][1], pts[p][2]);
+        normals.push(norm[0], norm[1], norm[2]);
+        colors.push(col[0], col[1], col[2], col[3]);
+        uvs.push(0, 0);
+      }
+    }
+  }
+}
 
 export class Bullet {
   constructor(x, y, z, dx, dy, dz, damage, speed = 190, range = 85, isEnemy = false) {
@@ -36,7 +103,7 @@ export class Bullet {
     const nextY = this.y + this.dy * step;
     const nextZ = this.z + this.dz * step;
 
-    // Check hit on player
+    // Hit check against player
     if (this.isEnemy && player.alive) {
       const d = Math.hypot(nextX - player.x, nextZ - player.z);
       if (d < 0.65 && Math.abs(nextY - (player.y + 1.0)) < 1.1) {
@@ -47,27 +114,27 @@ export class Bullet {
       }
     }
 
-    // Check hit on hostile enemies
+    // Hit check against hostile syndicate enemies
     if (!this.isEnemy) {
       for (let i = 0; i < enemies.length; i++) {
         const en = enemies[i];
         if (!en.alive) continue;
         const d = Math.hypot(nextX - en.x, nextZ - en.z);
         if (d < 0.65 && Math.abs(nextY - (en.y + 1.0)) < 1.1) {
-          en.takeDamage(this.damage);
+          en.takeDamage(this.damage, combat);
           combat.spawnImpactParticles(nextX, nextY, nextZ, [0.85, 0.15, 0.15]);
           this.alive = false;
           return;
         }
       }
 
-      // Check hit on pedestrians
+      // Hit check against pedestrians
       for (let i = 0; i < pedestrians.pedestrians.length; i++) {
         const ped = pedestrians.pedestrians[i];
         if (!ped.alive) continue;
         const d = Math.hypot(nextX - ped.x, nextZ - ped.z);
         if (d < 0.65 && Math.abs(nextY - (ped.y + 1.0)) < 1.1) {
-          ped.takeDamage(this.damage);
+          ped.takeDamage(this.damage, combat);
           combat.spawnImpactParticles(nextX, nextY, nextZ, [0.85, 0.15, 0.15]);
           this.alive = false;
           return;
@@ -75,19 +142,19 @@ export class Bullet {
       }
     }
 
-    // Check hit on vehicles
+    // Hit check against vehicles
     for (let i = 0; i < vehicles.vehicles.length; i++) {
       const v = vehicles.vehicles[i];
       const d = Math.hypot(nextX - v.x, nextZ - v.z);
       if (d < v.spec.length * 0.45 && Math.abs(nextY - (v.y + 0.6)) < 1.1) {
         v.takeDamage(this.damage);
-        combat.spawnImpactParticles(nextX, nextY, nextZ, [0.95, 0.85, 0.25]); // Metal sparks
+        combat.spawnImpactParticles(nextX, nextY, nextZ, [0.95, 0.85, 0.25]); // Sparks
         this.alive = false;
         return;
       }
     }
 
-    // Check hit on static world architecture
+    // Hit check against static buildings and obstacles
     const col = world.checkCollision(nextX, nextZ, 0.2);
     if (col.collided) {
       combat.spawnImpactParticles(nextX, nextY, nextZ, [0.85, 0.82, 0.78]); // Concrete dust
@@ -108,47 +175,49 @@ export class Enemy {
     this.z = z;
     this.rotY = rotY;
 
-    this.health = 65;
+    this.health = 70;
     this.alive = true;
     this.shootTimer = 1.0 + Math.random() * 1.5;
-    this.weapon = 'rifle';
+    this.weapon = 'carbine';
   }
 
-  takeDamage(amount) {
+  takeDamage(amount, combat) {
     if (!this.alive) return;
     this.health -= amount;
     if (this.health <= 0) {
       this.alive = false;
+      if (combat) {
+        combat.spawnCashDrop(this.x, this.y, this.z, Math.floor(80 + Math.random() * 140));
+      }
     }
   }
 
   update(dt, player, combat, audio) {
     if (!this.alive) return;
 
-    // Face player
+    // Target player orientation
     const dx = player.x - this.x;
     const dz = player.z - this.z;
     const dist = Math.hypot(dx, dz);
     this.rotY = Math.atan2(dx, dz);
 
-    // Tactical return fire if in line of sight
-    if (dist < 55.0 && player.alive) {
+    // Suppressive fire when player is detected within tactical perimeter
+    if (dist < 58.0 && player.alive) {
       this.shootTimer -= dt;
       if (this.shootTimer <= 0) {
-        this.shootTimer = 1.4 + Math.random() * 0.8;
+        this.shootTimer = 1.2 + Math.random() * 0.9;
 
         const dirX = dx / dist;
         const dirY = (player.y + 1.2 - (this.y + 1.2)) / dist;
         const dirZ = dz / dist;
 
-        // Add spread
-        const sp = 0.05;
+        const sp = 0.045;
         const fx = dirX + (Math.random() - 0.5) * sp;
         const fy = dirY + (Math.random() - 0.5) * sp;
         const fz = dirZ + (Math.random() - 0.5) * sp;
 
-        combat.bullets.push(new Bullet(this.x, this.y + 1.2, this.z, fx, fy, fz, 18, 175, 75, true));
-        if (audio) audio.playGunshot('pistol');
+        combat.bullets.push(new Bullet(this.x, this.y + 1.2, this.z, fx, fy, fz, 18, 180, 80, true));
+        if (audio) audio.playGunshot('carbine');
       }
     }
   }
@@ -164,10 +233,10 @@ export class Enemy {
     const sinRot = Math.sin(rot);
     const cosRot = Math.cos(rot);
 
-    // Syndicate Enforcer Tactical Uniform (Black vest, maroon shirt, tactical grey cargo pants)
-    const vestCol = [0.14, 0.14, 0.16, 1.0];
-    const shirtCol = [0.65, 0.18, 0.22, 1.0]; // Syndicate maroon
-    const pantsCol = [0.22, 0.24, 0.26, 1.0];
+    // Syndicate Enforcer Tactical Uniform (Black armor vest, crimson shirt, dark cargo pants)
+    const vestCol = [0.12, 0.13, 0.15, 1.0];
+    const shirtCol = [0.65, 0.16, 0.20, 1.0];
+    const pantsCol = [0.18, 0.20, 0.22, 1.0];
     const skinCol = [0.82, 0.65, 0.52, 1.0];
 
     const addBoxRot = (bx, by, bz, sx, sy, sz, color) => {
@@ -208,34 +277,34 @@ export class Enemy {
       }
     };
 
-    // Legs
+    // Tactical combat posture
     addBoxRot(-0.14, y, 0, 0.18, 0.72, 0.18, pantsCol);
     addBoxRot(0.14, y, 0, 0.18, 0.72, 0.18, pantsCol);
 
-    // Torso (Shirt + Body Armor Vest)
+    // Torso with tactical vest
     addBoxRot(0, y + 0.72, 0, 0.46, 0.68, 0.26, shirtCol);
     addBoxRot(0, y + 0.78, 0, 0.48, 0.55, 0.28, vestCol);
 
-    // Arms aiming forward
+    // Arms in ready aim
     addBoxRot(-0.28, y + 0.85, 0.18, 0.14, 0.55, 0.14, shirtCol);
     addBoxRot(0.28, y + 0.85, 0.18, 0.14, 0.55, 0.14, shirtCol);
 
-    // Head
+    // Head with sunglasses / comm headset
     addBoxRot(0, y + 1.42, 0, 0.28, 0.28, 0.28, skinCol);
 
-    // Weapon
-    addBoxRot(0.18, y + 1.15, 0.32, 0.10, 0.14, 0.65, [0.1, 0.1, 0.1, 1.0]);
+    // Tactical Carbine barrel
+    addBoxRot(0.18, y + 1.15, 0.32, 0.09, 0.13, 0.68, [0.1, 0.1, 0.1, 1.0]);
   }
 }
 
 export class Explosion {
-  constructor(x, y, z, maxRadius = 6.5) {
+  constructor(x, y, z, maxRadius = 6.8) {
     this.x = x;
     this.y = y;
     this.z = z;
     this.maxRadius = maxRadius;
     this.radius = 0.5;
-    this.duration = 0.65;
+    this.duration = 0.7;
     this.timer = 0;
     this.alive = true;
   }
@@ -255,8 +324,7 @@ export class Explosion {
     const progress = this.timer / this.duration;
     const alpha = (1.0 - progress) * 0.95;
 
-    // Glowing orange fireball core
-    const col = [1.5, 0.75 * (1.0 - progress), 0.1, alpha];
+    const col = [1.8, 0.85 * (1.0 - progress), 0.12, alpha];
     const r = this.radius;
 
     const latBands = 6;
@@ -299,13 +367,15 @@ export class CombatSystem {
     this.enemies = [];
     this.explosions = [];
     this.particles = [];
+    this.cashDrops = [];
   }
 
   initDocksEnemies() {
-    // Spawn syndicate enforcers around Pier 7 and container yard
+    // Syndicate enforcers guarding Pier 7 contraband shipping containers
     this.spawnEnemy(145.0, 0, 118.0, Math.PI * 0.85);
     this.spawnEnemy(155.0, 0, 128.0, Math.PI * 0.75);
     this.spawnEnemy(162.0, 0, 142.0, Math.PI * 0.95);
+    this.spawnEnemy(138.0, 0, 125.0, Math.PI * 0.65);
   }
 
   spawnEnemy(x, y, z, rot = 0) {
@@ -314,20 +384,24 @@ export class CombatSystem {
     return en;
   }
 
-  spawnExplosion(x, y, z, radius = 6.5) {
+  spawnExplosion(x, y, z, radius = 6.8) {
     this.explosions.push(new Explosion(x, y, z, radius));
   }
 
+  spawnCashDrop(x, y, z, amount = 75) {
+    this.cashDrops.push(new CashDrop(x, y, z, amount));
+  }
+
   spawnImpactParticles(x, y, z, color) {
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 7; i++) {
       this.particles.push({
         x, y, z,
-        vx: (Math.random() - 0.5) * 5.0,
-        vy: Math.random() * 4.0 + 1.0,
-        vz: (Math.random() - 0.5) * 5.0,
+        vx: (Math.random() - 0.5) * 5.5,
+        vy: Math.random() * 4.2 + 1.2,
+        vz: (Math.random() - 0.5) * 5.5,
         color,
-        life: 0.35,
-        maxLife: 0.35,
+        life: 0.38,
+        maxLife: 0.38,
       });
     }
   }
@@ -335,15 +409,16 @@ export class CombatSystem {
   playerShoot(player, camera, police, audio) {
     const now = performance.now() * 0.001;
     const wep = WEAPONS[player.currentWeapon];
+    if (!wep) return;
     if (now - player.lastFireTime < wep.fireInterval) return;
     if (player.isReloading) return;
 
     const ammo = player.ammo[player.currentWeapon];
     if (ammo.clip <= 0) {
-      // Auto reload
       if (ammo.reserve > 0) {
         player.isReloading = true;
         player.reloadTimer = wep.reloadTime;
+        if (audio) audio.playReload();
       }
       return;
     }
@@ -351,25 +426,25 @@ export class CombatSystem {
     ammo.clip--;
     player.lastFireTime = now;
 
-    // Bullet direction from player orientation or camera
     const fwdX = Math.sin(player.rotY);
     const fwdZ = Math.cos(player.rotY);
-    const sp = wep.spread;
-    const dx = fwdX + (Math.random() - 0.5) * sp;
-    const dy = (Math.random() - 0.5) * sp * 0.5;
-    const dz = fwdZ + (Math.random() - 0.5) * sp;
-
     const startX = player.x + fwdX * 0.5;
     const startY = player.y + 1.25;
     const startZ = player.z + fwdZ * 0.5;
 
-    this.bullets.push(new Bullet(startX, startY, startZ, dx, dy, dz, wep.damage, wep.tracerSpeed, wep.range, false));
+    // Shotgun shoots 6 pellets; other weapons shoot single high-velocity tracer
+    const pelletCount = player.currentWeapon === 'shotgun' ? 6 : 1;
+    for (let p = 0; p < pelletCount; p++) {
+      const sp = wep.spread;
+      const dx = fwdX + (Math.random() - 0.5) * sp;
+      const dy = (Math.random() - 0.5) * sp * 0.5;
+      const dz = fwdZ + (Math.random() - 0.5) * sp;
+      this.bullets.push(new Bullet(startX, startY, startZ, dx, dy, dz, wep.damage, wep.tracerSpeed, wep.range, false));
+    }
 
-    // Audio & camera recoil
     if (audio) audio.playGunshot(player.currentWeapon);
-    if (camera) camera.shake(0.2, 0.15);
+    if (camera) camera.shake(wep.recoil || 0.25, 0.16);
 
-    // Raise wanted heat slightly if firing in public
     police.addCrime('gunfire');
   }
 
@@ -390,14 +465,13 @@ export class CombatSystem {
       const exp = this.explosions[i];
       exp.update(dt);
 
-      // Check damage to player, enemies, vehicles
       if (player.alive && Math.hypot(player.x - exp.x, player.z - exp.z) < exp.radius) {
-        player.takeDamage(45 * dt * 4);
+        player.takeDamage(48 * dt * 4);
       }
       for (let j = 0; j < this.enemies.length; j++) {
         const en = this.enemies[j];
         if (en.alive && Math.hypot(en.x - exp.x, en.z - exp.z) < exp.radius) {
-          en.takeDamage(60 * dt * 4);
+          en.takeDamage(65 * dt * 4, this);
         }
       }
     }
@@ -413,11 +487,17 @@ export class CombatSystem {
       p.vy -= 9.8 * dt;
     }
     this.particles = this.particles.filter((p) => p.life > 0);
+
+    // Update collectible cash drops
+    for (let i = 0; i < this.cashDrops.length; i++) {
+      this.cashDrops[i].update(dt, player, audio);
+    }
+    this.cashDrops = this.cashDrops.filter((c) => c.alive);
   }
 
   buildMesh(positions, normals, colors, uvs) {
     // 1. Bullets (Glowing Golden-Orange Tracers)
-    const tracerCol = [1.8, 1.2, 0.25, 1.0];
+    const tracerCol = [1.8, 1.25, 0.28, 1.0];
     for (let i = 0; i < this.bullets.length; i++) {
       const b = this.bullets[i];
       const tLen = 1.6;
@@ -450,7 +530,12 @@ export class CombatSystem {
       this.explosions[i].buildMesh(positions, normals, colors, uvs);
     }
 
-    // 4. Impact particles
+    // 4. Collectible cash drops
+    for (let i = 0; i < this.cashDrops.length; i++) {
+      this.cashDrops[i].buildMesh(positions, normals, colors, uvs);
+    }
+
+    // 5. Impact particles
     for (let i = 0; i < this.particles.length; i++) {
       const p = this.particles[i];
       const s = 0.08;

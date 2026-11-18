@@ -1,8 +1,9 @@
 /**
  * Nightfall City: Vela Bay - Pedestrian Population & Reactive Citizen AI
- * Diverse citizen models with articulated walking cycles, street wandering,
- * panic fleeing from speeding vehicles and gunfire, and cash drops on elimination.
- * Authored for make.fun GTA 6 bounty challenge.
+ * Diverse Mediterranean citizen models with articulated walking cycles,
+ * sunglasses, shopping bags, ambient street wandering, panic fleeing from speeding
+ * vehicles, gunfire and honking horns, with dropped cash bundles upon demise.
+ * Authored for make.fun open-world crime entry.
  */
 
 import { clamp, normalizeAngle } from './math.js';
@@ -19,36 +20,39 @@ export class Pedestrian {
     this.speed = 1.6 + Math.random() * 0.6;
     this.walkCycle = Math.random() * Math.PI * 2;
 
-    this.health = 25;
+    this.health = 30;
     this.alive = true;
     this.isFleeing = false;
     this.fleeTimer = 0;
+    this.hasDroppedCash = false;
 
-    // Rich clothing palette
+    // Mediterranean coastal civilian styling
     const shirtColors = [
-      [0.94, 0.38, 0.32, 1.0], // Sunset coral
-      [0.22, 0.68, 0.90, 1.0], // Coastal cyan
-      [0.96, 0.82, 0.22, 1.0], // Bright amber
-      [0.28, 0.78, 0.45, 1.0], // Emerald green
-      [0.96, 0.96, 0.98, 1.0], // Crisp linen white
-      [0.85, 0.45, 0.75, 1.0], // Magenta
-      [0.22, 0.24, 0.28, 1.0], // Charcoal
+      [0.95, 0.42, 0.35, 1.0], // Sunset coral
+      [0.24, 0.70, 0.88, 1.0], // Vela teal
+      [0.96, 0.84, 0.25, 1.0], // Ochre sun
+      [0.28, 0.78, 0.48, 1.0], // Coastal mint
+      [0.96, 0.96, 0.98, 1.0], // White linen
+      [0.86, 0.48, 0.72, 1.0], // Bougainvillea magenta
+      [0.24, 0.26, 0.30, 1.0], // Espresso dark
     ];
     const pantColors = [
-      [0.18, 0.28, 0.45, 1.0], // Blue denim
-      [0.62, 0.54, 0.42, 1.0], // Khaki
-      [0.16, 0.16, 0.18, 1.0], // Dark slate
-      [0.85, 0.85, 0.88, 1.0], // White linen
+      [0.18, 0.28, 0.45, 1.0], // Denim indigo
+      [0.64, 0.56, 0.44, 1.0], // Sand khaki
+      [0.16, 0.16, 0.18, 1.0], // Slate black
+      [0.86, 0.86, 0.88, 1.0], // Linen white
     ];
     const skinTones = [
       [0.92, 0.76, 0.62, 1.0],
-      [0.78, 0.58, 0.42, 1.0],
-      [0.52, 0.36, 0.26, 1.0],
+      [0.80, 0.60, 0.44, 1.0],
+      [0.55, 0.38, 0.28, 1.0],
     ];
 
     this.shirtCol = shirtColors[Math.floor(Math.random() * shirtColors.length)];
     this.pantsCol = pantColors[Math.floor(Math.random() * pantColors.length)];
     this.skinCol = skinTones[Math.floor(Math.random() * skinTones.length)];
+    this.hasGlasses = Math.random() < 0.45;
+    this.hasBag = Math.random() < 0.35;
 
     this.targetDirTimer = 5 + Math.random() * 10;
   }
@@ -80,7 +84,7 @@ export class Pedestrian {
       if (this.fleeTimer <= 0) this.isFleeing = false;
     }
 
-    const currentSpeed = this.isFleeing ? 5.4 : this.speed;
+    const currentSpeed = this.isFleeing ? 5.5 : this.speed;
 
     // Periodic wandering direction shifts
     this.targetDirTimer -= dt;
@@ -106,15 +110,15 @@ export class Pedestrian {
       this.rotY += Math.PI * 0.5;
     }
 
-    // Advance walking animation
-    this.walkCycle += dt * currentSpeed * 3.5;
+    // Advance walking gait
+    this.walkCycle += dt * currentSpeed * 3.6;
 
-    // React to nearby speeding vehicles
+    // Flee from nearby speeding vehicles
     for (let i = 0; i < vehicles.vehicles.length; i++) {
       const v = vehicles.vehicles[i];
-      if (Math.abs(v.speed) > 6.0) {
+      if (Math.abs(v.speed) > 6.5) {
         const d = Math.hypot(this.x - v.x, this.z - v.z);
-        if (d < 8.0) {
+        if (d < 8.5) {
           this.fleeFrom(v.x, v.z);
           break;
         }
@@ -184,8 +188,18 @@ export class Pedestrian {
     addBoxRot(-0.28, y + 0.76, -swing * 0.15, 0.12, 0.55, 0.12, this.shirtCol);
     addBoxRot(0.28, y + 0.76, swing * 0.15, 0.12, 0.55, 0.12, this.shirtCol);
 
+    // Optional Shopping Bag
+    if (this.hasBag) {
+      addBoxRot(0.32, y + 0.45, swing * 0.15, 0.10, 0.26, 0.22, [0.85, 0.72, 0.55, 1.0]);
+    }
+
     // Head
     addBoxRot(0, y + 1.37, 0, 0.26, 0.26, 0.26, this.skinCol);
+
+    // Optional Sunglasses
+    if (this.hasGlasses) {
+      addBoxRot(0, y + 1.44, 0.14, 0.24, 0.07, 0.06, [0.12, 0.12, 0.14, 1.0]);
+    }
   }
 }
 
@@ -199,23 +213,24 @@ export class CashPickup {
     this.rot = 0;
   }
 
-  update(dt, player) {
+  update(dt, player, audio) {
     if (!this.alive) return;
-    this.rot += dt * 3.0;
+    this.rot += dt * 3.5;
 
     const d = Math.hypot(this.x - player.x, this.z - player.z);
     if (d < 1.6 && Math.abs(this.y - player.y) < 2.0) {
-      player.cash += this.amount;
+      player.addMoney(this.amount);
+      if (audio) audio.playCashChime();
       this.alive = false;
     }
   }
 
   buildMesh(positions, normals, colors, uvs) {
     if (!this.alive) return;
-    const green = [0.15, 0.85, 0.35, 1.0];
+    const green = [0.22, 0.88, 0.42, 1.0];
     const hoverY = this.y + 0.35 + Math.sin(this.rot * 2) * 0.08;
 
-    const s = 0.35;
+    const s = 0.32;
     const pts = [
       [this.x - s, hoverY, this.z - s],
       [this.x + s, hoverY, this.z - s],
@@ -240,15 +255,16 @@ export class PedestrianManager {
   }
 
   initCityPedestrians() {
-    // Spawn population around downtown sidewalks and market
+    // Populate downtown sidewalks, market quarter, and coastal promenade
     const sidewalkZones = [
-      { xMin: 110, xMax: 160, zMin: -160, zMax: -80 }, // Downtown avenue sidewalks
-      { xMin: -95, xMax: -30, zMin: -160, zMax: -70 },  // Old Market
-      { xMin: -115, xMax: -90, zMin: 30, zMax: 180 },   // Promenade boardwalk
+      { xMin: 110, xMax: 160, zMin: -160, zMax: -80 }, // Downtown Vela sidewalks
+      { xMin: -95, xMax: -30, zMin: -160, zMax: -70 },  // Old Market Quarter
+      { xMin: -115, xMax: -90, zMin: 30, zMax: 180 },   // Promenade Boardwalk
+      { xMin: 20, xMax: 80, zMin: -50, zMax: 50 },      // Central Grand Plaza
     ];
 
     for (const zone of sidewalkZones) {
-      for (let i = 0; i < 10; i++) {
+      for (let i = 0; i < 9; i++) {
         const x = zone.xMin + Math.random() * (zone.xMax - zone.xMin);
         const z = zone.zMin + Math.random() * (zone.zMax - zone.zMin);
         this.spawn(x, 0.22, z, Math.random() * Math.PI * 2);
@@ -262,7 +278,7 @@ export class PedestrianManager {
     return p;
   }
 
-  notifyGunfire(gx, gz, radius = 45) {
+  notifyGunfire(gx, gz, radius = 48) {
     for (let i = 0; i < this.pedestrians.length; i++) {
       const p = this.pedestrians[i];
       if (p.alive && Math.hypot(p.x - gx, p.z - gz) < radius) {
@@ -271,12 +287,21 @@ export class PedestrianManager {
     }
   }
 
-  update(dt, world, player, vehicles) {
+  notifyHorn(hx, hz, radius = 18) {
+    for (let i = 0; i < this.pedestrians.length; i++) {
+      const p = this.pedestrians[i];
+      if (p.alive && Math.hypot(p.x - hx, p.z - hz) < radius) {
+        p.fleeFrom(hx, hz);
+      }
+    }
+  }
+
+  update(dt, world, player, vehicles, audio) {
     for (let i = 0; i < this.pedestrians.length; i++) {
       const p = this.pedestrians[i];
       p.update(dt, world, player, vehicles);
 
-      // If just died, drop cash
+      // If dead, drop cash
       if (!p.alive && !p.hasDroppedCash) {
         p.hasDroppedCash = true;
         this.pickups.push(new CashPickup(p.x, p.y, p.z, 25 + Math.floor(Math.random() * 75)));
@@ -284,7 +309,7 @@ export class PedestrianManager {
     }
 
     for (let i = 0; i < this.pickups.length; i++) {
-      this.pickups[i].update(dt, player);
+      this.pickups[i].update(dt, player, audio);
     }
     this.pickups = this.pickups.filter((pk) => pk.alive);
   }

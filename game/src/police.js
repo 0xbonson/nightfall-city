@@ -1,8 +1,9 @@
 /**
  * Nightfall City: Vela Bay - Wanted Heat & Escalating Pursuit AI
  * Implements 5-star criminal pursuit escalation, cruiser intercept tactics,
- * roadblocks, helicopter air support with searchlight, and line-of-sight evasion.
- * Authored for make.fun GTA 6 bounty challenge.
+ * tactical roadblocks, police helicopter air support with searchlight,
+ * line-of-sight evasion tracking, evasion cash rewards, and safehouse heat clearance.
+ * Authored for make.fun open-world crime entry.
  */
 
 import { POLICE_CONFIG, WORLD } from './config.js';
@@ -15,6 +16,7 @@ export class PoliceSystem {
     this.evasionTimer = 0;
     this.isEvading = false;
     this.spawnTimer = 0;
+    this.previousStars = 0;
 
     // Tactical Police Helicopter
     this.helicopter = {
@@ -31,11 +33,22 @@ export class PoliceSystem {
     };
   }
 
+  clearHeat() {
+    this.heat = 0;
+    this.wantedStars = 0;
+    this.previousStars = 0;
+    this.isEvading = false;
+    this.evasionTimer = 0;
+    if (!this.helicopter.forcedActive) {
+      this.helicopter.active = false;
+    }
+  }
+
   addCrime(type) {
     if (type === 'minor_collision') this.heat += 0.35;
     else if (type === 'vehicle_theft') this.heat += 0.8;
-    else if (type === 'pedestrian_hit') this.heat += 1.2;
-    else if (type === 'gunfire') this.heat += 0.6;
+    else if (type === 'pedestrian_hit') this.heat += 1.25;
+    else if (type === 'gunfire') this.heat += 0.65;
     else if (type === 'assault_officer') this.heat += 2.0;
     else if (type === 'heist_trigger') this.heat = Math.max(this.heat, 4.0);
 
@@ -52,7 +65,7 @@ export class PoliceSystem {
     this.evasionTimer = POLICE_CONFIG.LOSE_SIGHT_TIME;
   }
 
-  update(dt, player, vehicles, world) {
+  update(dt, player, vehicles, world, audio) {
     this.wantedStars = Math.floor(this.heat);
 
     if (this.wantedStars <= 0 && !this.helicopter.forcedActive) {
@@ -77,7 +90,6 @@ export class PoliceSystem {
         const d = Math.hypot(v.x - player.x, v.z - player.z);
         if (d < nearestDist) nearestDist = d;
 
-        // Direct cruiser to intercept player
         this.directPursuit(v, player, dt);
       }
     }
@@ -87,11 +99,17 @@ export class PoliceSystem {
       this.isEvading = true;
       this.evasionTimer -= dt;
       if (this.evasionTimer <= 0) {
+        const oldStar = this.wantedStars;
         this.heat = Math.max(0, this.heat - 1.0);
         this.wantedStars = Math.floor(this.heat);
         this.evasionTimer = POLICE_CONFIG.LOSE_SIGHT_TIME;
-        if (this.wantedStars === 0) {
+
+        if (this.wantedStars === 0 && oldStar > 0) {
           this.isEvading = false;
+          // Reward player for cleanly ditching the police
+          const escapeBonus = oldStar * 250;
+          player.addMoney(escapeBonus);
+          if (audio) audio.playCashChime();
         }
       }
     } else {
@@ -109,7 +127,7 @@ export class PoliceSystem {
 
     // Update Tactical Helicopter
     if (this.helicopter.active) {
-      this.helicopter.rotorAngle += dt * 38.0;
+      this.helicopter.rotorAngle += dt * 42.0;
 
       if (!this.helicopter.lockedPosition) {
         const hTargetX = player.x + Math.sin(performance.now() * 0.001) * 12.0;
@@ -138,7 +156,6 @@ export class PoliceSystem {
   }
 
   spawnPursuitCruiser(player, vehicles) {
-    // Spawn cruiser behind or ahead along the road network
     const spawnAngle = Math.random() * Math.PI * 2;
     const spawnDist = 65 + Math.random() * 35;
     const sx = player.x + Math.sin(spawnAngle) * spawnDist;
@@ -223,7 +240,6 @@ export class PoliceSystem {
     const rSin = Math.sin(rAng);
     const rotorLen = 9.5;
 
-    // Cross rotor blades
     const b1x = rCos * (rotorLen * 0.5);
     const b1z = rSin * (rotorLen * 0.5);
     addBoxHeli(b1x, 2.8, b1z, 0.45, 0.08, rotorLen, rotorCol);
@@ -240,7 +256,6 @@ export class PoliceSystem {
     const beamRadius = 7.5;
     const groundY = 0.05;
 
-    // Conical spotlight geometry on the ground
     const circlePts = 12;
     for (let c = 0; c < circlePts; c++) {
       const a1 = (c / circlePts) * Math.PI * 2;

@@ -1,8 +1,10 @@
 /**
  * Nightfall City: Vela Bay - Heads-Up Display (HUD) System
  * Crisp GTA-style interface: Health/Armor bars, Cash readout, 5 Wanted Stars,
- * Weapon ammo counters, mission objective banner with distance readout, and high-speed speedometer gauge.
- * Authored for make.fun GTA 6 bounty challenge.
+ * Weapon ammo counters, mission objective banner with distance readout,
+ * radio station notification, district entrance banner, safehouse garage prompts,
+ * and high-speed speedometer gauge.
+ * Authored for make.fun open-world crime entry.
  */
 
 import { WEAPONS } from './config.js';
@@ -23,7 +25,7 @@ export class HUD {
     this.damageFlashTimer = 0.35;
   }
 
-  render(player, missions, police, activeCar, shotPreset) {
+  render(player, missions, police, activeCar, shotPreset, radio, districts, garage) {
     if (!this.ctx) return;
     const ctx = this.ctx;
     const w = this.canvas.width;
@@ -47,18 +49,33 @@ export class HUD {
     // 3. Center-Top: Mission Objective Banner with distance readout
     this.renderObjectiveBanner(ctx, w, missions, player, shotPreset);
 
-    // 4. Bottom-Right: Vehicle Speedometer Gauge
+    // 4. District toast banner (under objective)
+    if (districts && districts.bannerTimer > 0) {
+      this.renderDistrictBanner(ctx, w, districts);
+    }
+
+    // 5. Radio station toast (top right below weapon)
+    if (radio && radio.bannerTimer > 0) {
+      this.renderRadioBanner(ctx, w, radio);
+    }
+
+    // 6. Bottom-Right: Vehicle Speedometer Gauge
     if (activeCar || (shotPreset && shotPreset.player && shotPreset.player.inVehicle)) {
       this.renderSpeedometer(ctx, w, h, activeCar, shotPreset);
     }
 
-    // 5. Center Banner (Mission complete / start / failed)
-    if (!shotPreset && missions.bannerTimer > 0) {
+    // 7. Center Banner (Mission complete / start / failed)
+    if (!shotPreset && missions && missions.bannerTimer > 0) {
       this.renderMissionBanner(ctx, w, h, missions);
     }
 
-    // 6. Interaction Prompts
-    this.renderInteractionPrompts(ctx, w, h, player, activeCar);
+    // 8. Safehouse Garage prompt
+    if (garage && garage.promptTimer > 0) {
+      this.renderGaragePrompt(ctx, w, h, garage.promptText);
+    } else {
+      // General Interaction Prompts
+      this.renderInteractionPrompts(ctx, w, h, player, activeCar);
+    }
   }
 
   renderTopRight(ctx, w, player, police, shotPreset) {
@@ -123,8 +140,8 @@ export class HUD {
     // --- Weapon & Ammo Readout ---
     topY += 36;
     const wepKey = player.currentWeapon;
-    const wep = WEAPONS[wepKey] || WEAPONS.rifle;
-    const ammoState = player.ammo[wepKey] || { clip: 30, reserve: 120 };
+    const wep = WEAPONS[wepKey] || WEAPONS.carbine;
+    const ammoState = player.ammo[wepKey] || { clip: 30, reserve: 150 };
 
     ctx.textAlign = 'right';
     ctx.font = '800 15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
@@ -211,7 +228,6 @@ export class HUD {
     const bannerX = (w - bannerW) * 0.5;
     const bannerY = 24;
 
-    // Translucent dark pill background
     ctx.fillStyle = 'rgba(8, 10, 16, 0.82)';
     ctx.beginPath();
     ctx.roundRect(bannerX, bannerY, bannerW, bannerH, 6);
@@ -220,10 +236,8 @@ export class HUD {
     ctx.lineWidth = 1.8;
     ctx.stroke();
 
-    // Objective text
-    let text = shotPreset && shotPreset.objective ? shotPreset.objective : missions.getObjectiveText();
+    let text = shotPreset && shotPreset.objective ? shotPreset.objective : (missions ? missions.getObjectiveText() : 'EXPLORE VELA BAY');
 
-    // Append distance if not in preset and in game
     if (!shotPreset && missions) {
       const dist = missions.getDistanceToTarget(player.x, player.z);
       if (dist > 0) {
@@ -237,6 +251,36 @@ export class HUD {
     ctx.fillText(text.toUpperCase(), w * 0.5, bannerY + 28);
   }
 
+  renderDistrictBanner(ctx, w, districts) {
+    const bannerW = 340;
+    const bannerH = 34;
+    const bannerX = (w - bannerW) * 0.5;
+    const bannerY = 76;
+
+    ctx.fillStyle = 'rgba(12, 18, 28, 0.88)';
+    ctx.beginPath();
+    ctx.roundRect(bannerX, bannerY, bannerW, bannerH, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#00e5ff';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+
+    ctx.textAlign = 'center';
+    ctx.font = '800 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = '#00e5ff';
+    ctx.fillText(districts.bannerText.toUpperCase(), w * 0.5, bannerY + 22);
+  }
+
+  renderRadioBanner(ctx, w, radio) {
+    const rightMargin = w - 35;
+    const bannerY = 148;
+
+    ctx.textAlign = 'right';
+    ctx.font = '700 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = '#ffaa00';
+    ctx.fillText(`📻 ${radio.bannerText.toUpperCase()}`, rightMargin, bannerY);
+  }
+
   renderSpeedometer(ctx, w, h, activeCar, shotPreset) {
     const cx = w - 90;
     const cy = h - 90;
@@ -247,7 +291,6 @@ export class HUD {
 
     ctx.save();
 
-    // Dial background
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(8, 10, 16, 0.85)';
@@ -256,7 +299,6 @@ export class HUD {
     ctx.lineWidth = 3;
     ctx.stroke();
 
-    // Speedometer RPM arch
     const maxSpeedDisplay = 160;
     const speedRatio = Math.min(1.0, speed / maxSpeedDisplay);
     const startAngle = Math.PI * 0.75;
@@ -272,7 +314,6 @@ export class HUD {
     ctx.lineWidth = 6;
     ctx.stroke();
 
-    // Speed number
     ctx.textAlign = 'center';
     ctx.font = '900 32px "Arial Black", sans-serif';
     ctx.fillStyle = '#ffffff';
@@ -296,7 +337,6 @@ export class HUD {
     ctx.fillStyle = 'rgba(6, 8, 14, 0.92)';
     ctx.fillRect(0, bannerY, w, bannerH);
 
-    // Accent line
     ctx.fillStyle = '#ffaa00';
     ctx.fillRect(0, bannerY, w, 3);
     ctx.fillRect(0, bannerY + bannerH - 3, w, 3);
@@ -311,12 +351,21 @@ export class HUD {
     ctx.fillText(missions.bannerSubtitle, w * 0.5, bannerY + 62);
   }
 
+  renderGaragePrompt(ctx, w, h, text) {
+    ctx.textAlign = 'center';
+    ctx.font = '800 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = '#22ff66';
+    ctx.fillText(`🔧 ${text}`, w * 0.5, h - 25);
+  }
+
   renderInteractionPrompts(ctx, w, h, player, activeCar) {
+    ctx.textAlign = 'center';
+    ctx.font = '700 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
     if (activeCar) {
-      ctx.textAlign = 'center';
-      ctx.font = '700 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
-      ctx.fillText('[F / E] Exit Vehicle   [SPACE] Drift   [H] Horn   [K] Taxi Shift', w * 0.5, h - 25);
+      ctx.fillText('[F / E] Exit Vehicle   [SPACE] Drift   [H] Horn   [R] Radio Station   [K] Taxi Shift', w * 0.5, h - 25);
+    } else {
+      ctx.fillText('[F / E] Enter Vehicle   [1-4 / Q] Weapons   [R] Reload   [SHIFT] Sprint   [ESC] Menu', w * 0.5, h - 25);
     }
   }
 }
