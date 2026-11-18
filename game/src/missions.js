@@ -377,6 +377,36 @@ export class MissionManager {
     }
   }
 
+  // Reset the whole campaign back to mission one for a fresh run.
+  resetCampaign() {
+    this.currentMissionIndex = 0;
+    this.activeMission = null;
+    this.currentStepIndex = 0;
+    this.stepTimer = 0;
+    this.currentCheckpointIndex = 0;
+    this.enemies = [];
+    this.dialogue = null;
+    this.dialogueTimer = 0;
+    this.storyCompleted = false;
+    if (this.courierRun) {
+      this.courierRun.active = false;
+      this.courierRun.completedRuns = 0;
+      this.courierRun.target = null;
+      this.courierRun.timer = 0;
+      this.courierRun.reward = 0;
+    }
+    if (this.taxiShift) {
+      this.taxiShift.active = false;
+      this.taxiShift.state = 'idle';
+      this.taxiShift.passenger = null;
+      this.taxiShift.destination = null;
+      this.taxiShift.completedFares = 0;
+      this.taxiShift.totalEarned = 0;
+      this.taxiShift.fare = 0;
+    }
+    this.startMission(0);
+  }
+
   completeMission(player = null) {
     audio.playMissionFanfare();
     const rew = this.activeMission.reward;

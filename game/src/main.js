@@ -180,6 +180,24 @@ class GameApp {
         camera.pitch = 0.05;
         camera.distance = 7.4;
         camera.snap(player);
+      } else if (shot === 'title' || shot === 'menu') {
+        // Shot 5: Title screen over the skyline orbit camera (start screen)
+        menu.state = 'title';
+      } else if (shot === 'controls') {
+        // Shot 6: Controls & shortcuts screen (the rules of play)
+        menu.state = 'controls';
+      } else if (shot === 'win' || shot === 'score') {
+        // Shot 7: Victory / results screen with the final score and a restart button
+        player.cash = 128450;
+        player.health = 100;
+        player.armor = 85;
+        world.collectedMixtapes = new Set(world.mixtapes.map((m) => m.id));
+        missions.courierRun.completedRuns = 14;
+        missions.taxiShift.completedFares = 22;
+        missions.currentMissionIndex = missions.missions.length;
+        missions.storyCompleted = true;
+        missions.activeMission = null;
+        menu.state = 'ending';
       } else if (shot === '4' || shot === 'end' || shot === 'dock') {
         // Shot 4: Mission 6 "Showdown at Meridian Docks" with shipping containers, gantry crane, helicopter and water beyond
         player.inVehicle = false;
@@ -282,7 +300,28 @@ class GameApp {
       menu.state = 'playing';
     } else if (action === 'toggle_radio') {
       audio.toggleRadio();
+    } else if (action === 'restart_campaign') {
+      this.restartCampaign();
     }
+  }
+
+  // Restart a finished campaign from mission one with a clean score.
+  restartCampaign() {
+    player.cash = 1000;
+    player.health = player.maxHealth;
+    player.armor = 50;
+    player.x = 0;
+    player.z = 25;
+    player.inVehicle = false;
+    player.vehicle = null;
+    player.isWasted = false;
+    player.wastedTimer = 0;
+    world.collectedCaches = new Set();
+    world.collectedMixtapes = new Set();
+    police.setWantedLevel(0);
+    missions.resetCampaign();
+    menu.state = 'playing';
+    input.requestLock();
   }
 
   resize() {

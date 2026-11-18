@@ -2,6 +2,7 @@
 
 import { SaveManager } from './save.js';
 import { audio } from './audio.js';
+import { TOTAL_STORY_CAMPAIGN_MISSIONS } from './missions.js';
 
 export const MENU_BUTTON_WIDTH = 260;
 export const MENU_BUTTON_HEIGHT = 46;
@@ -27,7 +28,7 @@ export class MenuManager {
     } else if (this.state === 'paused') {
       this.renderPauseScreen(ctx, width, height, player, world, missions);
     } else if (this.state === 'ending') {
-      this.renderEndingScreen(ctx, width, height);
+      this.renderEndingScreen(ctx, width, height, player, world, missions);
     }
   }
 
@@ -66,11 +67,32 @@ export class MenuManager {
     ctx.letterSpacing = '4px';
     ctx.fillText('VELA BAY · OPEN WORLD CRIME', width / 2, titleY + 34);
 
+    // Goal & Rules panel — the two things a player needs before the first job
+    const panelW = 560;
+    const panelH = 104;
+    const panelX = width / 2 - panelW / 2;
+    const panelY = height * 0.375;
+    ctx.fillStyle = 'rgba(8, 12, 22, 0.72)';
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.45)';
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(panelX, panelY, panelW, panelH);
+    ctx.strokeRect(panelX, panelY, panelW, panelH);
+
+    ctx.font = 'bold 15px system-ui, sans-serif';
+    ctx.fillStyle = '#00f0ff';
+    ctx.fillText(`GOAL: clear all ${TOTAL_STORY_CAMPAIGN_MISSIONS} story missions and rule Vela Bay`, width / 2, panelY + 24);
+    ctx.font = '13px system-ui, sans-serif';
+    ctx.fillStyle = '#ecf0f1';
+    ctx.fillText('RULES: every job pays cash · cash buys cars and ammo ·', width / 2, panelY + 50);
+    ctx.fillText('crimes raise your wanted stars · lose the police and keep the cash', width / 2, panelY + 70);
+    ctx.fillStyle = '#a855f7';
+    ctx.fillText('SCORE: final cash + 500 per mixtape + courier and taxi fares', width / 2, panelY + 91);
+
     // Menu Buttons
     const btnW = MENU_BUTTON_WIDTH;
     const btnH = MENU_BUTTON_HEIGHT;
     const btnX = width / 2 - btnW / 2;
-    let btnY = height * 0.50;
+    let btnY = height * 0.56;
 
     this.drawButton(ctx, btnX, btnY, btnW, btnH, 'START NEW GAME', 'start');
     btnY += 60;
@@ -89,7 +111,7 @@ export class MenuManager {
     // Footer credits & edition
     ctx.font = '12px system-ui, sans-serif';
     ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
-    ctx.fillText('Nightfall City: Vela Bay · make.fun (gta6-01) · 100% Offline Static ES Modules', width / 2, height - 24);
+    ctx.fillText('Nightfall City: Vela Bay · make.fun bounty entry · 100% Offline Static ES Modules', width / 2, height - 24);
 
     ctx.restore();
   }
@@ -426,7 +448,7 @@ export class MenuManager {
     ctx.restore();
   }
 
-  renderEndingScreen(ctx, width, height) {
+  renderEndingScreen(ctx, width, height, player, world, missions) {
     const grad = ctx.createLinearGradient(0, 0, 0, height);
     grad.addColorStop(0, 'rgba(30, 10, 40, 0.95)');
     grad.addColorStop(1, 'rgba(10, 5, 20, 0.98)');
@@ -438,11 +460,11 @@ export class MenuManager {
 
     ctx.font = '900 48px system-ui, sans-serif';
     ctx.fillStyle = '#ffcc00';
-    ctx.fillText('NIGHTFALL CITY CONQUERED', width / 2, height * 0.25);
+    ctx.fillText('NIGHTFALL CITY CONQUERED', width / 2, height * 0.17);
 
     ctx.font = 'bold 22px system-ui, sans-serif';
     ctx.fillStyle = '#00f0ff';
-    ctx.fillText('Vela Bay is yours, Rhea "Rook" Solano.', width / 2, height * 0.34);
+    ctx.fillText('Vela Bay is yours, Rhea "Rook" Solano.', width / 2, height * 0.25);
 
     ctx.font = '16px system-ui, sans-serif';
     ctx.fillStyle = '#ecf0f1';
@@ -450,19 +472,54 @@ export class MenuManager {
       'The Vane Street Syndicate has crumbled.',
       'Corrupt Police Captain Reynolds has been ousted.',
       'Port Meridian family honors your independence as Queen of the Streets.',
-      'All 7 Story Missions completed successfully.',
+      `All ${TOTAL_STORY_CAMPAIGN_MISSIONS} Story Missions completed successfully.`,
       'Free roam continues with your earnings, cars, and courier contracts.'
     ];
 
-    let ly = height * 0.42;
+    let ly = height * 0.32;
     for (const line of lines) {
       ctx.fillText(line, width / 2, ly);
-      ly += 30;
+      ly += 28;
     }
 
-    const btnW = 240;
-    const btnH = 46;
-    this.drawButton(ctx, width / 2 - btnW / 2, height * 0.76, btnW, btnH, 'CONTINUE FREE ROAM', 'continue_roam');
+    // Final score panel
+    const cash = player ? player.cash : 0;
+    const mixtapes = world && world.collectedMixtapes ? world.collectedMixtapes.size : 0;
+    const courierRuns = missions && missions.courierRun ? missions.courierRun.completedRuns : 0;
+    const taxiFares = missions && missions.taxiShift ? missions.taxiShift.completedFares : 0;
+    const score = cash + mixtapes * 500 + courierRuns * 750 + taxiFares * 200;
+
+    const panelW = 470;
+    const panelH = 150;
+    const panelX = width / 2 - panelW / 2;
+    const panelY = height * 0.50;
+    ctx.fillStyle = 'rgba(10, 16, 28, 0.9)';
+    ctx.strokeStyle = '#ffcc00';
+    ctx.lineWidth = 2;
+    ctx.fillRect(panelX, panelY, panelW, panelH);
+    ctx.strokeRect(panelX, panelY, panelW, panelH);
+
+    ctx.font = 'bold 18px system-ui, sans-serif';
+    ctx.fillStyle = '#ffcc00';
+    ctx.fillText('FINAL SCORE', width / 2, panelY + 26);
+
+    ctx.font = 'bold 15px system-ui, sans-serif';
+    ctx.fillStyle = '#ecf0f1';
+    ctx.fillText(`Story missions cleared: ${TOTAL_STORY_CAMPAIGN_MISSIONS} / ${TOTAL_STORY_CAMPAIGN_MISSIONS}`, width / 2, panelY + 56);
+    ctx.fillText(`Cash: $${cash.toLocaleString()}`, width / 2, panelY + 80);
+    ctx.fillText(`Mixtapes: ${mixtapes} · Courier runs: ${courierRuns} · Taxi fares: ${taxiFares}`, width / 2, panelY + 104);
+
+    ctx.font = '900 30px system-ui, sans-serif';
+    ctx.fillStyle = '#39e75f';
+    ctx.shadowColor = '#39e75f';
+    ctx.shadowBlur = 10;
+    ctx.fillText(`SCORE ${score.toLocaleString()}`, width / 2, panelY + 134);
+    ctx.shadowBlur = 0;
+
+    const btnW = 220;
+    const btnH = 42;
+    this.drawButton(ctx, width / 2 - btnW - 12, height * 0.80, btnW, btnH, 'CONTINUE FREE ROAM', 'continue_roam');
+    this.drawButton(ctx, width / 2 + 12, height * 0.80, btnW, btnH, 'RESTART CAMPAIGN', 'restart_campaign');
 
     ctx.restore();
   }
