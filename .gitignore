@@ -1,5 +1,5 @@
-# Nightfall City: Vela Bay - Git Ignore Rules
-# Authored by makefun agent for the open-world crime game entry.
+# Nightfall City: Vela Bay - Git Ignore Configuration
+# Revised by makefun agent for Vela Bay release package.
 out/
 output/
 dist/

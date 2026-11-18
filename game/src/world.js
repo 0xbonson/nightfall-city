@@ -170,7 +170,7 @@ export class World {
    */
   addGroundShadow(x, z, sx, sz, height, y = 0.035) {
     const shadowStretch = Math.min(height * 0.75, 28.0);
-    const shadowColor = [0.12, 0.14, 0.20, 0.55]; // Deep Mediterranean blue-grey shadow
+    const shadowColor = [0.46, 0.46, 0.50, 1.0]; // Ambient-lit Mediterranean ground shadow (soft, never pitch black)
     const hx = sx * 0.5;
     const hz = sz * 0.5;
 
@@ -191,7 +191,7 @@ export class World {
 
   generateTerrainAndSea() {
     // City ground base slab - warm sun-baked asphalt foundation
-    const groundColor = [0.34, 0.33, 0.36, 1.0];
+    const groundColor = [0.42, 0.40, 0.38, 1.0];
     this.addQuad(
       [WORLD.COAST_X, 0, -WORLD.HALF_SIZE],
       [WORLD.HALF_SIZE, 0, -WORLD.HALF_SIZE],
@@ -238,7 +238,7 @@ export class World {
     }
 
     // Coastal Seawall & Granite Revetment along shoreline
-    const seawallColor = [0.60, 0.58, 0.56, 1.0];
+    const seawallColor = [0.65, 0.63, 0.60, 1.0];
     this.addBox(WORLD.COAST_X, -2.5, 0, 3.6, 5.0, WORLD.SIZE, seawallColor, [1, 1], true, true);
   }
 
@@ -277,7 +277,7 @@ export class World {
     const eastWestRoads = [-180, -115, -50, 20, 85, 150, 215];
 
     // Rich warm asphalt (reflects golden sunlight, never murky black)
-    const asphaltColor = [0.36, 0.35, 0.38, 1.0];
+    const asphaltColor = [0.40, 0.39, 0.41, 1.0];
     const markingYellow = [1.0, 0.82, 0.12, 1.0]; // High-vis golden amber centerline
     const markingWhite = [0.96, 0.96, 0.98, 1.0]; // Bright white lane boundaries
     const sidewalkColor = [0.82, 0.78, 0.70, 1.0]; // Sunlit washed sandstone sidewalks
@@ -387,10 +387,10 @@ export class World {
     const overpassLen = WORLD.OVERPASS_Z_END - WORLD.OVERPASS_Z_START;
     const overpassZMid = (WORLD.OVERPASS_Z_START + WORLD.OVERPASS_Z_END) * 0.5;
 
-    const concreteDeck = [0.62, 0.64, 0.68, 1.0];
-    const highwayAsphalt = [0.34, 0.33, 0.36, 1.0];
-    const barrierColor = [0.86, 0.88, 0.92, 1.0];
-    const pillarColor = [0.52, 0.54, 0.58, 1.0];
+    const concreteDeck = [0.65, 0.67, 0.70, 1.0];
+    const highwayAsphalt = [0.38, 0.37, 0.40, 1.0];
+    const barrierColor = [0.88, 0.90, 0.94, 1.0];
+    const pillarColor = [0.55, 0.57, 0.60, 1.0];
 
     // Main overpass deck
     this.addBox(WORLD.OVERPASS_X, overpassY, overpassZMid, overpassW, 1.3, overpassLen, concreteDeck, [1, 1], true, true);
@@ -431,7 +431,7 @@ export class World {
     const bridgeW = 12;
 
     const steelColor = [0.82, 0.38, 0.24, 1.0]; // International rust orange
-    const roadwayColor = [0.35, 0.34, 0.38, 1.0];
+    const roadwayColor = [0.38, 0.37, 0.40, 1.0];
 
     // Bridge road deck spanning west across the bay
     this.addBox(bridgeX - bridgeLen * 0.5, 6.0, bridgeZ, bridgeLen, 1.2, bridgeW, roadwayColor, [1, 1], true, true);
@@ -777,11 +777,12 @@ export class World {
   }
 
   generateDocksAndCranes() {
-    // Meridian Cargo Docks in South-East district
-    const dockApron = [0.38, 0.40, 0.44, 1.0];
+    // Meridian Cargo Docks in South-East district:
+    // Sun-drenched warm Mediterranean quayside concrete, never murky black
+    const dockApron = [0.72, 0.70, 0.65, 1.0];
     this.addBox(140, 0.08, 140, 160, 0.16, 160, dockApron, [1, 1], false, true);
 
-    // Safety yellow & black hazard boundary strip along wharf
+    // Safety yellow & black hazard boundary strip along wharf edge
     const hazardYellow = [1.0, 0.82, 0.08, 1.0];
     this.addBox(140, 0.18, 220, 160, 0.04, 1.8, hazardYellow, [1, 1], false, false);
     this.addBox(220, 0.18, 140, 1.8, 0.04, 160, hazardYellow, [1, 1], false, false);
@@ -809,16 +810,18 @@ export class World {
     this.addBox(244, -1.0, 160, 24, 7.0, 80, [0.22, 0.24, 0.28, 1.0], [1, 1], true, true);
     this.addBox(244, 6.0, 128, 16, 8.5, 20, [0.92, 0.92, 0.95, 1.0], [1, 1], true, true);
 
-    // Cargo Warehouses
-    const whColor = [0.46, 0.48, 0.52, 1.0];
-    const whRoof = [0.72, 0.34, 0.24, 1.0];
+    // Cargo Warehouses along western edge of docks
+    const whColor = [0.55, 0.56, 0.58, 1.0];
+    const whRoof = [0.78, 0.38, 0.26, 1.0];
     this.addBox(80, 0, 70, 38, 14, 32, whColor, [0.2, 0.2], true, true);
     this.addBox(80, 14, 70, 40, 2.6, 34, whRoof, [1, 1], false, true);
 
     this.addBox(80, 0, 150, 38, 14, 32, whColor, [0.2, 0.2], true, true);
     this.addBox(80, 14, 150, 40, 2.6, 34, whRoof, [1, 1], false, true);
 
-    // Multi-tier shipping container stacks in bold high-chroma primary colors
+    // Multi-tier shipping container stacks in bold high-chroma primary colors.
+    // Staged along north perimeter and far eastern background to frame Pier 7 naturally
+    // without blocking the foreground player, crates, or target van!
     const containerColors = [
       [0.90, 0.20, 0.16, 1.0], // Crimson Red
       [0.15, 0.52, 0.90, 1.0], // Ocean Blue
@@ -829,30 +832,46 @@ export class World {
 
     const cW = 2.65, cL = 7.2, cH = 2.65;
     let colIdx = 0;
-    for (let row = 0; row < 5; row++) {
-      for (let stackZ = 0; stackZ < 4; stackZ++) {
-        const cx = 135 + row * 4.3;
-        const cz = 95 + stackZ * 9.8;
+
+    // Northern perimeter container stacks (Z = 72..86)
+    for (let row = 0; row < 3; row++) {
+      for (let stackX = 0; stackX < 4; stackX++) {
+        const cx = 132 + stackX * 8.6;
+        const cz = 72 + row * 4.4;
+        const layers = 1 + ((row + stackX) % 3);
+
+        for (let l = 0; l < layers; l++) {
+          const col = containerColors[(colIdx++) % containerColors.length];
+          this.addBox(cx, 0.16 + l * cH, cz, cL, cH, cW, col, [1, 1], true, true);
+        }
+      }
+    }
+
+    // Eastern backdrop container stacks (X = 168..190, Z = 96..150)
+    for (let row = 0; row < 4; row++) {
+      for (let stackZ = 0; stackZ < 5; stackZ++) {
+        const cx = 168 + row * 5.4;
+        const cz = 96 + stackZ * 11.2;
         const layers = 1 + ((row + stackZ) % 3);
 
         for (let l = 0; l < layers; l++) {
           const col = containerColors[(colIdx++) % containerColors.length];
-          this.addBox(cx, l * cH, cz, cW, cH, cL, col, [1, 1], true, true);
+          this.addBox(cx, 0.16 + l * cH, cz, cW, cH, cL, col, [1, 1], true, true);
         }
         this.addGroundShadow(cx, cz, cW, cL, layers * cH);
       }
     }
 
-    // Contraband Heist Loot Crates near Pier 7
-    const crateWood = [0.78, 0.56, 0.34, 1.0];
+    // Contraband Heist Loot Crates on Pier 7 (Mid Ground Subject)
+    const crateWood = [0.80, 0.58, 0.36, 1.0];
     const crateBands = [0.22, 0.22, 0.24, 1.0];
-    this.addBox(146.0, 0.08, 114.0, 1.6, 1.5, 1.6, crateWood, [1, 1], true, true);
-    this.addBox(146.0, 0.45, 114.0, 1.65, 0.2, 1.65, crateBands, [1, 1], false, false);
-    this.addBox(148.0, 0.08, 115.0, 1.4, 1.3, 1.4, crateWood, [1, 1], true, true);
-    this.addBox(147.0, 1.58, 114.5, 1.2, 1.1, 1.2, crateWood, [1, 1], false, true);
+    this.addBox(148.0, 0.16, 114.5, 1.8, 1.6, 1.8, crateWood, [1, 1], true, true);
+    this.addBox(148.0, 0.65, 114.5, 1.85, 0.22, 1.85, crateBands, [1, 1], false, false);
+    this.addBox(150.4, 0.16, 115.6, 1.5, 1.4, 1.5, crateWood, [1, 1], true, true);
+    this.addBox(149.2, 1.76, 115.0, 1.3, 1.2, 1.3, crateWood, [1, 1], false, true);
 
-    // Massive 36m Industrial Gantry Crane
-    this.buildGantryCrane(150, 0, 155);
+    // Massive 36m Industrial Gantry Crane towering in background
+    this.buildGantryCrane(150, 0.16, 155);
   }
 
   buildGantryCrane(x, y, z) {

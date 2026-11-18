@@ -1,7 +1,7 @@
 /**
  * Nightfall City: Vela Bay — Build Pipeline & Release Dossier Packager
  * Custom build orchestrator for make.fun open-world crime entrypoint.
- * Authored by makefun agent for the open-world crime game entry.
+ * Authored and packaged by makefun agent for Vela Bay release.
  *
  * Responsibilities:
  * 1. Target Directory Resolution via MAKEFUN_OUTPUT_DIR (or fallback to /output).

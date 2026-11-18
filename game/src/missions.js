@@ -25,11 +25,16 @@ export class MissionManager {
     this.taxiFare = null; // { startX, startZ, destX, destZ, reward }
 
     this.markerRotation = 0;
+    this.customTarget = null;
     this.loadMission(0);
   }
 
   getCurrentMission() {
     return this.missions[this.currentIdx];
+  }
+
+  setCustomTarget(target) {
+    this.customTarget = target;
   }
 
   loadMission(index) {
@@ -83,6 +88,10 @@ export class MissionManager {
   }
 
   getTargetCoords() {
+    if (this.customTarget) {
+      return this.customTarget;
+    }
+
     if (this.taxiMode && this.taxiFare) {
       return [this.taxiFare.destX, 0, this.taxiFare.destZ];
     }
@@ -198,7 +207,7 @@ export class MissionManager {
     if (!target) return;
 
     const tx = target[0];
-    const ty = target[1] + 2.2 + Math.sin(this.markerRotation * 1.5) * 0.35;
+    const ty = target[1] + 2.4 + Math.sin(this.markerRotation * 1.5) * 0.35;
     const tz = target[2];
 
     const rot = this.markerRotation;

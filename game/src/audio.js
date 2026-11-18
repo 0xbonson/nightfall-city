@@ -1,6 +1,7 @@
 /**
  * Nightfall City: Vela Bay - Procedural WebAudio Synthesizer Engine
  * Authored by makefun agent for the open-world crime game entry.
+ * Sun-Soaked Vela Bay Edition - 100% procedural WebAudio acoustics.
  *
  * 100% code-synthesized sound effects and multi-station generative audio:
  * - Vehicle V8 / Turbo-4 engine rev synthesis with RPM-tracked pitch & lowpass cutoff

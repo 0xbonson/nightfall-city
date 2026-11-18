@@ -1,6 +1,7 @@
 /**
  * Nightfall City: Vela Bay - Safehouse Garage & Vehicle Stash System
  * Authored by makefun agent for the open-world crime game entry.
+ * Sun-Soaked Vela Bay Edition - Garage facility & vehicle storage.
  *
  * Implements:
  * - Downtown Safehouse Garage at [95, 0, -85] with 3D structural bay

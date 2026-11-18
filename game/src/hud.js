@@ -4,7 +4,7 @@
  * Weapon ammo counters, mission objective banner with distance readout,
  * radio station notification, district entrance banner, safehouse garage prompts,
  * and high-speed speedometer gauge.
- * Authored for make.fun open-world crime entry.
+ * Authored for make.fun open-world crime entry (Vela Bay edition).
  */
 
 import { WEAPONS } from './config.js';

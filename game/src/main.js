@@ -4,6 +4,7 @@
  *
  * Coordinates:
  * - Pure WebGL 3D rendering pipeline (world mesh, dynamic entities, atmosphere)
+ * - Soft volumetric searchlight rendering pass with additive feathered blending
  * - 2D HUD canvas overlay (status bars, wanted stars, speedometer, radar minimap, menus)
  * - Systems orchestration: Player, Vehicles, Pedestrians, Police AI, Missions, Combat, Audio Synth,
  *   District Manager, Safehouse Garage, Generative Multi-Station Radio System
@@ -77,18 +78,22 @@ export class Game {
     this.handleResize();
     window.addEventListener('resize', () => this.handleResize());
 
+    // Dynamic mesh buffers
+    this.dynPositions = [];
+    this.dynNormals = [];
+    this.dynColors = [];
+    this.dynUvs = [];
+
+    // Searchlight light buffers
+    this.searchlightPositions = [];
+    this.searchlightColors = [];
+
     // Apply photo mode preset or load save
     if (this.shotPreset) {
       this.applyShotPreset(this.shotPreset);
     } else {
       this.saveSystem.load(this.player, this.missions, this.police, this.garage, this.radio);
     }
-
-    // Dynamic mesh buffers
-    this.dynPositions = [];
-    this.dynNormals = [];
-    this.dynColors = [];
-    this.dynUvs = [];
 
     // Audio context unlock on first user gesture
     const unlockAudio = () => {
@@ -134,6 +139,10 @@ export class Game {
       }
     }
 
+    if (preset.targetPos) {
+      this.missions.setCustomTarget(preset.targetPos);
+    }
+
     if (preset.wantedStars !== undefined) {
       this.police.setWantedStars(preset.wantedStars);
     }
@@ -170,6 +179,7 @@ export class Game {
       this.police.helicopter.active = true;
       this.police.helicopter.forcedActive = true;
       this.police.helicopter.lockedPosition = true;
+      this.police.helicopter.searchlightActive = true;
       if (preset.heliPos) {
         this.police.helicopter.x = preset.heliPos[0];
         this.police.helicopter.y = preset.heliPos[1];
@@ -179,6 +189,15 @@ export class Game {
         this.police.helicopter.y = 26;
         this.police.helicopter.z = preset.player.pos[2] + 16;
       }
+
+      if (preset.player) {
+        this.police.helicopter.targetX = preset.player.pos[0];
+        this.police.helicopter.targetZ = preset.player.pos[2] - 6.0;
+      }
+    } else {
+      this.police.helicopter.active = false;
+      this.police.helicopter.forcedActive = false;
+      this.police.helicopter.searchlightActive = false;
     }
   }
 
@@ -270,7 +289,7 @@ export class Game {
     this.missions.buildMesh(this.dynPositions, this.dynNormals, this.dynColors, this.dynUvs);
     this.combat.buildMesh(this.dynPositions, this.dynNormals, this.dynColors, this.dynUvs);
 
-    // 2. Render 3D WebGL Scene
+    // 2. Render 3D WebGL Scene (World & Opaque Dynamic Entities)
     const sirens = this.vehicles.getPoliceSirens();
     this.renderer.renderWorld(this.camera, this.totalTime, sirens);
 
@@ -281,7 +300,13 @@ export class Game {
       this.dynUvs
     );
 
-    // 3. Render 2D Overlay (HUD, Minimap, Menus)
+    // 3. Render Volumetric Searchlight Pass (Soft Additive Blended Lighting)
+    this.searchlightPositions.length = 0;
+    this.searchlightColors.length = 0;
+    this.police.buildSearchlightMesh(this.searchlightPositions, this.searchlightColors);
+    this.renderer.drawSearchlight(this.searchlightPositions, this.searchlightColors);
+
+    // 4. Render 2D Overlay (HUD, Minimap, Menus)
     const hudCtx = this.hud.ctx;
     const h = this.hudCanvas.height;
 

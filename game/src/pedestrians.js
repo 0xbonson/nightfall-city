@@ -1,6 +1,7 @@
 /**
  * Nightfall City: Vela Bay - Pedestrian Population & Reactive Citizen AI
  * Authored by makefun agent for the open-world crime game entry.
+ * Sun-Soaked Vela Bay Edition - Citizen population & pedestrian AI.
  *
  * Implements:
  * - Diverse Mediterranean coastal citizens with articulated walking kinematics

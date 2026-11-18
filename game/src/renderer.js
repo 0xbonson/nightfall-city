@@ -12,6 +12,7 @@
  * - Harmonic wave displacement with sun path glint and foam crests
  * - Multi-stop sunset atmospheric sky dome with solar corona and sun disc
  * - Soft golden-hour distance depth fog
+ * - Soft volumetric searchlight rendering with additive alpha blending & feathered edges
  */
 
 import { M4, V3 } from './math.js';
@@ -34,8 +35,7 @@ export class Renderer {
     const gl = this.gl;
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
-    gl.enable(gl.CULL_FACE);
-    gl.cullFace(gl.BACK);
+    gl.disable(gl.CULL_FACE);
 
     this.programs = {};
     this.buffers = {};
@@ -380,6 +380,32 @@ export class Renderer {
     this.cacheUniforms('sky', [
       'u_invViewProj', 'u_sunDir', 'u_sunCol', 'u_camPos',
     ]);
+
+    // --- Soft Volumetric Searchlight Shader ---
+    const vsLight = `
+      precision highp float;
+      attribute vec3 a_pos;
+      attribute vec4 a_col;
+      uniform mat4 u_proj;
+      uniform mat4 u_view;
+      uniform mat4 u_model;
+      varying vec4 v_col;
+      void main() {
+        v_col = a_col;
+        gl_Position = u_proj * u_view * u_model * vec4(a_pos, 1.0);
+      }
+    `;
+
+    const fsLight = `
+      precision highp float;
+      varying vec4 v_col;
+      void main() {
+        gl_FragColor = v_col;
+      }
+    `;
+
+    this.programs.searchlight = this.createProgram(vsLight, fsLight);
+    this.cacheUniforms('searchlight', ['u_proj', 'u_view', 'u_model']);
   }
 
   cacheUniforms(progName, uniformNames) {
@@ -457,6 +483,11 @@ export class Renderer {
       norm: gl.createBuffer(),
       col: gl.createBuffer(),
       uv: gl.createBuffer(),
+    };
+
+    this.buffers.searchlight = {
+      pos: gl.createBuffer(),
+      col: gl.createBuffer(),
     };
   }
 
@@ -607,5 +638,45 @@ export class Renderer {
 
     this.bindVBO(prog, this.buffers.dynamic);
     gl.drawArrays(gl.TRIANGLES, 0, positions.length / 3);
+  }
+
+  drawSearchlight(positions, colors, modelMatrix) {
+    if (!positions || !positions.length) return;
+    const gl = this.gl;
+    const prog = this.programs.searchlight;
+    gl.useProgram(prog);
+
+    gl.uniformMatrix4fv(prog.uniforms.u_proj, false, this.matProj);
+    gl.uniformMatrix4fv(prog.uniforms.u_view, false, this.matView);
+    gl.uniformMatrix4fv(prog.uniforms.u_model, false, modelMatrix || this.matModel);
+
+    // Additive blending for volumetric light beam and soft ground pool
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    gl.depthMask(false);
+    gl.disable(gl.CULL_FACE);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.searchlight.pos);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.DYNAMIC_DRAW);
+    const locPos = gl.getAttribLocation(prog, 'a_pos');
+    if (locPos >= 0) {
+      gl.enableVertexAttribArray(locPos);
+      gl.vertexAttribPointer(locPos, 3, gl.FLOAT, false, 0, 0);
+    }
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.searchlight.col);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.DYNAMIC_DRAW);
+    const locCol = gl.getAttribLocation(prog, 'a_col');
+    if (locCol >= 0) {
+      gl.enableVertexAttribArray(locCol);
+      gl.vertexAttribPointer(locCol, 4, gl.FLOAT, false, 0, 0);
+    }
+
+    gl.drawArrays(gl.TRIANGLES, 0, positions.length / 3);
+
+    // Restore standard rendering state
+    gl.disable(gl.BLEND);
+    gl.depthMask(true);
+    gl.enable(gl.CULL_FACE);
   }
 }

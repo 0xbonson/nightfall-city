@@ -1,6 +1,7 @@
 /**
  * Nightfall City: Vela Bay - District Navigation & Spatial Territory System
  * Authored by makefun agent for the open-world crime game entry.
+ * Sun-Soaked Vela Bay Edition - Municipal territories and notifications.
  *
  * Tracks territory boundaries across Vela Bay's Mediterranean coastal topography:
  * - Downtown Vela: Towering glass curtain skyscrapers and financial plazas

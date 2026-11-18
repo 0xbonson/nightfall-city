@@ -16,7 +16,7 @@ The game world spans an expansive coordinate area (-280m to +280m in X and Z) fe
 - **Distinct Districts**:
   1. **Downtown Vela**: High-rise glass skyscrapers, corporate plazas, rooftop HVAC clutter, and safehouse garage.
   2. **Old Market Quarter**: Mediterranean terracotta roofs, sandstone ochre townhouses, arched alleys, and market stalls.
-  3. **Meridian Cargo Docks**: Heavy industrial quays, multi-tier container stacks, breakwater quays, and a 36m yellow container gantry crane.
+  3. **Meridian Cargo Docks**: Heavy industrial quays, warm sunlit concrete apron, multi-tier container stacks, breakwater quays, contraband crates, target heist van, and a 36m yellow container gantry crane.
   4. **Ocean Promenade & Marina San Vento**: Art Deco pastel resorts, beachfront boardwalk, palm avenues, and marina boat slips.
   5. **Skyway Boulevard Expressway**: Multi-lane elevated concrete expressway spanning over the metropolis.
   6. **Harbor Suspension Bridge & Monte Sereno Foothills**: Twin-tower suspension bridge spanning the bay, framed by rolling northern mountain ridges.
@@ -53,13 +53,16 @@ The game world spans an expansive coordinate area (-280m to +280m in X and Z) fe
 - Dynamic panic AI: civilians scatter, yell, and sprint away from speeding cars, hit-and-run incidents, horn honks, and weapon fire.
 - Defeated pedestrians drop glowing green cash bundles ($25–$100).
 
-### 2.4 Police Pursuit & 5-Star Wanted System (`police.js`)
+### 2.4 Police Pursuit, Chopper Searchlight & 5-Star Wanted System (`police.js`, `renderer.js`)
 - Escalating heat meter scaling from 0 to 5 stars:
   - **1 Star**: Local patrol cruisers investigate.
   - **2 Stars**: Police interceptors initiate code-3 pursuit with sirens and flashing lightbars.
   - **3 Stars**: Coordinated cruiser pursuit with aggressive pit maneuvers and roadblock barricades.
-  - **4 Stars**: Police tactical helicopter deployed with rotating rotors and downward searchlight beam.
+  - **4 Stars**: Police tactical helicopter deployed with rotating rotors and atmospheric searchlight beam.
   - **5 Stars**: Full citywide tactical lockdown with relentless cruiser waves and airborne suppression.
+- **Volumetric Atmospheric Searchlight Beam**: Rendered with additive alpha blending (`SRC_ALPHA, ONE`), no depth mask writes, and multi-layered translucent amber-white pyramids (`[1.0, 0.90..0.92, 0.70..0.74]`). Opacity falls off towards the ground and sides, leaving street asphalt, cars, and building facades clearly visible behind the beam.
+- **Ground Footprint Ellipse**: Feathered concentric amber rings illuminating the pavement beneath the beam.
+- Helicopter only appears and beams down when searchlight is actively over player target.
 - Evasion mechanics: breaking line of sight initiates heat cooldown with flashing stars; losing the police awards cash escape bonuses. Pulling into the Safehouse Garage immediately purges police heat.
 
 ### 2.5 Combat & Ballistics (`combat.js`)
@@ -106,6 +109,7 @@ The game world spans an expansive coordinate area (-280m to +280m in X and Z) fe
 - Facade illumination: storefront neon displays at street level and office window grids on skyscrapers.
 - Dynamic emergency lightbars casting red and blue strobes on surrounding geometry.
 - Distance depth fog blending geometry softly into the golden twilight horizon.
+- Dedicated additive alpha searchlight pass preserving background visibility.
 
 ### 2.11 Tactical HUD & Circular Radar Minimap (`hud.js`, `minimap.js`)
 - 2D Canvas HUD overlay drawing health/armor gauges, cash balance, wanted stars, ammo counter, speedometer dial, active mission banner with distance in meters, radio toast, and district toasts.
@@ -138,11 +142,11 @@ game/
     ├── save.js           # LocalStorage state serialization and loading
     ├── camera.js         # Third-person follow camera, high-speed chase zoom, screen shake, slow-mo dilation
     ├── world.js          # Procedural city generation: 6 districts, roads, skyway, bridge, docks, crane, marina, hills, props
-    ├── renderer.js       # WebGL 3D rendering engine, shaders, sunset atmosphere, asphalt sheen, dynamic lights
+    ├── renderer.js       # WebGL 3D rendering engine, shaders, sunset atmosphere, asphalt sheen, dynamic lights, searchlight pass
     ├── vehicles.js       # 7 vehicle models, driving physics, drift mechanics, traffic AI, body roll/pitch
     ├── pedestrians.js    # Pedestrian models, wandering AI, panic fleeing, dropped cash pickups
     ├── player.js         # Rook character model, articulated limbs, movement, carjacking, health/armor, multi-weapon arsenal
-    ├── police.js         # 0-5 star wanted system, pursuit cruisers, tactical helicopter with spotlight
+    ├── police.js         # 0-5 star wanted system, pursuit cruisers, tactical helicopter with atmospheric searchlight
     ├── combat.js         # Ballistics, golden glowing tracers, enemy syndicate AI, explosions, cash drops
     ├── missions.js       # 8-mission story campaign, taxi side jobs, 3D rotating diamond beacon
     ├── hud.js            # Health/armor bars, cash readout, wanted stars, speedometer, objective banner, radio toast, district toast

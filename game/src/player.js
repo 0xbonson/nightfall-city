@@ -136,8 +136,8 @@ export class Player {
     }
 
     // Weapon Reloading
-    const wep = WEAPONS[this.currentWeapon];
-    const ammoState = this.ammo[this.currentWeapon];
+    const wep = WEAPONS[this.currentWeapon] || WEAPONS.carbine;
+    const ammoState = this.ammo[this.currentWeapon] || { clip: 30, reserve: 150 };
 
     if (input.isJustPressed('KeyR') && ammoState.clip < wep.clipSize && ammoState.reserve > 0) {
       this.isReloading = true;
@@ -325,7 +325,7 @@ export class Player {
     addBoxRot(0, y + 1.54, 0.14, 0.26, 0.09, 0.06, shadesCol); // Sunglasses
 
     // 7. Weapon Models
-    if (this.currentWeapon === 'carbine') {
+    if (this.currentWeapon === 'carbine' || this.currentWeapon === 'rifle') {
       // Tactical Carbine with receiver, curved magazine, barrel, stock
       addBoxRot(0.24, y + 1.14, 0.30, 0.08, 0.14, 0.34, gunSteel); // Receiver
       addBoxRot(0.24, y + 1.12, 0.54, 0.05, 0.06, 0.42, gunSteel); // Extended barrel

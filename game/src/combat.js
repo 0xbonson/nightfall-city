@@ -2,7 +2,7 @@
  * Nightfall City: Vela Bay - Combat Engine, Ballistics, Explosives & Tactical AI
  * Implements glowing multi-caliber tracers, muzzle flash bursts, blood/spark/dust particle dynamics,
  * shotgun pellet fan spread, collectible contraband cash drops, and hostile Syndicate enforcer AI.
- * Authored by makefun agent for the open-world crime entry.
+ * Authored by makefun agent for the open-world crime entry (Vela Bay Edition).
  */
 
 import { WEAPONS } from './config.js';

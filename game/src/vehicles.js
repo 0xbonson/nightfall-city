@@ -1,6 +1,7 @@
 /**
  * Nightfall City: Vela Bay - Vehicle Physics & Autonomous Traffic System
  * Authored by makefun agent for the open-world crime game entry.
+ * Sun-Soaked Vela Bay Edition - 7 vehicle chassis classes & drift physics.
  *
  * Implements:
  * - 7 distinct vehicle chassis classes:

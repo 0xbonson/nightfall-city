@@ -23,6 +23,7 @@ export class PoliceSystem {
       active: false,
       forcedActive: false,
       lockedPosition: false,
+      searchlightActive: false,
       x: 0,
       y: 35,
       z: 0,
@@ -41,6 +42,7 @@ export class PoliceSystem {
     this.evasionTimer = 0;
     if (!this.helicopter.forcedActive) {
       this.helicopter.active = false;
+      this.helicopter.searchlightActive = false;
     }
   }
 
@@ -70,6 +72,7 @@ export class PoliceSystem {
 
     if (this.wantedStars <= 0 && !this.helicopter.forcedActive) {
       this.helicopter.active = false;
+      this.helicopter.searchlightActive = false;
       this.isEvading = false;
       return;
     }
@@ -125,7 +128,7 @@ export class PoliceSystem {
       this.spawnPursuitCruiser(player, vehicles);
     }
 
-    // Update Tactical Helicopter
+    // Update Tactical Helicopter & Searchlight
     if (this.helicopter.active) {
       this.helicopter.rotorAngle += dt * 42.0;
 
@@ -136,7 +139,16 @@ export class PoliceSystem {
         this.helicopter.x = lerp(this.helicopter.x, hTargetX, dt * 1.8);
         this.helicopter.z = lerp(this.helicopter.z, hTargetZ, dt * 1.8);
         this.helicopter.y = 28.0;
+
+        this.helicopter.targetX = player.x;
+        this.helicopter.targetZ = player.z;
       }
+
+      // Searchlight beam only engages when helicopter is actually tracking directly over the player
+      const distToPlayer = Math.hypot(this.helicopter.x - player.x, this.helicopter.z - player.z);
+      this.helicopter.searchlightActive = distToPlayer < 24.0;
+    } else {
+      this.helicopter.searchlightActive = false;
     }
   }
 
@@ -250,28 +262,123 @@ export class PoliceSystem {
 
     // Rotor mast
     addBoxHeli(0, 2.0, 0, 0.35, 1.6, 0.35, [0.1, 0.1, 0.1, 1.0]);
+  }
 
-    // High-Intensity Downward Searchlight Spotlight Beam
-    const spotCol = [1.8, 1.6, 1.2, 0.38];
-    const beamRadius = 7.5;
-    const groundY = 0.05;
+  buildSearchlightMesh(positions, colors) {
+    if (!this.helicopter.active || !this.helicopter.searchlightActive) return;
 
-    const circlePts = 12;
-    for (let c = 0; c < circlePts; c++) {
-      const a1 = (c / circlePts) * Math.PI * 2;
-      const a2 = ((c + 1) / circlePts) * Math.PI * 2;
+    const h = this.helicopter;
+    const hx = h.x;
+    const hy = h.y;
+    const hz = h.z;
 
-      const p1 = [x, y - 1.5, z];
-      const p2 = [x + Math.cos(a1) * beamRadius, groundY, z + Math.sin(a1) * beamRadius];
-      const p3 = [x + Math.cos(a2) * beamRadius, groundY, z + Math.sin(a2) * beamRadius];
+    // Searchlight target on the ground (defaults to player or slightly ahead)
+    const gx = h.targetX !== undefined ? h.targetX : hx;
+    const gz = h.targetZ !== undefined ? h.targetZ : hz;
+    const gy = 0.06;
 
-      const quad = [p1, p2, p3];
-      for (const pt of quad) {
-        positions.push(pt[0], pt[1], pt[2]);
-        normals.push(0, 1, 0);
-        colors.push(spotCol[0], spotCol[1], spotCol[2], spotCol[3]);
-        uvs.push(0, 0);
-      }
+    // Pale amber-white palette with soft opacity falloff
+    const apexCol = [1.0, 0.92, 0.74, 0.10];         // Faint warm glow near lamp
+    const midBeamCol = [1.0, 0.88, 0.68, 0.035];     // Falling off towards ground
+    const groundBeamCol = [0.98, 0.84, 0.60, 0.012]; // Soft transparent base
+    const edgeBeamCol = [0.95, 0.80, 0.52, 0.0];     // Completely feathered outer rim
+
+    // 1. Soft Elliptical Ground Footprint (feathered concentric rings)
+    const rx = 5.2;
+    const rz = 7.0;
+    const groundCenterCol = [1.0, 0.90, 0.70, 0.16]; // Soft warm pool on asphalt
+    const groundMidCol = [0.98, 0.85, 0.62, 0.07];
+    const groundEdgeCol = [0.95, 0.78, 0.50, 0.0];   // Completely fades out at rim
+
+    const radialSegments = 24;
+    for (let i = 0; i < radialSegments; i++) {
+      const a1 = (i / radialSegments) * Math.PI * 2;
+      const a2 = ((i + 1) / radialSegments) * Math.PI * 2;
+
+      const cos1 = Math.cos(a1), sin1 = Math.sin(a1);
+      const cos2 = Math.cos(a2), sin2 = Math.sin(a2);
+
+      // Inner disc
+      const pCenter = [gx, gy, gz];
+      const pMid1 = [gx + cos1 * rx * 0.45, gy, gz + sin1 * rz * 0.45];
+      const pMid2 = [gx + cos2 * rx * 0.45, gy, gz + sin2 * rz * 0.45];
+
+      positions.push(pCenter[0], pCenter[1], pCenter[2]);
+      colors.push(...groundCenterCol);
+      positions.push(pMid1[0], pMid1[1], pMid1[2]);
+      colors.push(...groundMidCol);
+      positions.push(pMid2[0], pMid2[1], pMid2[2]);
+      colors.push(...groundMidCol);
+
+      // Outer feather skirt
+      const pOut1 = [gx + cos1 * rx, gy, gz + sin1 * rz];
+      const pOut2 = [gx + cos2 * rx, gy, gz + sin2 * rz];
+
+      positions.push(pMid1[0], pMid1[1], pMid1[2]);
+      colors.push(...groundMidCol);
+      positions.push(pOut1[0], pOut1[1], pOut1[2]);
+      colors.push(...groundEdgeCol);
+      positions.push(pMid2[0], pMid2[1], pMid2[2]);
+      colors.push(...groundMidCol);
+
+      positions.push(pMid2[0], pMid2[1], pMid2[2]);
+      colors.push(...groundMidCol);
+      positions.push(pOut1[0], pOut1[1], pOut1[2]);
+      colors.push(...groundEdgeCol);
+      positions.push(pOut2[0], pOut2[1], pOut2[2]);
+      colors.push(...groundEdgeCol);
+    }
+
+    // 2. Faint Volumetric Atmospheric Beam
+    // Cone from helicopter lamp to ground with soft feathered boundary
+    const lampY = hy - 1.2;
+    const rTop = 0.45;
+    const rBase = 4.8;
+    const rSkirt = 6.6;
+
+    for (let i = 0; i < radialSegments; i++) {
+      const a1 = (i / radialSegments) * Math.PI * 2;
+      const a2 = ((i + 1) / radialSegments) * Math.PI * 2;
+
+      const cos1 = Math.cos(a1), sin1 = Math.sin(a1);
+      const cos2 = Math.cos(a2), sin2 = Math.sin(a2);
+
+      const top1 = [hx + cos1 * rTop, lampY, hz + sin1 * rTop];
+      const top2 = [hx + cos2 * rTop, lampY, hz + sin2 * rTop];
+      const bot1 = [gx + cos1 * rBase, gy + 0.08, gz + sin1 * rBase];
+      const bot2 = [gx + cos2 * rBase, gy + 0.08, gz + sin2 * rBase];
+      const skirt1 = [gx + cos1 * rSkirt, gy + 0.08, gz + sin1 * rSkirt];
+      const skirt2 = [gx + cos2 * rSkirt, gy + 0.08, gz + sin2 * rSkirt];
+
+      // Inner beam body: top -> bot (opacity falls off towards ground)
+      positions.push(top1[0], top1[1], top1[2]);
+      colors.push(...apexCol);
+      positions.push(bot1[0], bot1[1], bot1[2]);
+      colors.push(...groundBeamCol);
+      positions.push(top2[0], top2[1], top2[2]);
+      colors.push(...apexCol);
+
+      positions.push(top2[0], top2[1], top2[2]);
+      colors.push(...apexCol);
+      positions.push(bot1[0], bot1[1], bot1[2]);
+      colors.push(...groundBeamCol);
+      positions.push(bot2[0], bot2[1], bot2[2]);
+      colors.push(...groundBeamCol);
+
+      // Outer soft feathered rim: fades to 0 opacity
+      positions.push(top1[0], top1[1], top1[2]);
+      colors.push(...midBeamCol);
+      positions.push(skirt1[0], skirt1[1], skirt1[2]);
+      colors.push(...edgeBeamCol);
+      positions.push(bot1[0], bot1[1], bot1[2]);
+      colors.push(...groundBeamCol);
+
+      positions.push(top2[0], top2[1], top2[2]);
+      colors.push(...midBeamCol);
+      positions.push(bot2[0], bot2[1], bot2[2]);
+      colors.push(...groundBeamCol);
+      positions.push(skirt2[0], skirt2[1], skirt2[2]);
+      colors.push(...edgeBeamCol);
     }
   }
 }

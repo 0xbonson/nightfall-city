@@ -30,7 +30,7 @@
   {
     "name": "3-police-chase.png",
     "query": "?shot=3",
-    "description": "Intense 5-star police chase down Skyway Boulevard: player car pursued bumper-to-bumper by police cruisers with blazing red and blue emergency lightbars washing the asphalt and buildings, tactical police chopper overhead, elevated expressway structure, and full HUD showing 5 wanted stars and flashing radar blips.",
+    "description": "Intense 5-star police chase down Skyway Boulevard: player car pursued bumper-to-bumper by police cruisers with blazing red and blue emergency lightbars washing the asphalt and buildings, tactical police chopper overhead with soft transparent amber searchlight beam, elevated expressway structure, and full HUD showing 5 wanted stars and flashing radar blips.",
     "camera": {
       "pos": [46.5, 2.6, -19.0],
       "target": [45.0, 1.7, -50.0],
@@ -44,11 +44,11 @@
   {
     "name": "4-dock-heist.png",
     "query": "?shot=4",
-    "description": "Meridian Cargo Docks heist operation: tactical carbine in hand, target contraband truck and gold-banded loot crate at Pier 7, towering 36m yellow container gantry cranes, cargo ship and bay water in background, rotating mission objective beacon, and full tactical radar HUD.",
+    "description": "Meridian Cargo Docks heist operation: protagonist in foreground holding tactical carbine, contraband crates and target hauler van in mid ground with glowing 3D objective marker, towering 36m yellow container gantry crane and vivid container stacks framing Pier 7 in background, and full tactical HUD.",
     "camera": {
-      "pos": [127.0, 5.9, 97.0],
-      "target": [172.0, 4.3, 148.0],
-      "fov": 63
+      "pos": [140.2, 1.95, 102.8],
+      "target": [148.0, 2.05, 118.0],
+      "fov": 62
     },
     "district": "Meridian Cargo Docks",
     "wantedStars": 3,

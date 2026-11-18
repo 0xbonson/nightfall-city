@@ -475,6 +475,7 @@ export const SHOT_PRESETS = {
   3: {
     // 5-Star police chase: player muscle car pursued bumper-to-bumper by at least 2 police cars with red and blue lights,
     // lights washing the street and buildings, wanted level showing 5 stars, tactical police chopper overhead, HUD & minimap with police blips.
+    // Soft transparent pale amber searchlight beam with feathered ground ellipse, illuminating street without obscuring action.
     name: '3-police-chase.png',
     camera: {
       pos: [46.5, 2.6, -19.0],
@@ -501,32 +502,33 @@ export const SHOT_PRESETS = {
     ],
   },
   4: {
-    // Meridian Cargo Docks heist mission: protagonist holding weapon, objective marker diamond,
-    // contraband target truck and loot crate at Pier 7, container stacks in bold colors, 36m gantry crane, water and far shore.
+    // Meridian Cargo Docks heist mission: protagonist in foreground with tactical carbine,
+    // mid ground features contraband loot crates, parked target hauler van, and glowing 3D objective marker,
+    // background shows towering 36m yellow gantry crane, vibrant container stacks framing Pier 7, and deep harbor water.
     name: '4-dock-heist.png',
     camera: {
-      pos: [127.0, 5.9, 97.0],
-      target: [172.0, 4.3, 148.0],
-      fov: 63,
+      pos: [140.2, 1.95, 102.8],
+      target: [148.0, 2.05, 118.0],
+      fov: 62,
     },
     player: {
-      pos: [134.0, 0, 106.0],
-      rot: Math.PI * 0.28,
+      pos: [142.6, 0.16, 107.4],
+      rot: 0.45,
       inVehicle: false,
-      weapon: 'rifle',
+      weapon: 'carbine',
     },
     district: 'Meridian Cargo Docks',
     wantedStars: 3,
     cash: 75000,
     objective: 'SEIZE THE CONTRABAND CRATES AT PIER 7',
-    hasHeli: true,
-    heliPos: [158.0, 24.0, 138.0],
+    targetPos: [148.0, 0.16, 114.5],
+    hasHeli: false,
     enemies: [
-      { pos: [145.0, 0, 118.0], rot: Math.PI * 0.85 },
-      { pos: [155.0, 0, 128.0], rot: Math.PI * 0.75 },
+      { pos: [151.0, 0.16, 122.0], rot: Math.PI * 0.85 },
+      { pos: [156.5, 0.16, 119.0], rot: Math.PI * 0.75 },
     ],
     traffic: [
-      { type: 'truck', pos: [152.0, 0, 112.0], rot: Math.PI * 0.45, speedMph: 0 },
+      { type: 'truck', pos: [153.2, 0.16, 115.5], rot: Math.PI * 0.72, speedMph: 0 },
     ],
   },
 };
