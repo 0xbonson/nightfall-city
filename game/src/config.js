@@ -1,6 +1,7 @@
 /**
- * Nightfall City: Vela Bay - Game Configuration & Constants
- * Authored by makefun agent for the GTA 6 bounty challenge.
+ * Nightfall City: Vela Bay - World Configuration & Game Balancing
+ * Authoritative constants, vehicle specifications, mission parameters, and camera presets.
+ * Authored for make.fun GTA 6 bounty challenge.
  */
 
 export const WORLD = {
@@ -25,16 +26,16 @@ export const DISTRICTS = {
     id: 'downtown',
     name: 'Downtown Vela',
     bounds: { minX: 10, maxX: 240, minZ: -240, maxZ: -10 },
-    buildingHeightMin: 45,
-    buildingHeightMax: 110,
-    accentColor: [0.2, 0.6, 0.9],
+    buildingHeightMin: 55,
+    buildingHeightMax: 125,
+    accentColor: [0.22, 0.65, 0.95],
   },
   OLD_TOWN: {
     id: 'old_town',
     name: 'Old Market Quarter',
     bounds: { minX: -120, maxX: -10, minZ: -240, maxZ: -10 },
     buildingHeightMin: 14,
-    buildingHeightMax: 32,
+    buildingHeightMax: 34,
     accentColor: [0.85, 0.45, 0.25],
   },
   DOCKS: {
@@ -42,28 +43,29 @@ export const DISTRICTS = {
     name: 'Meridian Cargo Docks',
     bounds: { minX: 10, maxX: 240, minZ: 10, maxZ: 240 },
     buildingHeightMin: 12,
-    buildingHeightMax: 26,
-    accentColor: [0.9, 0.5, 0.1],
+    buildingHeightMax: 28,
+    accentColor: [0.95, 0.55, 0.12],
   },
   PROMENADE: {
     id: 'promenade',
     name: 'Ocean Promenade',
     bounds: { minX: -125, maxX: -10, minZ: 10, maxZ: 240 },
-    buildingHeightMin: 18,
-    buildingHeightMax: 48,
-    accentColor: [0.1, 0.8, 0.7],
+    buildingHeightMin: 20,
+    buildingHeightMax: 50,
+    accentColor: [0.15, 0.85, 0.75],
   },
 };
 
 export const LIGHTING = {
-  // Golden hour late-afternoon sun
-  SUN_DIR: [-0.68, 0.44, -0.58], // Normalized in renderer
-  SUN_COLOR: [1.0, 0.88, 0.66],
-  SKY_COLOR: [0.38, 0.56, 0.86],
-  HORIZON_COLOR: [0.95, 0.72, 0.52],
-  AMBIENT_COLOR: [0.28, 0.32, 0.40],
-  FOG_COLOR: [0.88, 0.72, 0.58],
-  FOG_DENSITY: 0.0035,
+  // Low golden-hour sunset sun position
+  SUN_DIR: [-0.65, 0.38, -0.65],
+  SUN_COLOR: [1.25, 1.05, 0.78],
+  SKY_COLOR: [0.30, 0.60, 0.95],
+  HORIZON_COLOR: [1.0, 0.74, 0.48],
+  AMBIENT_COLOR: [0.55, 0.62, 0.75],
+  GROUND_BOUNCE: [0.65, 0.52, 0.40],
+  FOG_COLOR: [0.95, 0.78, 0.60],
+  FOG_DENSITY: 0.0022,
 };
 
 export const CAR_TYPES = {
@@ -73,15 +75,15 @@ export const CAR_TYPES = {
     width: 2.1,
     length: 4.6,
     height: 1.25,
-    maxSpeed: 44.0,
-    accel: 29.0,
-    brake: 38.0,
+    maxSpeed: 45.0,
+    accel: 30.0,
+    brake: 40.0,
     reverseSpeed: 14.0,
     steerAngle: 0.62,
-    steerSpeed: 3.8,
+    steerSpeed: 4.0,
     driftGrip: 0.88,
     mass: 1250,
-    color: [0.08, 0.78, 0.86, 1.0], // Vibrant turquoise
+    color: [0.08, 0.82, 0.88, 1.0], // Vibrant turquoise
     roofColor: [0.06, 0.55, 0.65, 1.0],
     hasSpoiler: true,
   },
@@ -91,99 +93,97 @@ export const CAR_TYPES = {
     width: 2.2,
     length: 4.9,
     height: 1.35,
-    maxSpeed: 40.0,
-    accel: 32.0,
-    brake: 32.0,
+    maxSpeed: 41.0,
+    accel: 33.0,
+    brake: 33.0,
     reverseSpeed: 12.0,
     steerAngle: 0.58,
-    steerSpeed: 3.2,
+    steerSpeed: 3.3,
     driftGrip: 0.82,
-    mass: 1650,
-    color: [0.92, 0.24, 0.15, 1.0], // Crimson red
-    roofColor: [0.15, 0.15, 0.15, 1.0],
-    hoodScoop: true,
-  },
-  sedan: {
-    id: 'sedan',
-    name: 'Cortez Royale',
-    width: 2.0,
-    length: 4.7,
-    height: 1.42,
-    maxSpeed: 33.0,
-    accel: 19.0,
-    brake: 28.0,
-    reverseSpeed: 10.0,
-    steerAngle: 0.60,
-    steerSpeed: 3.0,
-    driftGrip: 0.92,
-    mass: 1480,
-    color: [0.78, 0.80, 0.85, 1.0], // Silver metallic
-    roofColor: [0.70, 0.72, 0.76, 1.0],
+    mass: 1550,
+    color: [0.96, 0.42, 0.12, 1.0], // Flame orange
+    roofColor: [0.18, 0.18, 0.20, 1.0],
+    hasSpoiler: false,
+    hasHoodScoop: true,
   },
   police: {
     id: 'police',
-    name: 'Metro Cruiser',
-    width: 2.1,
-    length: 4.8,
-    height: 1.45,
-    maxSpeed: 41.0,
-    accel: 27.0,
-    brake: 36.0,
+    name: 'Metro Interceptor',
+    width: 2.15,
+    length: 4.95,
+    height: 1.42,
+    maxSpeed: 43.5,
+    accel: 31.0,
+    brake: 38.0,
     reverseSpeed: 13.0,
-    steerAngle: 0.64,
+    steerAngle: 0.60,
     steerSpeed: 3.6,
-    driftGrip: 0.90,
-    mass: 1600,
-    color: [0.12, 0.13, 0.16, 1.0], // Dark police navy
-    roofColor: [0.95, 0.95, 0.95, 1.0], // White roof
+    driftGrip: 0.86,
+    mass: 1650,
+    color: [0.94, 0.95, 0.98, 1.0], // Police white
+    roofColor: [0.12, 0.12, 0.14, 1.0], // Police black roof
     isPolice: true,
-    hasLightbar: true,
+    hasPushBar: true,
+  },
+  sedan: {
+    id: 'sedan',
+    name: 'Meridian Executive',
+    width: 2.1,
+    length: 4.75,
+    height: 1.40,
+    maxSpeed: 35.0,
+    accel: 22.0,
+    brake: 28.0,
+    reverseSpeed: 11.0,
+    steerAngle: 0.56,
+    steerSpeed: 3.0,
+    driftGrip: 0.90,
+    mass: 1450,
+    color: [0.85, 0.82, 0.78, 1.0], // Champagne silver
+    roofColor: [0.80, 0.78, 0.75, 1.0],
   },
   taxi: {
     id: 'taxi',
-    name: 'Metro Cab',
-    width: 2.0,
-    length: 4.7,
-    height: 1.46,
-    maxSpeed: 31.0,
-    accel: 18.0,
-    brake: 27.0,
-    reverseSpeed: 10.0,
-    steerAngle: 0.58,
-    steerSpeed: 2.8,
-    driftGrip: 0.92,
-    mass: 1520,
-    color: [0.98, 0.76, 0.08, 1.0], // Taxi yellow
-    roofColor: [0.98, 0.76, 0.08, 1.0],
-    hasTaxiSign: true,
+    name: 'Cobra City Cab',
+    width: 2.1,
+    length: 4.75,
+    height: 1.42,
+    maxSpeed: 34.0,
+    accel: 22.0,
+    brake: 28.0,
+    reverseSpeed: 11.0,
+    steerAngle: 0.56,
+    steerSpeed: 3.0,
+    driftGrip: 0.90,
+    mass: 1460,
+    color: [0.98, 0.82, 0.12, 1.0], // NYC taxi yellow
+    roofColor: [0.92, 0.78, 0.10, 1.0],
+    isTaxi: true,
   },
   truck: {
     id: 'truck',
-    name: 'Bison Freight',
-    width: 2.4,
-    length: 6.2,
+    name: 'Meridian Hauler',
+    width: 2.6,
+    length: 7.2,
     height: 2.4,
-    maxSpeed: 25.0,
-    accel: 13.0,
-    brake: 22.0,
+    maxSpeed: 28.0,
+    accel: 15.0,
+    brake: 24.0,
     reverseSpeed: 8.0,
     steerAngle: 0.48,
     steerSpeed: 2.2,
-    driftGrip: 0.95,
-    mass: 2800,
-    color: [0.25, 0.45, 0.75, 1.0],
-    roofColor: [0.85, 0.85, 0.85, 1.0],
+    driftGrip: 0.94,
+    mass: 3800,
+    color: [0.28, 0.45, 0.72, 1.0], // Industrial blue
+    roofColor: [0.22, 0.38, 0.62, 1.0],
   },
 };
 
 export const PLAYER = {
-  HEIGHT: 1.82,
-  RADIUS: 0.42,
-  WALK_SPEED: 4.8,
-  SPRINT_SPEED: 9.2,
+  WALK_SPEED: 4.6,
+  SPRINT_SPEED: 8.4,
   ACCEL: 24.0,
-  DECEL: 20.0,
-  TURN_SPEED: 9.0,
+  ROT_SPEED: 8.5,
   MAX_HEALTH: 100,
   MAX_ARMOR: 100,
   ENTER_CAR_DIST: 3.6,
@@ -192,15 +192,15 @@ export const PLAYER = {
 export const WEAPONS = {
   pistol: {
     id: 'pistol',
-    name: '.45 Vanguard',
+    name: 'Viper .45',
     damage: 28,
-    fireInterval: 0.28,
+    fireInterval: 0.22,
     clipSize: 12,
     maxReserve: 120,
     reloadTime: 1.25,
     spread: 0.025,
     range: 65,
-    tracerSpeed: 180,
+    tracerSpeed: 190,
   },
   rifle: {
     id: 'rifle',
@@ -217,7 +217,7 @@ export const WEAPONS = {
 };
 
 export const POLICE_CONFIG = {
-  HEAT_DECAY_RATE: 0.06, // Stars decay when unseen
+  HEAT_DECAY_RATE: 0.06,
   SIGHT_RADIUS: 55,
   LOSE_SIGHT_TIME: 14.0,
   SPAWN_INTERVAL: 8.0,
@@ -345,19 +345,19 @@ export const SHOT_PRESETS = {
     // Downtown on foot behind player: towers, traffic, pedestrians, long warm shadows, HUD visible
     name: '1-city-street.png',
     camera: {
-      pos: [119.5, 1.9, -89.0],
-      target: [123.5, 1.7, -125.0],
-      fov: 62,
+      pos: [118.0, 2.1, -91.0],
+      target: [123.0, 1.8, -128.0],
+      fov: 63,
     },
     player: {
-      pos: [119.5, 0.22, -95.0],
+      pos: [118.5, 0.22, -96.0],
       rot: Math.PI,
       inVehicle: false,
       weapon: 'rifle',
     },
-    district: 'Downtown Core',
+    district: 'Downtown Vela',
     wantedStars: 0,
-    cash: 14850,
+    cash: 18450,
     objective: 'DELIVER THE VELOCE GT TO DOWNTOWN SAFEHOUSE (140M)',
     traffic: [
       { type: 'taxi', pos: [125.5, 0, -104.0], rot: Math.PI, speedMph: 28 },
@@ -365,8 +365,8 @@ export const SHOT_PRESETS = {
       { type: 'sports', pos: [125.5, 0, -135.0], rot: Math.PI, speedMph: 48 },
     ],
     pedestrians: [
-      { pos: [119.5, 0.22, -108.0], rot: Math.PI },
-      { pos: [119.2, 0.22, -122.0], rot: 0 },
+      { pos: [118.0, 0.22, -108.0], rot: Math.PI },
+      { pos: [117.8, 0.22, -122.0], rot: 0 },
       { pos: [143.5, 0.22, -102.0], rot: Math.PI },
     ],
   },
@@ -374,9 +374,9 @@ export const SHOT_PRESETS = {
     // Sports car at speed on waterfront road: sea and low sun, palms, boardwalk, marina in frame, speed on HUD
     name: '2-car-promenade.png',
     camera: {
-      pos: [-106.8, 1.45, 71.5],
-      target: [-112.5, 1.3, 112.0],
-      fov: 64,
+      pos: [-106.5, 1.55, 71.0],
+      target: [-112.0, 1.35, 112.0],
+      fov: 65,
     },
     player: {
       pos: [-107.5, 0, 78.0],
@@ -387,7 +387,7 @@ export const SHOT_PRESETS = {
     },
     district: 'Ocean Promenade',
     wantedStars: 0,
-    cash: 26400,
+    cash: 26800,
     objective: 'COASTAL TIME TRIAL: PASS CHECKPOINT 4/6 (0:34)',
     traffic: [
       { type: 'sedan', pos: [-102.0, 0, 120.0], rot: 0, speedMph: 45 },
@@ -397,9 +397,9 @@ export const SHOT_PRESETS = {
     // The chase at its height: wanted stars in HUD, red & blue flashing lights, player car between two cruisers, overpass behind
     name: '3-police-chase.png',
     camera: {
-      pos: [45.0, 2.2, -20.0],
-      target: [45.0, 1.8, -62.0],
-      fov: 66,
+      pos: [46.5, 2.6, -19.0],
+      target: [45.0, 1.7, -50.0],
+      fov: 68,
     },
     player: {
       pos: [45.0, 0, -32.0],
@@ -410,8 +410,10 @@ export const SHOT_PRESETS = {
     },
     district: 'Skyway Boulevard',
     wantedStars: 5,
-    cash: 38200,
+    cash: 42500,
     objective: 'EVADE 5-STAR METRO POLICE PURSUIT',
+    hasHeli: true,
+    heliPos: [45.0, 22.0, -48.0],
     cruisers: [
       { pos: [40.8, 0, -30.5], rot: Math.PI, sirenPhase: 0 },
       { pos: [49.2, 0, -30.5], rot: Math.PI, sirenPhase: Math.PI },
@@ -421,9 +423,9 @@ export const SHOT_PRESETS = {
     // Docks at golden hour: shipping containers, gantry crane, helicopter, water beyond
     name: '4-dock-heist.png',
     camera: {
-      pos: [127.0, 5.8, 97.0],
-      target: [172.0, 4.2, 148.0],
-      fov: 62,
+      pos: [127.0, 5.9, 97.0],
+      target: [172.0, 4.3, 148.0],
+      fov: 63,
     },
     player: {
       pos: [134.0, 0, 106.0],

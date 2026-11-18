@@ -1,6 +1,8 @@
 /**
- * Nightfall City: Vela Bay - Narrative Mission Engine & Objectives
- * Authored by makefun agent for the GTA 6 bounty challenge.
+ * Nightfall City: Vela Bay - Narrative Mission Engine & Objective Tracking
+ * 8-part story arc (Courier deliveries, vehicle repo, street racing, depot sabotage,
+ * overpass pursuit, marina heist) plus interactive Taxi Driver side hustle.
+ * Authored for make.fun GTA 6 bounty challenge.
  */
 
 import { MISSIONS } from './config.js';
@@ -18,7 +20,7 @@ export class MissionManager {
     this.missionTimer = 0;
     this.checkpointIdx = 0;
 
-    // Taxi Side Job
+    // Taxi Driver Side Job
     this.taxiMode = false;
     this.taxiFare = null; // { startX, startZ, destX, destZ, reward }
 
@@ -44,6 +46,24 @@ export class MissionManager {
     this.bannerText = title;
     this.bannerSubtitle = subtitle;
     this.bannerTimer = duration;
+  }
+
+  toggleTaxiMode(player) {
+    this.taxiMode = !this.taxiMode;
+    if (this.taxiMode) {
+      // Generate random fare across town
+      const destX = (Math.random() - 0.5) * 320;
+      const destZ = (Math.random() - 0.5) * 320;
+      this.taxiFare = {
+        destX,
+        destZ,
+        reward: 350 + Math.floor(Math.random() * 450),
+      };
+      this.showBanner('TAXI SHIFT STARTED', `Deliver fare to marked destination ($${this.taxiFare.reward})`, 3.5);
+    } else {
+      this.taxiFare = null;
+      this.showBanner('TAXI SHIFT ENDED', 'Off duty. Resuming standard operations.', 3.0);
+    }
   }
 
   getObjectiveText() {
@@ -77,6 +97,12 @@ export class MissionManager {
     return m.targetPos;
   }
 
+  getDistanceToTarget(playerX, playerZ) {
+    const target = this.getTargetCoords();
+    if (!target) return 0;
+    return Math.round(Math.hypot(playerX - target[0], playerZ - target[2]));
+  }
+
   update(dt, player, vehicles, police, combat, saveSystem) {
     this.markerRotation += dt * 2.5;
 
@@ -84,10 +110,23 @@ export class MissionManager {
       this.bannerTimer -= dt;
     }
 
+    // Taxi Fare Completion Check
+    if (this.taxiMode && this.taxiFare) {
+      const d = Math.hypot(player.x - this.taxiFare.destX, player.z - this.taxiFare.destZ);
+      if (d < 8.0) {
+        player.cash += this.taxiFare.reward;
+        this.showBanner('FARE DELIVERED!', `Earned $${this.taxiFare.reward} cash fare + tip!`, 3.5);
+        this.taxiFare = null;
+        this.taxiMode = false;
+        if (saveSystem) saveSystem.save(player, this, police);
+      }
+      return;
+    }
+
     const m = this.getCurrentMission();
     if (!m || this.status !== 'active') return;
 
-    // Update timed missions
+    // Update timed countdown
     if (m.timeLimit && this.missionTimer > 0) {
       this.missionTimer -= dt;
       if (this.missionTimer <= 0) {
@@ -100,77 +139,57 @@ export class MissionManager {
     const target = this.getTargetCoords();
     if (!target) return;
 
-    const dist = Math.hypot(player.x - target[0], player.z - target[2]);
+    const d = Math.hypot(player.x - target[0], player.z - target[2]);
 
-    // Checkpoint race progression
     if (m.targetType === 'race') {
-      if (dist < 8.0) {
+      if (d < 14.0) {
         this.checkpointIdx++;
         if (this.checkpointIdx >= m.checkpoints.length) {
-          this.completeMission(player, saveSystem);
+          // Race complete!
+          this.completeMission(player, police, saveSystem);
+        } else {
+          this.showBanner('CHECKPOINT CLEARED', `${this.checkpointIdx}/${m.checkpoints.length} passed!`, 1.5);
         }
       }
-      return;
-    }
-
-    // Standard waypoint arrival
-    if (dist < 6.5) {
-      if (m.targetType === 'vehicle_drop') {
-        if (player.inVehicle) {
-          this.completeMission(player, saveSystem);
+    } else if (m.targetType === 'vehicle_drop') {
+      if (d < 10.0 && player.inVehicle) {
+        this.completeMission(player, police, saveSystem);
+      }
+    } else if (m.targetType === 'pickup') {
+      if (d < 4.0) {
+        if (m.wantedLevelOnPickup) police.setWantedStars(m.wantedLevelOnPickup);
+        this.completeMission(player, police, saveSystem);
+      }
+    } else if (m.targetType === 'combat_repo' || m.targetType === 'combat_elimination') {
+      if (d < 12.0) {
+        const aliveEnemies = combat.enemies.filter((e) => e.alive);
+        if (aliveEnemies.length === 0) {
+          this.completeMission(player, police, saveSystem);
         }
-      } else if (m.targetType === 'pickup') {
-        if (m.wantedLevelOnPickup) {
-          police.setWantedStars(m.wantedLevelOnPickup);
-        }
-        this.completeMission(player, saveSystem);
-      } else if (m.targetType === 'heist_finale') {
-        if (m.wantedLevelOnTrigger) {
-          police.setWantedStars(m.wantedLevelOnTrigger);
-        }
-        this.completeMission(player, saveSystem);
-      } else {
-        this.completeMission(player, saveSystem);
+      }
+    } else if (m.targetType === 'chase_intercept' || m.targetType === 'sabotage_escape' || m.targetType === 'heist_finale') {
+      if (d < 8.0) {
+        this.completeMission(player, police, saveSystem);
       }
     }
   }
 
-  completeMission(player, saveSystem) {
+  completeMission(player, police, saveSystem) {
     const m = this.getCurrentMission();
     this.status = 'passed';
     player.cash += m.rewardCash;
 
-    this.showBanner('MISSION PASSED!', `+ $${m.rewardCash} CASH REWARD - ${m.completionText}`, 5.0);
+    this.showBanner('MISSION PASSED!', `${m.title} — Earned $${m.rewardCash.toLocaleString()}`, 4.5);
 
-    if (saveSystem) {
-      saveSystem.save(player, this);
-    }
-
-    // Advance to next mission after delay
+    // Advance to next mission
     setTimeout(() => {
       if (this.currentIdx < this.missions.length - 1) {
         this.loadMission(this.currentIdx + 1);
       } else {
-        this.showBanner('CAMPAIGN COMPLETE', 'You rule the streets of Vela Bay!', 8.0);
+        this.showBanner('CAMPAIGN CONQUERED!', 'You control Vela Bay. Free roam unlocked.', 6.0);
       }
+      if (saveSystem) saveSystem.save(player, this, police);
     }, 4500);
-  }
-
-  toggleTaxiMode(player) {
-    if (!player.inVehicle) return;
-    this.taxiMode = !this.taxiMode;
-    if (this.taxiMode) {
-      // Spawn random destination
-      this.taxiFare = {
-        destX: -105 + Math.random() * 200,
-        destZ: -180 + Math.random() * 360,
-        reward: 150 + Math.floor(Math.random() * 300),
-      };
-      this.showBanner('TAXI SHIFT STARTED', `Deliver fare to destination for $${this.taxiFare.reward}!`, 3.0);
-    } else {
-      this.taxiFare = null;
-      this.showBanner('TAXI SHIFT ENDED', 'Off the clock.', 2.5);
-    }
   }
 
   buildMesh(positions, normals, colors, uvs) {
@@ -178,49 +197,42 @@ export class MissionManager {
     if (!target) return;
 
     const tx = target[0];
-    const ty = target[1] + 1.2 + Math.sin(this.markerRotation * 1.5) * 0.35;
+    const ty = target[1] + 2.2 + Math.sin(this.markerRotation * 1.5) * 0.35;
     const tz = target[2];
 
-    // Rotating golden diamond waypoint marker
-    const goldColor = [1.0, 0.85, 0.15, 0.95];
-    const size = 1.4;
-
     const rot = this.markerRotation;
-    const cosR = Math.cos(rot);
-    const sinR = Math.sin(rot);
+    const goldCol = [1.5, 1.15, 0.25, 0.95];
+    const s = 1.1;
 
-    const toWorld = (lx, ly, lz) => {
-      const wx = tx + (lx * cosR + lz * sinR);
-      const wy = ty + ly;
-      const wz = tz + (-lx * sinR + lz * cosR);
-      return [wx, wy, wz];
-    };
-
-    const top = toWorld(0, size, 0);
-    const bottom = toWorld(0, -size, 0);
-    const mid1 = toWorld(size * 0.7, 0, 0);
-    const mid2 = toWorld(0, 0, size * 0.7);
-    const mid3 = toWorld(-size * 0.7, 0, 0);
-    const mid4 = toWorld(0, 0, -size * 0.7);
-
-    const faces = [
-      [top, mid1, mid2],
-      [top, mid2, mid3],
-      [top, mid3, mid4],
-      [top, mid4, mid1],
-      [bottom, mid2, mid1],
-      [bottom, mid3, mid2],
-      [bottom, mid4, mid3],
-      [bottom, mid1, mid4],
+    // Rotating 3D octahedron diamond beacon
+    const topPt = [tx, ty + s, tz];
+    const btmPt = [tx, ty - s, tz];
+    const midPts = [
+      [tx + Math.cos(rot) * s, ty, tz + Math.sin(rot) * s],
+      [tx + Math.cos(rot + Math.PI * 0.5) * s, ty, tz + Math.sin(rot + Math.PI * 0.5) * s],
+      [tx + Math.cos(rot + Math.PI) * s, ty, tz + Math.sin(rot + Math.PI) * s],
+      [tx + Math.cos(rot + Math.PI * 1.5) * s, ty, tz + Math.sin(rot + Math.PI * 1.5) * s],
     ];
 
-    for (const f of faces) {
-      for (let p = 0; p < 3; p++) {
-        positions.push(f[p][0], f[p][1], f[p][2]);
-        normals.push(0, 1, 0);
-        colors.push(goldColor[0], goldColor[1], goldColor[2], goldColor[3]);
-        uvs.push(0, 0);
-      }
-    }
+    const addTri = (p1, p2, p3) => {
+      positions.push(p1[0], p1[1], p1[2], p2[0], p2[1], p2[2], p3[0], p3[1], p3[2]);
+      normals.push(0, 1, 0, 0, 1, 0, 0, 1, 0);
+      colors.push(goldCol[0], goldCol[1], goldCol[2], goldCol[3]);
+      colors.push(goldCol[0], goldCol[1], goldCol[2], goldCol[3]);
+      colors.push(goldCol[0], goldCol[1], goldCol[2], goldCol[3]);
+      uvs.push(0, 0, 1, 0, 0.5, 1);
+    };
+
+    // Upper pyramid
+    addTri(topPt, midPts[0], midPts[1]);
+    addTri(topPt, midPts[1], midPts[2]);
+    addTri(topPt, midPts[2], midPts[3]);
+    addTri(topPt, midPts[3], midPts[0]);
+
+    // Lower pyramid
+    addTri(btmPt, midPts[1], midPts[0]);
+    addTri(btmPt, midPts[2], midPts[1]);
+    addTri(btmPt, midPts[3], midPts[2]);
+    addTri(btmPt, midPts[0], midPts[3]);
   }
 }

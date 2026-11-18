@@ -16,7 +16,7 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: #0a0c10;
+      background: #080a0f;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
     #game-container {
@@ -46,59 +46,63 @@
       width: 100%;
       height: 100%;
       z-index: 10;
-      background: radial-gradient(circle at center, rgba(16, 20, 32, 0.85) 0%, rgba(6, 8, 14, 0.95) 100%);
+      background: radial-gradient(circle at center, rgba(14, 18, 30, 0.88) 0%, rgba(6, 8, 14, 0.96) 100%);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       color: #ffffff;
-      transition: opacity 0.4s ease;
+      transition: opacity 0.35s ease;
     }
     #start-overlay.hidden {
       opacity: 0;
       pointer-events: none;
     }
     .game-logo {
-      font-size: 52px;
+      font-size: 56px;
       font-weight: 900;
       font-family: "Impact", "Arial Black", sans-serif;
       letter-spacing: 2px;
       text-transform: uppercase;
-      background: linear-gradient(180deg, #ffe066 0%, #ff9900 60%, #ff3300 100%);
+      background: linear-gradient(180deg, #ffe066 0%, #ff9900 55%, #ff3300 100%);
       -webkit-background-clip: text;
+      -webkit-fill-color: transparent;
       -webkit-text-fill-color: transparent;
-      text-shadow: 0 4px 20px rgba(255, 120, 0, 0.4);
-      margin-bottom: 6px;
+      text-shadow: 0 4px 24px rgba(255, 120, 0, 0.45);
+      margin-bottom: 4px;
     }
     .game-sub {
-      font-size: 20px;
-      font-weight: 700;
+      font-size: 21px;
+      font-weight: 800;
       color: #00d2ff;
-      letter-spacing: 6px;
+      letter-spacing: 7px;
       text-transform: uppercase;
-      margin-bottom: 30px;
+      margin-bottom: 32px;
+      text-shadow: 0 2px 14px rgba(0, 210, 255, 0.45);
     }
     .play-btn {
-      padding: 14px 44px;
-      font-size: 18px;
-      font-weight: 800;
+      padding: 15px 48px;
+      font-size: 19px;
+      font-weight: 900;
       text-transform: uppercase;
+      letter-spacing: 1px;
       color: #0c0e14;
       background: linear-gradient(180deg, #ffe066 0%, #ffaa00 100%);
       border: none;
       border-radius: 4px;
       cursor: pointer;
-      box-shadow: 0 4px 18px rgba(255, 170, 0, 0.45);
+      box-shadow: 0 4px 20px rgba(255, 170, 0, 0.5);
       transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
     .play-btn:hover {
       transform: scale(1.05);
-      box-shadow: 0 6px 24px rgba(255, 170, 0, 0.65);
+      box-shadow: 0 6px 26px rgba(255, 170, 0, 0.75);
     }
     .controls-hint {
-      margin-top: 25px;
+      margin-top: 28px;
       font-size: 13px;
-      color: rgba(220, 230, 245, 0.65);
+      font-weight: 500;
+      color: rgba(220, 235, 250, 0.7);
       letter-spacing: 1px;
     }
   </style>
@@ -111,14 +115,14 @@
     <div id="start-overlay">
       <h1 class="game-logo">Nightfall City</h1>
       <div class="game-sub">Vela Bay</div>
-      <button id="play-button" class="play-btn">Play Game</button>
-      <div class="controls-hint">[W/A/S/D] Drive & Move &bull; [F] Enter/Exit Car &bull; [LMB] Shoot &bull; [Space] Drift &bull; [Esc] Pause</div>
+      <button id="play-button" class="play-btn">Launch Game</button>
+      <div class="controls-hint">[W/A/S/D] Drive & Move &bull; [F] Enter/Exit Car &bull; [LMB] Shoot &bull; [Space] Handbrake Drift &bull; [Esc] Pause</div>
     </div>
   </div>
 
   <script type="module" src="./src/main.js"></script>
   <script>
-    // Hide start overlay when play button clicked or if ?shot= query is present
+    // Bypass overlay if ?shot= parameter is active for screenshot automation
     const overlay = document.getElementById('start-overlay');
     const playBtn = document.getElementById('play-button');
     const params = new URLSearchParams(window.location.search);
@@ -128,7 +132,7 @@
     } else {
       playBtn.addEventListener('click', () => {
         overlay.classList.add('hidden');
-        setTimeout(() => { overlay.style.display = 'none'; }, 400);
+        setTimeout(() => { overlay.style.display = 'none'; }, 350);
       });
     }
   </script>

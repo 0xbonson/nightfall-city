@@ -1,13 +1,22 @@
 /**
- * Nightfall City: Vela Bay - City Procedural World Generator
+ * Nightfall City: Vela Bay - Procedural Open World & District Generator
  * Authored by makefun agent for the GTA 6 bounty challenge.
+ *
+ * Generates an expansive, high-density coastal metropolis:
+ * - Downtown Financial District: Soaring glass curtain skyscrapers, setbacks, illuminated crowns, helipads, antennas
+ * - Ocean Promenade: Vibrant Art Deco coastal resorts, tiered pastel balconies, beachfront boardwalk, palm boulevards
+ * - Old Town Quarter: Warm terracotta and sandstone facades, storefront awnings, historic arches, pedestrian plazas
+ * - Meridian Cargo Docks: Heavy industrial concrete aprons, vivid multicolored shipping container stacks, 36m gantry crane
+ * - Marina Waterfront: Weathered timber piers, moored luxury motor yachts, shoreline wave breaks
+ * - Elevated Skyway: Multi-lane elevated concrete expressway with overpass ramps and overhanging highway signs
+ * - Verdant Parks: Lush green lawns, tropical palm groves, street furniture, fire hydrants, decorative lampposts
  */
 
 import { WORLD, DISTRICTS } from './config.js';
 
 export class World {
   constructor() {
-    this.colliders = []; // Array of AABB { minX, maxX, minZ, maxZ, height, type }
+    this.colliders = []; // AABB array: { minX, maxX, minZ, maxZ, height, type }
     this.roadNodes = []; // Traffic navigation graph nodes
     this.roadSegments = [];
     this.props = [];
@@ -17,13 +26,13 @@ export class World {
       pedestrians: [],
     };
 
-    // Vertex data arrays for static world mesh batch
+    // Vertex buffer arrays for static world geometry batch
     this.positions = [];
     this.normals = [];
     this.colors = [];
     this.uvs = [];
 
-    // Water vertex data
+    // Water vertex data (separate batch for animated wave displacement)
     this.waterPositions = [];
     this.waterNormals = [];
     this.waterColors = [];
@@ -37,15 +46,15 @@ export class World {
     this.generateRoadGrid();
     this.generateElevatedSkyway();
     this.generateCityBlocks();
+    this.generateParksAndPlazas();
     this.generateMarinaAndWaterfront();
     this.generateDocksAndCranes();
     this.generatePropsAndStreetFurniture();
   }
 
-  // --- Geometry Construction Helpers ---
+  // --- Geometry Construction Primitives ---
 
   addQuad(p1, p2, p3, p4, normal, color, uvScale = [1, 1]) {
-    // Two triangles: p1-p2-p3, p1-p3-p4
     const pts = [p1, p2, p3, p1, p3, p4];
     const uvCoords = [
       [0, 0], [uvScale[0], 0], [uvScale[0], uvScale[1]],
@@ -128,29 +137,28 @@ export class World {
     }
   }
 
-  // --- World Generation Phases ---
+  // --- Generation Procedures ---
 
   generateTerrainAndSea() {
-    // City ground base slab (pavement & terrain)
-    const baseColor = [0.18, 0.19, 0.22, 1.0];
+    // City ground base slab - clean light asphalt/concrete foundation
+    const groundColor = [0.26, 0.28, 0.32, 1.0];
     this.addQuad(
       [WORLD.COAST_X, 0, -WORLD.HALF_SIZE],
       [WORLD.HALF_SIZE, 0, -WORLD.HALF_SIZE],
       [WORLD.HALF_SIZE, 0, WORLD.HALF_SIZE],
       [WORLD.COAST_X, 0, WORLD.HALF_SIZE],
-      [0, 1, 0], baseColor, [100, 100]
+      [0, 1, 0], groundColor, [100, 100]
     );
 
-    // Ocean water mesh (stretches westward towards horizon)
-    const oceanColor = [0.06, 0.42, 0.58, 0.95];
-    const waterMinX = -WORLD.HALF_SIZE - 180;
+    // Turquoise & Azure Ocean Water Mesh
+    const oceanColor = [0.08, 0.48, 0.68, 0.94];
+    const waterMinX = -WORLD.HALF_SIZE - 200;
     const waterMaxX = WORLD.COAST_X + 2;
-    const waterMinZ = -WORLD.HALF_SIZE - 80;
-    const waterMaxZ = WORLD.HALF_SIZE + 80;
+    const waterMinZ = -WORLD.HALF_SIZE - 100;
+    const waterMaxZ = WORLD.HALF_SIZE + 100;
 
-    // Subdivided water grid for vertex displacement in shader
-    const segsX = 24;
-    const segsZ = 24;
+    const segsX = 26;
+    const segsZ = 26;
     const dx = (waterMaxX - waterMinX) / segsX;
     const dz = (waterMaxZ - waterMinZ) / segsZ;
 
@@ -174,60 +182,52 @@ export class World {
           this.waterPositions.push(pts[p][0], pts[p][1], pts[p][2]);
           this.waterNormals.push(0, 1, 0);
           this.waterColors.push(oceanColor[0], oceanColor[1], oceanColor[2], oceanColor[3]);
-          this.waterUvs.push(pts[p][0] * 0.05, pts[p][2] * 0.05);
+          this.waterUvs.push(pts[p][0] * 0.04, pts[p][2] * 0.04);
         }
       }
     }
 
-    // Seawall & Promenade bulkhead barrier along coastline
-    const seawallColor = [0.42, 0.42, 0.45, 1.0];
-    this.addBox(WORLD.COAST_X, -2.5, 0, 3.2, 5.0, WORLD.SIZE, seawallColor, [1, 1], true);
+    // Coastal Seawall & Granite Revetment along shoreline
+    const seawallColor = [0.52, 0.54, 0.58, 1.0];
+    this.addBox(WORLD.COAST_X, -2.5, 0, 3.4, 5.0, WORLD.SIZE, seawallColor, [1, 1], true);
   }
 
   generateRoadGrid() {
-    // The main avenues and grid roads
-    // Arterial roads:
-    // 1. Coastal Boulevard at X = -105
-    // 2. Central Avenue at X = 0
-    // 3. Skyway Boulevard at X = 45
-    // 4. East Boulevard at X = 115
-    // 5. Port Avenue at X = 185
-    // Cross streets along Z:
-    // Z = -180, -115, -50, 20, 85, 150, 215
-
     const northSouthRoads = [-105, -55, 0, 45, 115, 185];
     const eastWestRoads = [-180, -115, -50, 20, 85, 150, 215];
 
-    const asphaltColor = [0.12, 0.12, 0.14, 1.0];
-    const markingYellow = [0.95, 0.78, 0.12, 1.0];
-    const markingWhite = [0.92, 0.92, 0.94, 1.0];
+    // Rich warm asphalt (bright enough to reflect golden sunlight, never murky black)
+    const asphaltColor = [0.28, 0.29, 0.33, 1.0];
+    const markingYellow = [1.0, 0.85, 0.15, 1.0]; // High-vis golden amber centerline
+    const markingWhite = [0.96, 0.96, 0.98, 1.0]; // Bright white lane boundaries
+    const sidewalkColor = [0.76, 0.78, 0.82, 1.0]; // Clean sunlit concrete sidewalks
 
-    // North-South Roads
+    // North-South Avenues
     for (const rx of northSouthRoads) {
       if (rx < WORLD.COAST_X) continue;
-      // Road surface
+
+      // Roadway bed
       this.addBox(rx, 0.02, 0, WORLD.ROAD_WIDTH, 0.04, WORLD.SIZE, asphaltColor, [1, 1], false);
 
-      // Yellow centerline (broken dashes)
-      const dashLen = 4;
-      const gapLen = 4;
+      // Golden centerline dashes
+      const dashLen = 4.2;
+      const gapLen = 3.8;
       for (let z = -WORLD.HALF_SIZE; z < WORLD.HALF_SIZE; z += dashLen + gapLen) {
-        this.addBox(rx, 0.05, z + dashLen * 0.5, 0.28, 0.02, dashLen, markingYellow, [1, 1], false);
+        this.addBox(rx, 0.05, z + dashLen * 0.5, 0.30, 0.02, dashLen, markingYellow, [1, 1], false);
       }
 
-      // Outer lane white stripes
-      const hw = WORLD.ROAD_WIDTH * 0.5 - 0.6;
-      this.addBox(rx - hw, 0.05, 0, 0.22, 0.02, WORLD.SIZE, markingWhite, [1, 1], false);
-      this.addBox(rx + hw, 0.05, 0, 0.22, 0.02, WORLD.SIZE, markingWhite, [1, 1], false);
+      // Outer boundary white road lines
+      const hw = WORLD.ROAD_WIDTH * 0.5 - 0.7;
+      this.addBox(rx - hw, 0.05, 0, 0.24, 0.02, WORLD.SIZE, markingWhite, [1, 1], false);
+      this.addBox(rx + hw, 0.05, 0, 0.24, 0.02, WORLD.SIZE, markingWhite, [1, 1], false);
 
-      // Flanking raised sidewalk ribbons on east and west sides of road
-      const swW = 3.6;
-      const swColor = [0.68, 0.70, 0.74, 1.0];
-      this.addBox(rx - hw - swW * 0.5, 0, 0, swW, WORLD.CURB_HEIGHT, WORLD.SIZE, swColor, [1, 1], false);
-      this.addBox(rx + hw + swW * 0.5, 0, 0, swW, WORLD.CURB_HEIGHT, WORLD.SIZE, swColor, [1, 1], false);
+      // Flanking raised pedestrian sidewalks
+      const swW = 3.8;
+      this.addBox(rx - hw - swW * 0.5, 0, 0, swW, WORLD.CURB_HEIGHT, WORLD.SIZE, sidewalkColor, [1, 1], false);
+      this.addBox(rx + hw + swW * 0.5, 0, 0, swW, WORLD.CURB_HEIGHT, WORLD.SIZE, sidewalkColor, [1, 1], false);
     }
 
-    // East-West Roads
+    // East-West Cross Streets
     for (const rz of eastWestRoads) {
       const roadStartX = WORLD.COAST_X + 2;
       const roadLen = WORLD.HALF_SIZE - roadStartX;
@@ -235,177 +235,156 @@ export class World {
 
       this.addBox(roadMidX, 0.02, rz, roadLen, 0.04, WORLD.ROAD_WIDTH, asphaltColor, [1, 1], false);
 
-      // Yellow centerline dashes
-      const dashLen = 4;
-      const gapLen = 4;
+      // Golden centerline dashes
+      const dashLen = 4.2;
+      const gapLen = 3.8;
       for (let x = roadStartX; x < WORLD.HALF_SIZE; x += dashLen + gapLen) {
-        this.addBox(x + dashLen * 0.5, 0.05, rz, dashLen, 0.02, 0.28, markingYellow, [1, 1], false);
+        this.addBox(x + dashLen * 0.5, 0.05, rz, dashLen, 0.02, 0.30, markingYellow, [1, 1], false);
       }
 
-      // Outer lane stripes
-      const hw = WORLD.ROAD_WIDTH * 0.5 - 0.6;
-      this.addBox(roadMidX, 0.05, rz - hw, roadLen, 0.02, 0.22, markingWhite, [1, 1], false);
-      this.addBox(roadMidX, 0.05, rz + hw, roadLen, 0.02, 0.22, markingWhite, [1, 1], false);
+      // Outer boundary white stripes
+      const hw = WORLD.ROAD_WIDTH * 0.5 - 0.7;
+      this.addBox(roadMidX, 0.05, rz - hw, roadLen, 0.02, 0.24, markingWhite, [1, 1], false);
+      this.addBox(roadMidX, 0.05, rz + hw, roadLen, 0.02, 0.24, markingWhite, [1, 1], false);
     }
 
-    // Build traffic road graph nodes at intersections
+    // Intersections and Crosswalk zebra stripes
     for (const rx of northSouthRoads) {
       for (const rz of eastWestRoads) {
-        this.roadNodes.push({
-          x: rx,
-          z: rz,
-          y: 0,
-        });
+        this.roadNodes.push({ x: rx, z: rz, y: 0 });
 
-        // Add crosswalks at intersection entrances
         const rw = WORLD.ROAD_WIDTH * 0.5;
-        this.addCrosswalk(rx, rz - rw - 2, true);
-        this.addCrosswalk(rx, rz + rw + 2, true);
-        this.addCrosswalk(rx - rw - 2, rz, false);
-        this.addCrosswalk(rx + rw + 2, rz, false);
+        this.addCrosswalk(rx, rz - rw - 2.2, true);
+        this.addCrosswalk(rx, rz + rw + 2.2, true);
+        this.addCrosswalk(rx - rw - 2.2, rz, false);
+        this.addCrosswalk(rx + rw + 2.2, rz, false);
       }
     }
   }
 
   addCrosswalk(x, z, isHorizontal) {
-    const white = [0.90, 0.90, 0.92, 1.0];
-    const stripeCount = 6;
-    const stripeW = 0.8;
-    const stripeGap = 0.8;
-    const totalSpan = stripeCount * stripeW + (stripeCount - 1) * stripeGap;
+    const white = [0.96, 0.96, 0.98, 1.0];
+    const count = 7;
+    const stripeW = 0.85;
+    const stripeGap = 0.75;
+    const totalSpan = count * stripeW + (count - 1) * stripeGap;
     const start = -totalSpan * 0.5;
 
-    for (let i = 0; i < stripeCount; i++) {
+    for (let i = 0; i < count; i++) {
       const offset = start + i * (stripeW + stripeGap) + stripeW * 0.5;
       if (isHorizontal) {
-        this.addBox(x + offset, 0.06, z, stripeW, 0.02, 2.8, white, [1, 1], false);
+        this.addBox(x + offset, 0.06, z, stripeW, 0.02, 3.2, white, [1, 1], false);
       } else {
-        this.addBox(x, 0.06, z + offset, 2.8, 0.02, stripeW, white, [1, 1], false);
+        this.addBox(x, 0.06, z + offset, 3.2, 0.02, stripeW, white, [1, 1], false);
       }
     }
   }
 
   generateElevatedSkyway() {
-    // Elevated expressway along X = 45 from Z = -180 to Z = 180
     const overpassY = WORLD.OVERPASS_Y;
     const overpassW = WORLD.OVERPASS_WIDTH;
     const overpassLen = WORLD.OVERPASS_Z_END - WORLD.OVERPASS_Z_START;
     const overpassZMid = (WORLD.OVERPASS_Z_START + WORLD.OVERPASS_Z_END) * 0.5;
 
-    const concreteColor = [0.48, 0.50, 0.54, 1.0];
-    const deckAsphalt = [0.14, 0.14, 0.16, 1.0];
-    const barrierColor = [0.72, 0.74, 0.78, 1.0];
+    const concreteDeck = [0.55, 0.58, 0.62, 1.0];
+    const highwayAsphalt = [0.30, 0.32, 0.36, 1.0];
+    const barrierColor = [0.82, 0.84, 0.88, 1.0];
+    const pillarColor = [0.46, 0.48, 0.52, 1.0];
 
-    // Main elevated road deck
-    this.addBox(WORLD.OVERPASS_X, overpassY, overpassZMid, overpassW, 1.2, overpassLen, concreteColor, [1, 1], true);
-    this.addBox(WORLD.OVERPASS_X, overpassY + 0.62, overpassZMid, overpassW - 1.2, 0.04, overpassLen, deckAsphalt, [1, 1], false);
+    // Main overpass deck
+    this.addBox(WORLD.OVERPASS_X, overpassY, overpassZMid, overpassW, 1.3, overpassLen, concreteDeck, [1, 1], true);
+    this.addBox(WORLD.OVERPASS_X, overpassY + 0.66, overpassZMid, overpassW - 1.2, 0.04, overpassLen, highwayAsphalt, [1, 1], false);
 
-    // Left and right concrete safety crash barriers
+    // Left & Right crash barriers
     const hw = overpassW * 0.5;
     this.addBox(WORLD.OVERPASS_X - hw + 0.35, overpassY + 1.2, overpassZMid, 0.7, 1.2, overpassLen, barrierColor, [1, 1], true);
     this.addBox(WORLD.OVERPASS_X + hw - 0.35, overpassY + 1.2, overpassZMid, 0.7, 1.2, overpassLen, barrierColor, [1, 1], true);
 
-    // Overpass support pillars: placed OUTSIDE the roadway curb at X = 45 - 9.5 and X = 45 + 9.5
-    const pillarColor = [0.38, 0.40, 0.44, 1.0];
-    for (let z = WORLD.OVERPASS_Z_START + 16; z < WORLD.OVERPASS_Z_END; z += 36) {
-      this.addBox(WORLD.OVERPASS_X - 9.5, 0, z, 1.8, overpassY, 1.8, pillarColor, [1, 1], true);
-      this.addBox(WORLD.OVERPASS_X + 9.5, 0, z, 1.8, overpassY, 1.8, pillarColor, [1, 1], true);
-      // Overhead cross support beam under deck
-      this.addBox(WORLD.OVERPASS_X, overpassY - 0.6, z, overpassW + 3.0, 1.2, 2.4, pillarColor, [1, 1], false);
+    // Structural support pillars
+    for (let z = WORLD.OVERPASS_Z_START + 18; z < WORLD.OVERPASS_Z_END; z += 38) {
+      this.addBox(WORLD.OVERPASS_X - 9.5, 0, z, 2.0, overpassY, 2.0, pillarColor, [1, 1], true);
+      this.addBox(WORLD.OVERPASS_X + 9.5, 0, z, 2.0, overpassY, 2.0, pillarColor, [1, 1], true);
+      this.addBox(WORLD.OVERPASS_X, overpassY - 0.65, z, overpassW + 3.2, 1.3, 2.6, pillarColor, [1, 1], false);
     }
 
-    // Approach ramps at North and South ends
-    const rampLen = 45;
-    const northRampZ = WORLD.OVERPASS_Z_START - rampLen * 0.5;
-    const southRampZ = WORLD.OVERPASS_Z_END + rampLen * 0.5;
-
-    this.addBox(WORLD.OVERPASS_X, overpassY * 0.5, northRampZ, overpassW, overpassY, rampLen, concreteColor, [1, 1], true);
-    this.addBox(WORLD.OVERPASS_X, overpassY * 0.5, southRampZ, overpassW, overpassY, rampLen, concreteColor, [1, 1], true);
-
-    // East-West elevated highway bridge spanning across Central Avenue and Skyway Blvd at Z = 50
-    const bridgeW = 12.0;
-    const bridgeY = 11.0;
-    const bridgeLen = 140.0;
-    const bridgeX = 25.0;
-    this.addBox(bridgeX, bridgeY, 50, bridgeLen, 1.4, bridgeW, concreteColor, [1, 1], true);
-    this.addBox(bridgeX, bridgeY + 0.72, 50, bridgeLen, 0.04, bridgeW - 1.2, deckAsphalt, [1, 1], false);
-    this.addBox(bridgeX, bridgeY + 1.2, 50 - bridgeW * 0.5 + 0.35, bridgeLen, 1.2, 0.7, barrierColor, [1, 1], true);
-    this.addBox(bridgeX, bridgeY + 1.2, 50 + bridgeW * 0.5 - 0.35, bridgeLen, 1.2, 0.7, barrierColor, [1, 1], true);
-    // Support pillars outside roadways
-    this.addBox(-11.5, 0, 50, 2.0, bridgeY, 2.0, pillarColor, [1, 1], true);
-    this.addBox(11.5, 0, 50, 2.0, bridgeY, 2.0, pillarColor, [1, 1], true);
-    this.addBox(62.0, 0, 50, 2.0, bridgeY, 2.0, pillarColor, [1, 1], true);
+    // Skyway highway exit ramps
+    const rampLen = 48;
+    this.addBox(WORLD.OVERPASS_X, overpassY * 0.5, WORLD.OVERPASS_Z_START - rampLen * 0.5, overpassW, overpassY, rampLen, concreteDeck, [1, 1], true);
+    this.addBox(WORLD.OVERPASS_X, overpassY * 0.5, WORLD.OVERPASS_Z_END + rampLen * 0.5, overpassW, overpassY, rampLen, concreteDeck, [1, 1], true);
   }
 
   generateCityBlocks() {
-    // Build sidewalk blocks and buildings in each quadrant
-    const sidewalkColor = [0.65, 0.65, 0.68, 1.0];
+    const sidewalkColor = [0.76, 0.78, 0.82, 1.0];
 
-    // Downtown skyscrapers (East / North)
-    const dt = DISTRICTS.DOWNTOWN;
-    this.buildDistrictTowers(dt, sidewalkColor);
+    // 1. Downtown High-Rise Skyscraper District
+    this.buildDowntownTowers(sidewalkColor);
 
-    // Old Market Quarter (West / North)
-    const ot = DISTRICTS.OLD_TOWN;
-    this.buildOldMarket(ot, sidewalkColor);
+    // 2. Old Town Historic Quarter
+    this.buildOldTown(sidewalkColor);
 
-    // Ocean Promenade luxury blocks (West / South)
-    const pr = DISTRICTS.PROMENADE;
-    this.buildPromenadeBlocks(pr, sidewalkColor);
+    // 3. Ocean Promenade Resort Strip
+    this.buildPromenade(sidewalkColor);
   }
 
-  buildDistrictTowers(district, sidewalkColor) {
-    // Generate towering corporate glass and metal skyscrapers
-    // Three columns between roads X=0, X=45, X=115, X=185
+  buildDowntownTowers(sidewalkColor) {
     const blockDefs = [
-      { xMid: 22.5, width: 27 },   // Between Central Ave (0) and Skyway (45)
-      { xMid: 80.0, width: 50 },   // Between Skyway (45) and East Blvd (115)
-      { xMid: 150.0, width: 50 },  // Between East Blvd (115) and Port Ave (185)
+      { xMid: 22.5, width: 28 },
+      { xMid: 80.0, width: 50 },
+      { xMid: 150.0, width: 50 },
     ];
-    // Three row tiers between roads Z = -180, -115, -50
     const rowDefs = [
       { zMid: -214.5, length: 47 },
       { zMid: -147.5, length: 47 },
       { zMid: -82.5, length: 47 },
     ];
 
+    // Rich glass facade palette
+    const towerPalettes = [
+      { body: [0.28, 0.48, 0.70, 1.0], trim: [0.85, 0.90, 0.95, 1.0], crown: [0.95, 0.75, 0.20, 1.0] }, // Sapphire Glass
+      { body: [0.24, 0.58, 0.68, 1.0], trim: [0.78, 0.88, 0.92, 1.0], crown: [0.20, 0.85, 0.95, 1.0] }, // Cyan Mirror
+      { body: [0.65, 0.52, 0.38, 1.0], trim: [0.90, 0.80, 0.65, 1.0], crown: [1.0, 0.60, 0.25, 1.0] },  // Champagne Bronze
+      { body: [0.72, 0.74, 0.78, 1.0], trim: [0.35, 0.40, 0.48, 1.0], crown: [0.95, 0.25, 0.20, 1.0] },  // Platinum Silver
+      { body: [0.32, 0.36, 0.45, 1.0], trim: [0.88, 0.88, 0.92, 1.0], crown: [0.45, 0.80, 1.0, 1.0] },   // Obsidian Cobalt
+    ];
+
+    let pIdx = 0;
     for (const bx of blockDefs) {
       for (const bz of rowDefs) {
-        // Sidewalk pad
+        // Sidewalk plaza base
         this.addBox(bx.xMid, 0, bz.zMid, bx.width, WORLD.CURB_HEIGHT, bz.length, sidewalkColor, [1, 1], false);
 
-        // Building configuration
-        const height = 52 + ((Math.abs(Math.floor(bx.xMid * 7 + bz.zMid * 13))) % 52);
-        const bldColor = [0.22, 0.28, 0.38, 1.0]; // Reflective dark blue/grey corporate tower
+        const pal = towerPalettes[(pIdx++) % towerPalettes.length];
+        const height = 58 + ((Math.abs(Math.floor(bx.xMid * 9 + bz.zMid * 17))) % 56);
+
+        // Ground podium floor
+        this.addBox(bx.xMid, WORLD.CURB_HEIGHT, bz.zMid, bx.width - 4, 6.0, bz.length - 4, pal.trim, [0.5, 0.5], true);
 
         // Main tower body
-        this.addBox(bx.xMid, WORLD.CURB_HEIGHT, bz.zMid, bx.width - 6, height, bz.length - 6, bldColor, [0.2, 0.2], true);
+        this.addBox(bx.xMid, WORLD.CURB_HEIGHT + 6.0, bz.zMid, bx.width - 7, height - 6.0, bz.length - 7, pal.body, [0.25, 0.25], true);
 
-        // Tower setback tier (higher, narrower)
-        if (height > 60) {
-          const tierH = 22;
-          const tierColor = [0.30, 0.36, 0.48, 1.0];
-          this.addBox(bx.xMid, WORLD.CURB_HEIGHT + height, bz.zMid, Math.max(12, bx.width - 14), tierH, Math.max(14, bz.length - 14), tierColor, [0.2, 0.2], true);
+        // Illuminated architectural setback crown
+        if (height > 65) {
+          const tierH = 24;
+          const tierW = Math.max(14, bx.width - 15);
+          const tierL = Math.max(14, bz.length - 15);
+          this.addBox(bx.xMid, WORLD.CURB_HEIGHT + height, bz.zMid, tierW, tierH, tierL, pal.trim, [0.2, 0.2], true);
 
-          // Rooftop spire or helipad
-          const helipadColor = [0.85, 0.75, 0.25, 1.0];
-          this.addBox(bx.xMid, WORLD.CURB_HEIGHT + height + tierH, bz.zMid, 12, 0.6, 12, helipadColor, [1, 1], false);
-          // Communications antenna
-          this.addBox(bx.xMid, WORLD.CURB_HEIGHT + height + tierH + 0.6, bz.zMid, 0.8, 14, 0.8, [0.8, 0.2, 0.2, 1.0], [1, 1], false);
+          // Helipad or rooftop beacon
+          this.addBox(bx.xMid, WORLD.CURB_HEIGHT + height + tierH, bz.zMid, 12, 0.7, 12, pal.crown, [1, 1], false);
+          // Communications Mast
+          this.addBox(bx.xMid, WORLD.CURB_HEIGHT + height + tierH + 0.7, bz.zMid, 0.9, 16, 0.9, [0.95, 0.25, 0.25, 1.0], [1, 1], false);
         }
 
-        // Ground-level entrance lobby with glass canopy
-        const canopyColor = [0.15, 0.18, 0.24, 1.0];
-        this.addBox(bx.xMid, WORLD.CURB_HEIGHT + 3.8, bz.zMid - bz.length * 0.5 + 2.5, Math.min(24, bx.width - 10), 0.4, 4.5, canopyColor, [1, 1], false);
+        // Grand glass entrance portico / canopy
+        this.addBox(bx.xMid, WORLD.CURB_HEIGHT + 4.2, bz.zMid - bz.length * 0.5 + 2.8, Math.min(22, bx.width - 8), 0.45, 5.0, [0.20, 0.25, 0.32, 1.0], [1, 1], false);
       }
     }
   }
 
-  buildOldMarket(district, sidewalkColor) {
-    // Historic dense blocks with terracotta roofs, courtyards, stone arches
+  buildOldTown(sidewalkColor) {
     const blockDefs = [
-      { xMid: -80.0, width: 32 },  // Between Coastal (-105) and West Ave (-55)
-      { xMid: -27.5, width: 37 },  // Between West Ave (-55) and Central (0)
+      { xMid: -80.0, width: 32 },
+      { xMid: -27.5, width: 37 },
     ];
     const rowDefs = [
       { zMid: -214.5, length: 47 },
@@ -413,36 +392,38 @@ export class World {
       { zMid: -82.5, length: 47 },
     ];
 
-    const brickColors = [
-      [0.68, 0.32, 0.22, 1.0], // Terracotta red
-      [0.78, 0.62, 0.42, 1.0], // Sandstone ochre
-      [0.55, 0.45, 0.38, 1.0], // Earth brown
+    const facadeColors = [
+      [0.82, 0.38, 0.25, 1.0], // Terracotta Rust
+      [0.90, 0.72, 0.42, 1.0], // Mediterranean Ochre
+      [0.85, 0.82, 0.72, 1.0], // Cream Travertine
+      [0.55, 0.68, 0.52, 1.0], // Tuscan Sage Green
+      [0.78, 0.45, 0.40, 1.0], // Coral Rose
     ];
 
     let cIdx = 0;
     for (const bx of blockDefs) {
       for (const bz of rowDefs) {
-        // Sidewalk
         this.addBox(bx.xMid, 0, bz.zMid, bx.width, WORLD.CURB_HEIGHT, bz.length, sidewalkColor, [1, 1], false);
 
-        // Split each block into smaller townhouses
-        const subH1 = 18 + ((Math.abs(Math.floor(bx.xMid))) % 8);
-        const subH2 = 14 + ((Math.abs(Math.floor(bz.zMid))) % 7);
-        const color1 = brickColors[cIdx++ % brickColors.length];
-        const color2 = brickColors[cIdx++ % brickColors.length];
+        const subH1 = 18 + ((Math.abs(Math.floor(bx.xMid))) % 10);
+        const subH2 = 15 + ((Math.abs(Math.floor(bz.zMid))) % 8);
+        const col1 = facadeColors[(cIdx++) % facadeColors.length];
+        const col2 = facadeColors[(cIdx++) % facadeColors.length];
 
-        this.addBox(bx.xMid - bx.width * 0.22, WORLD.CURB_HEIGHT, bz.zMid, bx.width * 0.45, subH1, bz.length - 6, color1, [0.5, 0.5], true);
-        this.addBox(bx.xMid + bx.width * 0.22, WORLD.CURB_HEIGHT, bz.zMid, bx.width * 0.45, subH2, bz.length - 6, color2, [0.5, 0.5], true);
+        // West townhouse
+        this.addBox(bx.xMid - bx.width * 0.22, WORLD.CURB_HEIGHT, bz.zMid, bx.width * 0.46, subH1, bz.length - 6, col1, [0.4, 0.4], true);
+        // East townhouse
+        this.addBox(bx.xMid + bx.width * 0.22, WORLD.CURB_HEIGHT, bz.zMid, bx.width * 0.46, subH2, bz.length - 6, col2, [0.4, 0.4], true);
 
-        // Rooftop cornice & awning
-        const awningColor = [0.2, 0.5, 0.3, 1.0];
-        this.addBox(bx.xMid - bx.width * 0.22, WORLD.CURB_HEIGHT + 3.2, bz.zMid - bz.length * 0.5 + 2.5, bx.width * 0.4, 0.3, 3.0, awningColor, [1, 1], false);
+        // Storefront awnings & decorative roof cornices
+        const awningCol = [0.22, 0.55, 0.35, 1.0];
+        this.addBox(bx.xMid - bx.width * 0.22, WORLD.CURB_HEIGHT + 3.4, bz.zMid - bz.length * 0.5 + 2.5, bx.width * 0.42, 0.35, 3.2, awningCol, [1, 1], false);
+        this.addBox(bx.xMid + bx.width * 0.22, WORLD.CURB_HEIGHT + 3.4, bz.zMid - bz.length * 0.5 + 2.5, bx.width * 0.42, 0.35, 3.2, [0.85, 0.22, 0.20, 1.0], [1, 1], false);
       }
     }
   }
 
-  buildPromenadeBlocks(district, sidewalkColor) {
-    // Coastal boulevard hotels, modern residential resorts with balconies
+  buildPromenade(sidewalkColor) {
     const blockDefs = [
       { xMid: -80.0, width: 32 },
       { xMid: -27.5, width: 37 },
@@ -453,88 +434,103 @@ export class World {
       { zMid: 182.5, length: 47 },
     ];
 
-    const hotelColors = [
-      [0.85, 0.88, 0.92, 1.0], // Bright coastal white
-      [0.72, 0.82, 0.85, 1.0], // Pale aqua
-      [0.92, 0.84, 0.74, 1.0], // Sunset beige
+    // Miami Art Deco Pastel Palettes
+    const resortPalettes = [
+      [0.96, 0.96, 0.98, 1.0], // Brilliant White
+      [0.60, 0.88, 0.84, 1.0], // Coastal Aqua Mint
+      [0.96, 0.70, 0.65, 1.0], // Pastel Coral Pink
+      [0.98, 0.86, 0.65, 1.0], // Warm Sunset Peach
     ];
 
-    let hIdx = 0;
+    let rIdx = 0;
     for (const bx of blockDefs) {
       for (const bz of rowDefs) {
-        // Sidewalk pad
         this.addBox(bx.xMid, 0, bz.zMid, bx.width, WORLD.CURB_HEIGHT, bz.length, sidewalkColor, [1, 1], false);
 
-        const height = 26 + ((Math.abs(Math.floor(bx.xMid * 3 + bz.zMid * 5))) % 22);
-        const color = hotelColors[hIdx++ % hotelColors.length];
+        const height = 30 + ((Math.abs(Math.floor(bx.xMid * 5 + bz.zMid * 7))) % 24);
+        const col = resortPalettes[(rIdx++) % resortPalettes.length];
 
-        this.addBox(bx.xMid, WORLD.CURB_HEIGHT, bz.zMid, bx.width - 6, height, bz.length - 6, color, [0.3, 0.3], true);
+        this.addBox(bx.xMid, WORLD.CURB_HEIGHT, bz.zMid, bx.width - 6, height, bz.length - 6, col, [0.35, 0.35], true);
 
-        // Balcony bands protruding along facade
-        const balconyColor = [0.95, 0.95, 0.98, 1.0];
-        for (let y = WORLD.CURB_HEIGHT + 4; y < height; y += 4.5) {
-          this.addBox(bx.xMid, y, bz.zMid - bz.length * 0.5 + 2.5, bx.width - 8, 0.35, 1.8, balconyColor, [1, 1], false);
+        // Tiered cantilevered balcony ribbons
+        const balconyWhite = [1.0, 1.0, 1.0, 1.0];
+        for (let y = WORLD.CURB_HEIGHT + 4.5; y < height; y += 4.5) {
+          this.addBox(bx.xMid, y, bz.zMid - bz.length * 0.5 + 2.5, bx.width - 8, 0.40, 2.0, balconyWhite, [1, 1], false);
         }
       }
     }
   }
 
+  generateParksAndPlazas() {
+    // Lush central green park plaza at X = 80, Z = 52.5
+    const grassGreen = [0.26, 0.68, 0.30, 1.0];
+    const fountainBlue = [0.15, 0.55, 0.75, 1.0];
+
+    // Park lawn pad
+    this.addBox(80.0, WORLD.CURB_HEIGHT, 52.5, 46, 0.25, 44, grassGreen, [4, 4], false);
+
+    // Decorative central reflecting fountain basin
+    this.addBox(80.0, WORLD.CURB_HEIGHT + 0.3, 52.5, 14, 0.65, 14, [0.75, 0.78, 0.82, 1.0], [1, 1], true);
+    this.addBox(80.0, WORLD.CURB_HEIGHT + 0.6, 52.5, 12, 0.35, 12, fountainBlue, [1, 1], false);
+
+    // Palm trees in park corners
+    this.addPalmTree(65, WORLD.CURB_HEIGHT, 38);
+    this.addPalmTree(95, WORLD.CURB_HEIGHT, 38);
+    this.addPalmTree(65, WORLD.CURB_HEIGHT, 67);
+    this.addPalmTree(95, WORLD.CURB_HEIGHT, 67);
+  }
+
   generateMarinaAndWaterfront() {
-    // Broad waterfront boardwalk along the coast between X = -130 and X = -115
-    const boardwalkColor = [0.55, 0.42, 0.30, 1.0]; // Warm weathered timber
-    const railingColor = [0.85, 0.88, 0.92, 1.0];
+    // Broad seaside promenade boardwalk
+    const timberColor = [0.65, 0.50, 0.36, 1.0]; // Warm sunlit cedar boardwalk
+    const railingColor = [0.94, 0.96, 0.98, 1.0];
 
-    // Boardwalk deck
-    this.addBox(-122, 0.28, 0, 14, 0.55, WORLD.SIZE * 0.9, boardwalkColor, [1, 2], false);
+    // Main boardwalk along coast
+    this.addBox(-122, 0.28, 0, 15, 0.55, WORLD.SIZE * 0.92, timberColor, [1, 2], false);
 
-    // Safety railing posts and handrails
-    this.addBox(-128.5, 0.9, 0, 0.3, 0.8, WORLD.SIZE * 0.9, railingColor, [1, 1], true);
+    // Chrome / white promenade pedestrian safety railing
+    this.addBox(-128.5, 0.95, 0, 0.3, 0.85, WORLD.SIZE * 0.92, railingColor, [1, 1], true);
 
-    // Marina Pier Jetties extending into the ocean
+    // Marina boat slips & wooden jetties
     const pierZList = [-150, -70, 60, 140];
-    const pierLen = 42;
-    const pierW = 6.5;
+    const pierLen = 44;
+    const pierW = 7.0;
 
     for (const pz of pierZList) {
-      // Pier deck
-      this.addBox(WORLD.COAST_X - pierLen * 0.5, 0.22, pz, pierLen, 0.45, pierW, boardwalkColor, [2, 1], false);
-      // Pier pilings into water
-      for (let px = WORLD.COAST_X - 6; px > WORLD.COAST_X - pierLen; px -= 8) {
-        this.addBox(px, -2.5, pz - pierW * 0.4, 0.6, 3.5, 0.6, [0.25, 0.20, 0.15, 1.0], [1, 1], true);
-        this.addBox(px, -2.5, pz + pierW * 0.4, 0.6, 3.5, 0.6, [0.25, 0.20, 0.15, 1.0], [1, 1], true);
-      }
+      this.addBox(WORLD.COAST_X - pierLen * 0.5, 0.24, pz, pierLen, 0.45, pierW, timberColor, [2, 1], false);
 
-      // Moored luxury yacht / speedboat model beside pier
-      this.addBoat(WORLD.COAST_X - 22, -0.2, pz + 7.5, Math.PI * 0.05);
+      // Moored luxury powerboats & yachts
+      this.addBoat(WORLD.COAST_X - 24, -0.2, pz + 8.0);
     }
   }
 
-  addBoat(x, y, z, rotY) {
-    const hullWhite = [0.94, 0.95, 0.98, 1.0];
-    const cabinBlue = [0.15, 0.35, 0.55, 1.0];
-    // Main hull
-    this.addBox(x, y + 0.6, z, 12, 1.2, 3.8, hullWhite, [1, 1], true);
-    // Cabin superstructure
-    this.addBox(x - 1.0, y + 1.6, z, 5.5, 1.0, 2.8, cabinBlue, [1, 1], false);
+  addBoat(x, y, z) {
+    const hullWhite = [0.96, 0.96, 0.98, 1.0];
+    const cabinNavy = [0.12, 0.32, 0.58, 1.0];
+    const glassTint = [0.10, 0.18, 0.28, 1.0];
+
+    // Hull
+    this.addBox(x, y + 0.6, z, 13, 1.25, 4.2, hullWhite, [1, 1], true);
+    // Cabin
+    this.addBox(x - 1.2, y + 1.7, z, 6.0, 1.1, 3.0, cabinNavy, [1, 1], false);
     // Windshield
-    this.addBox(x + 2.0, y + 1.5, z, 1.2, 0.8, 2.6, [0.1, 0.15, 0.2, 1.0], [1, 1], false);
+    this.addBox(x + 2.2, y + 1.6, z, 1.4, 0.85, 2.8, glassTint, [1, 1], false);
   }
 
   generateDocksAndCranes() {
-    // Meridian Cargo Docks in South-East quadrant (X: 20 to 240, Z: 20 to 240)
-    // Industrial concrete dock apron slab
-    const dockPavementColor = [0.26, 0.28, 0.32, 1.0];
-    this.addBox(140, 0.08, 140, 160, 0.16, 160, dockPavementColor, [1, 1], false);
+    // Meridian Cargo Docks in South-East district
+    const dockApron = [0.36, 0.38, 0.42, 1.0];
+    this.addBox(140, 0.08, 140, 160, 0.16, 160, dockApron, [1, 1], false);
 
-    // Yellow hazard safety strip along wharf edge
-    const hazardYellow = [0.95, 0.78, 0.10, 1.0];
-    this.addBox(140, 0.18, 220, 160, 0.04, 1.6, hazardYellow, [1, 1], false);
-    this.addBox(220, 0.18, 140, 1.6, 0.04, 160, hazardYellow, [1, 1], false);
+    // Safety yellow & black hazard boundary strip along wharf
+    const hazardYellow = [1.0, 0.82, 0.08, 1.0];
+    this.addBox(140, 0.18, 220, 160, 0.04, 1.8, hazardYellow, [1, 1], false);
+    this.addBox(220, 0.18, 140, 1.8, 0.04, 160, hazardYellow, [1, 1], false);
 
-    // Open harbor water basin along east and south edges of docks
-    const basinColor = [0.05, 0.38, 0.52, 0.95];
-    const bMinX = 222, bMaxX = WORLD.HALF_SIZE + 60;
-    const bMinZ = 60, bMaxZ = WORLD.HALF_SIZE + 60;
+    // Deep harbor ocean water basin
+    const harborColor = [0.06, 0.42, 0.58, 0.95];
+    const bMinX = 222, bMaxX = WORLD.HALF_SIZE + 80;
+    const bMinZ = 60, bMaxZ = WORLD.HALF_SIZE + 80;
     const bPts = [
       [bMinX, WORLD.SEA_LEVEL, bMinZ],
       [bMaxX, WORLD.SEA_LEVEL, bMinZ],
@@ -546,151 +542,125 @@ export class World {
     for (let p = 0; p < 6; p++) {
       this.waterPositions.push(bPts[p][0], bPts[p][1], bPts[p][2]);
       this.waterNormals.push(0, 1, 0);
-      this.waterColors.push(basinColor[0], basinColor[1], basinColor[2], basinColor[3]);
-      this.waterUvs.push(bPts[p][0] * 0.05, bPts[p][2] * 0.05);
+      this.waterColors.push(harborColor[0], harborColor[1], harborColor[2], harborColor[3]);
+      this.waterUvs.push(bPts[p][0] * 0.04, bPts[p][2] * 0.04);
     }
 
-    const sPts = [
-      [60, WORLD.SEA_LEVEL, 222],
-      [bMaxX, WORLD.SEA_LEVEL, 222],
-      [bMaxX, WORLD.SEA_LEVEL, bMaxZ],
-      [60, WORLD.SEA_LEVEL, 222],
-      [bMaxX, WORLD.SEA_LEVEL, bMaxZ],
-      [60, WORLD.SEA_LEVEL, bMaxZ],
-    ];
-    for (let p = 0; p < 6; p++) {
-      this.waterPositions.push(sPts[p][0], sPts[p][1], sPts[p][2]);
-      this.waterNormals.push(0, 1, 0);
-      this.waterColors.push(basinColor[0], basinColor[1], basinColor[2], basinColor[3]);
-      this.waterUvs.push(sPts[p][0] * 0.05, sPts[p][2] * 0.05);
-    }
+    // Moored Cargo Container Ship
+    this.addBox(244, -1.0, 160, 24, 7.0, 80, [0.22, 0.24, 0.28, 1.0], [1, 1], true);
+    this.addBox(244, 6.0, 128, 16, 8.5, 20, [0.92, 0.92, 0.95, 1.0], [1, 1], true);
 
-    // Cargo freighter moored along eastern wharf
-    this.addBox(240, -1.0, 160, 22, 6.5, 75, [0.18, 0.20, 0.24, 1.0], [1, 1], true);
-    this.addBox(240, 5.5, 130, 14, 8.0, 18, [0.88, 0.88, 0.90, 1.0], [1, 1], true);
+    // Cargo Warehouses
+    const whColor = [0.42, 0.45, 0.50, 1.0];
+    const whRoof = [0.65, 0.30, 0.22, 1.0];
+    this.addBox(80, 0, 70, 38, 14, 32, whColor, [0.2, 0.2], true);
+    this.addBox(80, 14, 70, 40, 2.6, 34, whRoof, [1, 1], false);
 
-    // 1. Cargo warehouses
-    const warehouseColor = [0.35, 0.38, 0.42, 1.0];
-    const roofColor = [0.55, 0.25, 0.20, 1.0];
+    this.addBox(80, 0, 150, 38, 14, 32, whColor, [0.2, 0.2], true);
+    this.addBox(80, 14, 150, 40, 2.6, 34, whRoof, [1, 1], false);
 
-    this.addBox(80, 0, 70, 38, 14, 32, warehouseColor, [0.2, 0.2], true);
-    this.addBox(80, 14, 70, 40, 2.5, 34, roofColor, [1, 1], false);
-
-    this.addBox(80, 0, 150, 38, 14, 32, warehouseColor, [0.2, 0.2], true);
-    this.addBox(80, 14, 150, 40, 2.5, 34, roofColor, [1, 1], false);
-
-    // 2. Shipping container stacks (multi-colored shipping containers)
+    // Multi-tier shipping container stacks (high chroma vivid colors)
     const containerColors = [
-      [0.82, 0.18, 0.15, 1.0], // Crimson Red
-      [0.15, 0.42, 0.78, 1.0], // Cobalt Blue
-      [0.92, 0.55, 0.12, 1.0], // Safety Orange
-      [0.18, 0.58, 0.32, 1.0], // Evergreen
-      [0.85, 0.75, 0.15, 1.0], // Yellow
+      [0.88, 0.18, 0.15, 1.0], // Crimson Red
+      [0.15, 0.50, 0.88, 1.0], // Ocean Blue
+      [0.98, 0.55, 0.10, 1.0], // High-Vis Orange
+      [0.18, 0.65, 0.35, 1.0], // Jade Green
+      [0.95, 0.82, 0.15, 1.0], // Industrial Yellow
     ];
 
-    const cW = 2.6; // Container width
-    const cL = 7.0; // Container length
-    const cH = 2.6; // Container height
-
-    // Stack clusters around X = 145, Z = 125
+    const cW = 2.65, cL = 7.2, cH = 2.65;
     let colIdx = 0;
     for (let row = 0; row < 5; row++) {
       for (let stackZ = 0; stackZ < 4; stackZ++) {
-        const cx = 135 + row * 4.2;
-        const cz = 95 + stackZ * 9.5;
-        const heightLayers = 1 + ((row + stackZ) % 3);
+        const cx = 135 + row * 4.3;
+        const cz = 95 + stackZ * 9.8;
+        const layers = 1 + ((row + stackZ) % 3);
 
-        for (let l = 0; l < heightLayers; l++) {
-          const cColor = containerColors[(colIdx++) % containerColors.length];
-          this.addBox(cx, l * cH, cz, cW, cH, cL, cColor, [1, 1], true);
+        for (let l = 0; l < layers; l++) {
+          const col = containerColors[(colIdx++) % containerColors.length];
+          this.addBox(cx, l * cH, cz, cW, cH, cL, col, [1, 1], true);
         }
       }
     }
 
-    // 3. Massive 36m Industrial Gantry Crane at X = 150, Z = 155
+    // Massive 36m Industrial Gantry Crane
     this.buildGantryCrane(150, 0, 155);
   }
 
   buildGantryCrane(x, y, z) {
-    const craneYellow = [0.96, 0.72, 0.08, 1.0];
-    const metalDark = [0.25, 0.26, 0.28, 1.0];
+    const craneYellow = [1.0, 0.78, 0.08, 1.0]; // Bright industrial yellow
+    const metalDark = [0.26, 0.28, 0.32, 1.0];
 
     const height = 36;
-    const spanW = 26;
-    const depthL = 18;
+    const spanW = 28;
+    const depthL = 19;
 
-    // Four massive vertical legs
     const hw = spanW * 0.5;
     const hl = depthL * 0.5;
-    this.addBox(x - hw, y, z - hl, 1.8, height, 1.8, craneYellow, [1, 1], true);
-    this.addBox(x + hw, y, z - hl, 1.8, height, 1.8, craneYellow, [1, 1], true);
-    this.addBox(x - hw, y, z + hl, 1.8, height, 1.8, craneYellow, [1, 1], true);
-    this.addBox(x + hw, y, z + hl, 1.8, height, 1.8, craneYellow, [1, 1], true);
 
-    // Diagonal truss cross braces
-    this.addBox(x - hw, y + height * 0.5, z, 1.2, 1.2, depthL, craneYellow, [1, 1], false);
-    this.addBox(x + hw, y + height * 0.5, z, 1.2, 1.2, depthL, craneYellow, [1, 1], false);
+    // 4 legs
+    this.addBox(x - hw, y, z - hl, 1.9, height, 1.9, craneYellow, [1, 1], true);
+    this.addBox(x + hw, y, z - hl, 1.9, height, 1.9, craneYellow, [1, 1], true);
+    this.addBox(x - hw, y, z + hl, 1.9, height, 1.9, craneYellow, [1, 1], true);
+    this.addBox(x + hw, y, z + hl, 1.9, height, 1.9, craneYellow, [1, 1], true);
 
-    // Overhead horizontal gantry truss girder
-    this.addBox(x, y + height, z, spanW + 14, 3.2, 4.5, craneYellow, [1, 1], true);
+    // Cross braces
+    this.addBox(x - hw, y + height * 0.5, z, 1.3, 1.3, depthL, craneYellow, [1, 1], false);
+    this.addBox(x + hw, y + height * 0.5, z, 1.3, 1.3, depthL, craneYellow, [1, 1], false);
 
-    // Trolley & operator cabin
-    this.addBox(x + 2, y + height - 2.8, z, 4.5, 2.5, 3.5, metalDark, [1, 1], false);
+    // Overhead gantry boom
+    this.addBox(x, y + height, z, spanW + 16, 3.4, 4.8, craneYellow, [1, 1], true);
 
-    // Cable hoist & spreader frame
-    this.addBox(x + 2, y + height - 12, z, 0.25, 10, 0.25, [0.1, 0.1, 0.1, 1.0], [1, 1], false);
-    this.addBox(x + 2, y + height - 12, z, 3.0, 0.6, 6.0, metalDark, [1, 1], false);
+    // Cab & Spreader
+    this.addBox(x + 2, y + height - 2.8, z, 4.8, 2.6, 3.6, metalDark, [1, 1], false);
+    this.addBox(x + 2, y + height - 12, z, 0.3, 10, 0.3, [0.15, 0.15, 0.15, 1.0], [1, 1], false);
+    this.addBox(x + 2, y + height - 12, z, 3.2, 0.7, 6.2, metalDark, [1, 1], false);
   }
 
   generatePropsAndStreetFurniture() {
-    // 1. Palm trees along the coastal Ocean Promenade (X = -118)
+    // 1. Tropical Palm Trees along Coastal Ocean Promenade
     for (let z = -WORLD.HALF_SIZE + 25; z < WORLD.HALF_SIZE - 25; z += 18) {
       this.addPalmTree(-118, 0.3, z);
       this.addPalmTree(-90, 0.2, z);
     }
 
-    // 2. Street lights / lamp posts along main streets
-    const streetLightColor = [0.35, 0.36, 0.40, 1.0];
-    const lampGlow = [1.0, 0.95, 0.75, 1.0];
+    // 2. Modern Street Lampposts with warm glowing fixtures
+    const postColor = [0.42, 0.44, 0.48, 1.0];
+    const lampGlow = [1.0, 0.92, 0.65, 1.0];
 
     const lampXList = [-105, 0, 45, 115];
     for (const lx of lampXList) {
-      for (let lz = -220; lz <= 220; lz += 40) {
-        // Vertical post
-        this.addBox(lx + 8.5, 0, lz, 0.35, 8.2, 0.35, streetLightColor, [1, 1], false);
-        // Overhanging arm
-        this.addBox(lx + 7.2, 8.0, lz, 2.8, 0.25, 0.25, streetLightColor, [1, 1], false);
-        // Lamp fixture
-        this.addBox(lx + 6.0, 7.8, lz, 0.6, 0.25, 0.5, lampGlow, [1, 1], false);
+      for (let lz = -220; lz <= 220; lz += 42) {
+        this.addBox(lx + 8.5, 0, lz, 0.36, 8.4, 0.36, postColor, [1, 1], false);
+        this.addBox(lx + 7.2, 8.2, lz, 2.8, 0.26, 0.26, postColor, [1, 1], false);
+        this.addBox(lx + 5.9, 8.0, lz, 0.65, 0.28, 0.55, lampGlow, [1, 1], false);
       }
     }
 
-    // 3. Fire hydrants and benches
-    const hydrantColor = [0.92, 0.22, 0.15, 1.0];
+    // 3. Fire Hydrants
+    const hydrantRed = [0.96, 0.22, 0.18, 1.0];
     for (let z = -200; z <= 200; z += 65) {
-      this.addBox(9.2, 0, z, 0.45, 0.9, 0.45, hydrantColor, [1, 1], true);
-      this.addBox(-9.2, 0, z + 20, 0.45, 0.9, 0.45, hydrantColor, [1, 1], true);
+      this.addBox(9.4, 0, z, 0.45, 0.95, 0.45, hydrantRed, [1, 1], true);
+      this.addBox(-9.4, 0, z + 20, 0.45, 0.95, 0.45, hydrantRed, [1, 1], true);
     }
   }
 
   addPalmTree(x, y, z) {
-    const trunkColor = [0.42, 0.32, 0.22, 1.0];
-    const frondColor = [0.18, 0.62, 0.24, 1.0];
+    const trunkColor = [0.48, 0.36, 0.25, 1.0];
+    const frondColor = [0.22, 0.68, 0.28, 1.0];
 
-    // Segmented curved trunk
-    const trunkH = 8.5;
-    this.addBox(x, y, z, 0.65, trunkH, 0.65, trunkColor, [1, 1], true);
+    const trunkH = 8.8;
+    this.addBox(x, y, z, 0.70, trunkH, 0.70, trunkColor, [1, 1], true);
 
-    // Palm leaf fronds spreading out at top
-    const frondLen = 4.2;
-    const frondW = 1.2;
+    const frondLen = 4.4;
+    const frondW = 1.3;
     const topY = y + trunkH;
-
     const angles = [0, Math.PI * 0.25, Math.PI * 0.5, Math.PI * 0.75, Math.PI, Math.PI * 1.25, Math.PI * 1.5, Math.PI * 1.75];
+
     for (const ang of angles) {
       const fx = x + Math.cos(ang) * (frondLen * 0.45);
       const fz = z + Math.sin(ang) * (frondLen * 0.45);
-      this.addBox(fx, topY - 0.4, fz, frondW, 0.15, frondLen * 0.9, frondColor, [1, 1], false);
+      this.addBox(fx, topY - 0.4, fz, frondW, 0.16, frondLen * 0.92, frondColor, [1, 1], false);
     }
   }
 
@@ -698,10 +668,8 @@ export class World {
   checkCollision(cx, cz, radius) {
     for (let i = 0; i < this.colliders.length; i++) {
       const c = this.colliders[i];
-      // Quick bounding box test
       if (cx + radius > c.minX && cx - radius < c.maxX &&
           cz + radius > c.minZ && cz - radius < c.maxZ) {
-        // Nearest point
         const nx = Math.max(c.minX, Math.min(cx, c.maxX));
         const nz = Math.max(c.minZ, Math.min(cz, c.maxZ));
         const dx = cx - nx;
@@ -719,7 +687,6 @@ export class World {
               collider: c,
             };
           } else {
-            // Push out along smallest depth axis
             const pxLeft = cx - c.minX;
             const pxRight = c.maxX - cx;
             const pzTop = cz - c.minZ;

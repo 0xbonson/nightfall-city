@@ -1,40 +1,44 @@
 /**
- * Nightfall City: Vela Bay - Persistent Save & Load System
- * Authored by makefun agent for the GTA 6 bounty challenge.
+ * Nightfall City: Vela Bay - Persistent Save & Career State Manager
+ * Uses browser localStorage to persist campaign progress, cash balance,
+ * weapons arsenal, and player accomplishments across sessions.
+ * Authored for make.fun GTA 6 bounty challenge.
  */
 
-const SAVE_KEY = 'nightfall_city_save_v1';
+const STORAGE_KEY = 'nightfall_city_save_v1';
 
 export class SaveSystem {
   hasSave() {
     try {
-      return localStorage.getItem(SAVE_KEY) !== null;
+      return localStorage.getItem(STORAGE_KEY) !== null;
     } catch {
       return false;
     }
   }
 
-  save(player, missions) {
+  save(player, missions, police) {
     try {
-      const data = {
-        missionIdx: missions.currentIdx,
-        cash: player.cash,
-        health: player.health,
-        armor: player.armor,
-        currentWeapon: player.currentWeapon,
-        timestamp: Date.now(),
+      const payload = {
+        version: '1.3.0',
+        missionIdx: missions ? missions.currentIdx : 0,
+        cash: player ? player.cash : 1500,
+        health: player ? player.health : 100,
+        armor: player ? player.armor : 50,
+        currentWeapon: player ? player.currentWeapon : 'rifle',
+        wantedStars: police ? police.wantedStars : 0,
+        savedAt: Date.now(),
       };
-      localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
       return true;
-    } catch (e) {
-      console.warn('Unable to save to localStorage:', e);
+    } catch (err) {
+      console.warn('[SaveSystem] Unable to write save payload to localStorage:', err);
       return false;
     }
   }
 
-  load(player, missions) {
+  load(player, missions, police) {
     try {
-      const raw = localStorage.getItem(SAVE_KEY);
+      const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return false;
       const data = JSON.parse(raw);
 
@@ -53,16 +57,19 @@ export class SaveSystem {
       if (data.currentWeapon !== undefined && player) {
         player.currentWeapon = data.currentWeapon;
       }
+      if (data.wantedStars !== undefined && police) {
+        police.setWantedStars(data.wantedStars);
+      }
       return true;
-    } catch (e) {
-      console.warn('Failed to load save state:', e);
+    } catch (err) {
+      console.warn('[SaveSystem] Unable to read save payload from localStorage:', err);
       return false;
     }
   }
 
   reset() {
     try {
-      localStorage.removeItem(SAVE_KEY);
+      localStorage.removeItem(STORAGE_KEY);
       return true;
     } catch {
       return false;

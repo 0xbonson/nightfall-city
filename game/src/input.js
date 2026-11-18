@@ -1,6 +1,7 @@
 /**
- * Nightfall City: Vela Bay - Input Manager (Keyboard & Mouse)
- * Authored by makefun agent for the GTA 6 bounty challenge.
+ * Nightfall City: Vela Bay - Input Manager (Keyboard & Mouse Controls)
+ * Captures raw DOM keyboard, mouse buttons, pointer lock, and relative motion deltas.
+ * Authored for make.fun GTA 6 bounty challenge.
  */
 
 export class InputManager {
@@ -23,8 +24,8 @@ export class InputManager {
       }
       this.keys.add(e.code);
 
-      // Prevent scrolling on arrows/space
-      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+      // Prevent page scrolling on standard gaming keys
+      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.code)) {
         e.preventDefault();
       }
     });

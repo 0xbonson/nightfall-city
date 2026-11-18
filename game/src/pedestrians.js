@@ -1,6 +1,8 @@
 /**
- * Nightfall City: Vela Bay - Pedestrian Population & Reactive AI
- * Authored by makefun agent for the GTA 6 bounty challenge.
+ * Nightfall City: Vela Bay - Pedestrian Population & Reactive Citizen AI
+ * Diverse citizen models with articulated walking cycles, street wandering,
+ * panic fleeing from speeding vehicles and gunfire, and cash drops on elimination.
+ * Authored for make.fun GTA 6 bounty challenge.
  */
 
 import { clamp, normalizeAngle } from './math.js';
@@ -22,24 +24,26 @@ export class Pedestrian {
     this.isFleeing = false;
     this.fleeTimer = 0;
 
-    // Varied clothing palette
+    // Rich clothing palette
     const shirtColors = [
-      [0.92, 0.35, 0.28, 1.0], // Coral red
-      [0.22, 0.65, 0.85, 1.0], // Sky blue
-      [0.85, 0.78, 0.25, 1.0], // Yellow
-      [0.32, 0.72, 0.42, 1.0], // Green
-      [0.88, 0.88, 0.90, 1.0], // White
-      [0.18, 0.20, 0.24, 1.0], // Black
+      [0.94, 0.38, 0.32, 1.0], // Sunset coral
+      [0.22, 0.68, 0.90, 1.0], // Coastal cyan
+      [0.96, 0.82, 0.22, 1.0], // Bright amber
+      [0.28, 0.78, 0.45, 1.0], // Emerald green
+      [0.96, 0.96, 0.98, 1.0], // Crisp linen white
+      [0.85, 0.45, 0.75, 1.0], // Magenta
+      [0.22, 0.24, 0.28, 1.0], // Charcoal
     ];
     const pantColors = [
-      [0.18, 0.24, 0.38, 1.0], // Blue jeans
-      [0.55, 0.48, 0.38, 1.0], // Khaki
-      [0.16, 0.16, 0.18, 1.0], // Charcoal
+      [0.18, 0.28, 0.45, 1.0], // Blue denim
+      [0.62, 0.54, 0.42, 1.0], // Khaki
+      [0.16, 0.16, 0.18, 1.0], // Dark slate
+      [0.85, 0.85, 0.88, 1.0], // White linen
     ];
     const skinTones = [
-      [0.88, 0.72, 0.58, 1.0],
-      [0.72, 0.52, 0.38, 1.0],
-      [0.48, 0.34, 0.25, 1.0],
+      [0.92, 0.76, 0.62, 1.0],
+      [0.78, 0.58, 0.42, 1.0],
+      [0.52, 0.36, 0.26, 1.0],
     ];
 
     this.shirtCol = shirtColors[Math.floor(Math.random() * shirtColors.length)];
@@ -68,18 +72,17 @@ export class Pedestrian {
     this.rotY = Math.atan2(dx, dz);
   }
 
-  update(dt, world, player, activeCars) {
+  update(dt, world, player, vehicles) {
     if (!this.alive) return;
 
-    // React to nearby speeding cars or running player
     if (this.fleeTimer > 0) {
       this.fleeTimer -= dt;
       if (this.fleeTimer <= 0) this.isFleeing = false;
     }
 
-    const currentSpeed = this.isFleeing ? 5.2 : this.speed;
+    const currentSpeed = this.isFleeing ? 5.4 : this.speed;
 
-    // Strolling direction timer
+    // Periodic wandering direction shifts
     this.targetDirTimer -= dt;
     if (this.targetDirTimer <= 0 && !this.isFleeing) {
       this.targetDirTimer = 6 + Math.random() * 12;
@@ -95,76 +98,74 @@ export class Pedestrian {
     this.x += this.vx * dt;
     this.z += this.vz * dt;
 
-    // Collision with city buildings
+    // Building collision
     const col = world.checkCollision(this.x, this.z, 0.35);
     if (col.collided) {
       this.x = prevX + col.pushX;
       this.z = prevZ + col.pushZ;
-      this.rotY += Math.PI * 0.5 + Math.random() * 0.5;
+      this.rotY += Math.PI * 0.5;
     }
 
-    // Check collision with player vehicle
-    for (let i = 0; i < activeCars.length; i++) {
-      const c = activeCars[i];
-      const dist = Math.hypot(c.x - this.x, c.z - this.z);
-      if (dist < 2.5 && Math.abs(c.speed) > 4.0) {
-        // Hit by vehicle!
-        this.takeDamage(100);
-        break;
-      } else if (dist < 8.0 && Math.abs(c.speed) > 8.0) {
-        this.fleeFrom(c.x, c.z);
+    // Advance walking animation
+    this.walkCycle += dt * currentSpeed * 3.5;
+
+    // React to nearby speeding vehicles
+    for (let i = 0; i < vehicles.vehicles.length; i++) {
+      const v = vehicles.vehicles[i];
+      if (Math.abs(v.speed) > 6.0) {
+        const d = Math.hypot(this.x - v.x, this.z - v.z);
+        if (d < 8.0) {
+          this.fleeFrom(v.x, v.z);
+          break;
+        }
       }
     }
-
-    // Animate walk cycle
-    this.walkCycle += currentSpeed * dt * (this.isFleeing ? 7.0 : 4.5);
   }
 
   buildMesh(positions, normals, colors, uvs) {
     if (!this.alive) return;
 
-    const px = this.x;
-    const py = this.y;
-    const pz = this.z;
+    const x = this.x;
+    const y = this.y;
+    const z = this.z;
     const rot = this.rotY;
 
-    const cosR = Math.cos(rot);
-    const sinR = Math.sin(rot);
+    const sinRot = Math.sin(rot);
+    const cosRot = Math.cos(rot);
 
-    const toWorld = (lx, ly, lz) => {
-      const wx = px + (lx * cosR + lz * sinR);
-      const wy = py + ly;
-      const wz = pz + (-lx * sinR + lz * cosR);
-      return [wx, wy, wz];
-    };
+    const swing = Math.sin(this.walkCycle) * 0.35;
 
-    const addBoxLocal = (lx, ly, lz, sx, sy, sz, color) => {
+    const addBoxRot = (bx, by, bz, sx, sy, sz, color) => {
       const hx = sx * 0.5, hy = sy * 0.5, hz = sz * 0.5;
+      const cy = by + hy;
+
       const corners = [
-        toWorld(lx - hx, ly - hy, lz - hz),
-        toWorld(lx + hx, ly - hy, lz - hz),
-        toWorld(lx + hx, ly + hy, lz - hz),
-        toWorld(lx - hx, ly + hy, lz - hz),
-        toWorld(lx - hx, ly - hy, lz + hz),
-        toWorld(lx + hx, ly - hy, lz + hz),
-        toWorld(lx + hx, ly + hy, lz + hz),
-        toWorld(lx - hx, ly + hy, lz + hz),
+        [-hx, -hy, -hz], [hx, -hy, -hz], [hx, -hy, hz], [-hx, -hy, hz],
+        [-hx, hy, -hz],  [hx, hy, -hz],  [hx, hy, hz],  [-hx, hy, hz],
       ];
+
+      const rotCorners = corners.map(([cx, cyOff, cz]) => {
+        const lx = cx + bx;
+        const lz = cz + bz;
+        const wx = x + lx * cosRot + lz * sinRot;
+        const wz = z - lx * sinRot + lz * cosRot;
+        return [wx, cy + cyOff, wz];
+      });
 
       const faces = [
-        [3, 2, 6, 7, [0, 1, 0]],
-        [4, 5, 1, 0, [0, -1, 0]],
-        [7, 6, 5, 4, [sinR, 0, cosR]],
-        [1, 2, 3, 0, [-sinR, 0, -cosR]],
-        [6, 2, 1, 5, [cosR, 0, -sinR]],
-        [0, 3, 7, 4, [-cosR, 0, sinR]],
+        [4, 5, 6, 7, [0, 1, 0]],   // Top
+        [3, 2, 1, 0, [0, -1, 0]],  // Bottom
+        [7, 6, 2, 3, [sinRot, 0, cosRot]], // Front
+        [5, 4, 0, 1, [-sinRot, 0, -cosRot]], // Back
+        [6, 5, 1, 2, [cosRot, 0, -sinRot]],  // Right
+        [4, 7, 3, 0, [-cosRot, 0, sinRot]], // Left
       ];
 
-      for (const face of faces) {
-        const [i0, i1, i2, i3, norm] = face;
-        const quadPts = [corners[i0], corners[i1], corners[i2], corners[i0], corners[i2], corners[i3]];
+      for (const [i1, i2, i3, i4, norm] of faces) {
+        const p1 = rotCorners[i1], p2 = rotCorners[i2], p3 = rotCorners[i3], p4 = rotCorners[i4];
+        const pts = [p1, p2, p3, p1, p3, p4];
         for (let p = 0; p < 6; p++) {
-          positions.push(quadPts[p][0], quadPts[p][1], quadPts[p][2]);
+          positions.push(pts[p][0], pts[p][1], pts[p][2]);
           normals.push(norm[0], norm[1], norm[2]);
           colors.push(color[0], color[1], color[2], color[3] || 1.0);
           uvs.push(0, 0);
@@ -172,27 +173,62 @@ export class Pedestrian {
       }
     };
 
-    const legSwing = Math.sin(this.walkCycle) * 0.42;
-    const armSwing = Math.sin(this.walkCycle) * 0.42;
-
-    // Torso
-    addBoxLocal(0, 1.2, 0, 0.48, 0.58, 0.28, this.shirtCol);
-
-    // Head
-    addBoxLocal(0, 1.65, 0, 0.25, 0.28, 0.25, this.skinCol);
-
     // Legs
-    addBoxLocal(-0.14, 0.45 + legSwing * 0.1, legSwing * 0.3, 0.18, 0.78, 0.2, this.pantsCol);
-    addBoxLocal(0.14, 0.45 - legSwing * 0.1, -legSwing * 0.3, 0.18, 0.78, 0.2, this.pantsCol);
+    addBoxRot(-0.12, y, swing * 0.15, 0.16, 0.72, 0.16, this.pantsCol);
+    addBoxRot(0.12, y, -swing * 0.15, 0.16, 0.72, 0.16, this.pantsCol);
+
+    // Torso (Shirt)
+    addBoxRot(0, y + 0.72, 0, 0.44, 0.65, 0.24, this.shirtCol);
 
     // Arms
-    if (this.isFleeing) {
-      // Arms raised in panic!
-      addBoxLocal(-0.30, 1.55, 0.1, 0.14, 0.55, 0.14, this.shirtCol);
-      addBoxLocal(0.30, 1.55, 0.1, 0.14, 0.55, 0.14, this.shirtCol);
-    } else {
-      addBoxLocal(-0.30, 1.15 - armSwing * 0.1, -armSwing * 0.25, 0.14, 0.58, 0.14, this.shirtCol);
-      addBoxLocal(0.30, 1.15 + armSwing * 0.1, armSwing * 0.25, 0.14, 0.58, 0.14, this.shirtCol);
+    addBoxRot(-0.28, y + 0.76, -swing * 0.15, 0.12, 0.55, 0.12, this.shirtCol);
+    addBoxRot(0.28, y + 0.76, swing * 0.15, 0.12, 0.55, 0.12, this.shirtCol);
+
+    // Head
+    addBoxRot(0, y + 1.37, 0, 0.26, 0.26, 0.26, this.skinCol);
+  }
+}
+
+export class CashPickup {
+  constructor(x, y, z, amount = 50) {
+    this.x = x;
+    this.y = y;
+    this.z = z;
+    this.amount = amount;
+    this.alive = true;
+    this.rot = 0;
+  }
+
+  update(dt, player) {
+    if (!this.alive) return;
+    this.rot += dt * 3.0;
+
+    const d = Math.hypot(this.x - player.x, this.z - player.z);
+    if (d < 1.6 && Math.abs(this.y - player.y) < 2.0) {
+      player.cash += this.amount;
+      this.alive = false;
+    }
+  }
+
+  buildMesh(positions, normals, colors, uvs) {
+    if (!this.alive) return;
+    const green = [0.15, 0.85, 0.35, 1.0];
+    const hoverY = this.y + 0.35 + Math.sin(this.rot * 2) * 0.08;
+
+    const s = 0.35;
+    const pts = [
+      [this.x - s, hoverY, this.z - s],
+      [this.x + s, hoverY, this.z - s],
+      [this.x + s, hoverY + 0.1, this.z + s],
+      [this.x - s, hoverY + 0.1, this.z + s],
+    ];
+
+    const quad = [pts[0], pts[1], pts[2], pts[0], pts[2], pts[3]];
+    for (const pt of quad) {
+      positions.push(pt[0], pt[1], pt[2]);
+      normals.push(0, 1, 0);
+      colors.push(green[0], green[1], green[2], green[3]);
+      uvs.push(0, 0);
     }
   }
 }
@@ -200,87 +236,65 @@ export class Pedestrian {
 export class PedestrianManager {
   constructor() {
     this.pedestrians = [];
-    this.cashPickups = []; // { x, y, z, amount }
+    this.pickups = [];
   }
 
   initCityPedestrians() {
-    // Spawn 28 pedestrians along downtown and waterfront sidewalks
-    const sidewalkPoints = [
-      { x: 68, z: -45 }, { x: 72, z: -55 }, { x: 65, z: -85 },
-      { x: 55, z: -70 }, { x: 80, z: -75 }, { x: 92, z: -60 },
-      { x: -116, z: 25 }, { x: -116, z: 65 }, { x: -116, z: 110 },
-      { x: -116, z: 155 }, { x: -116, z: -50 }, { x: -116, z: -120 },
-      { x: -60, z: -100 }, { x: -50, z: -130 }, { x: -70, z: -70 },
-      { x: 12, z: -40 }, { x: 12, z: 50 }, { x: 12, z: 120 },
-      { x: 55, z: 30 }, { x: 55, z: 100 }, { x: 125, z: -60 },
-      { x: 125, z: 50 }, { x: 140, z: 110 }, { x: 155, z: 125 },
+    // Spawn population around downtown sidewalks and market
+    const sidewalkZones = [
+      { xMin: 110, xMax: 160, zMin: -160, zMax: -80 }, // Downtown avenue sidewalks
+      { xMin: -95, xMax: -30, zMin: -160, zMax: -70 },  // Old Market
+      { xMin: -115, xMax: -90, zMin: 30, zMax: 180 },   // Promenade boardwalk
     ];
 
-    for (const pt of sidewalkPoints) {
-      const p = new Pedestrian(pt.x + (Math.random() - 0.5) * 4, 0, pt.z + (Math.random() - 0.5) * 4, Math.random() * Math.PI * 2);
-      this.pedestrians.push(p);
+    for (const zone of sidewalkZones) {
+      for (let i = 0; i < 10; i++) {
+        const x = zone.xMin + Math.random() * (zone.xMax - zone.xMin);
+        const z = zone.zMin + Math.random() * (zone.zMax - zone.zMin);
+        this.spawn(x, 0.22, z, Math.random() * Math.PI * 2);
+      }
     }
   }
 
-  spawn(x, y, z, rotY = 0) {
-    const ped = new Pedestrian(x, y, z, rotY);
-    this.pedestrians.push(ped);
-    return ped;
+  spawn(x, y, z, rot = 0) {
+    const p = new Pedestrian(x, y, z, rot);
+    this.pedestrians.push(p);
+    return p;
+  }
+
+  notifyGunfire(gx, gz, radius = 45) {
+    for (let i = 0; i < this.pedestrians.length; i++) {
+      const p = this.pedestrians[i];
+      if (p.alive && Math.hypot(p.x - gx, p.z - gz) < radius) {
+        p.fleeFrom(gx, gz);
+      }
+    }
   }
 
   update(dt, world, player, vehicles) {
     for (let i = 0; i < this.pedestrians.length; i++) {
-      const ped = this.pedestrians[i];
-      if (ped.alive) {
-        ped.update(dt, world, player, vehicles.vehicles);
-        if (!ped.alive) {
-          // Drop cash pickup
-          this.cashPickups.push({
-            x: ped.x,
-            y: 0.15,
-            z: ped.z,
-            amount: 40 + Math.floor(Math.random() * 80),
-          });
-        }
+      const p = this.pedestrians[i];
+      p.update(dt, world, player, vehicles);
+
+      // If just died, drop cash
+      if (!p.alive && !p.hasDroppedCash) {
+        p.hasDroppedCash = true;
+        this.pickups.push(new CashPickup(p.x, p.y, p.z, 25 + Math.floor(Math.random() * 75)));
       }
     }
 
-    // Player collects cash pickups
-    for (let i = this.cashPickups.length - 1; i >= 0; i--) {
-      const cp = this.cashPickups[i];
-      const dist = Math.hypot(player.x - cp.x, player.z - cp.z);
-      if (dist < 1.8) {
-        player.cash += cp.amount;
-        this.cashPickups.splice(i, 1);
-      }
+    for (let i = 0; i < this.pickups.length; i++) {
+      this.pickups[i].update(dt, player);
     }
+    this.pickups = this.pickups.filter((pk) => pk.alive);
   }
 
   buildMesh(positions, normals, colors, uvs) {
     for (let i = 0; i < this.pedestrians.length; i++) {
       this.pedestrians[i].buildMesh(positions, normals, colors, uvs);
     }
-
-    // Render green cash pickups
-    const cashGreen = [0.15, 0.85, 0.25, 1.0];
-    for (let i = 0; i < this.cashPickups.length; i++) {
-      const cp = this.cashPickups[i];
-      const hx = 0.35, hz = 0.2, hy = 0.08;
-      // Simple glowing money stack
-      const pts = [
-        [cp.x - hx, cp.y + hy, cp.z - hz],
-        [cp.x + hx, cp.y + hy, cp.z - hz],
-        [cp.x + hx, cp.y + hy, cp.z + hz],
-        [cp.x - hx, cp.y + hy, cp.z - hz],
-        [cp.x + hx, cp.y + hy, cp.z + hz],
-        [cp.x - hx, cp.y + hy, cp.z + hz],
-      ];
-      for (let p = 0; p < 6; p++) {
-        positions.push(pts[p][0], pts[p][1], pts[p][2]);
-        normals.push(0, 1, 0);
-        colors.push(cashGreen[0], cashGreen[1], cashGreen[2], 1.0);
-        uvs.push(0, 0);
-      }
+    for (let i = 0; i < this.pickups.length; i++) {
+      this.pickups[i].buildMesh(positions, normals, colors, uvs);
     }
   }
 }

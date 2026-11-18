@@ -1,11 +1,18 @@
 /**
- * Nightfall City: Vela Bay - Menu & Interface Screens
+ * Nightfall City: Vela Bay - Interface & Navigation Menus
  * Authored by makefun agent for the GTA 6 bounty challenge.
+ *
+ * Implements:
+ * - Clean pause overlay with game state suspension
+ * - Interactive options: Resume, Controls Guide, Mission Log, Audio Synth Toggle, Restart
+ * - In-depth Controls Cheatsheet displaying keyboard & mouse mappings
+ * - 8-stage Syndicate Campaign Dossier with completion indicators and cash bounties
+ * - Grand Victory screen acknowledging campaign triumph in Vela Bay
  */
 
 export class MenuManager {
   constructor() {
-    this.state = 'none'; // 'none', 'title', 'pause', 'mission_log', 'victory'
+    this.state = 'none'; // 'none', 'pause', 'controls', 'mission_log', 'victory'
     this.selectedIdx = 0;
   }
 
@@ -24,10 +31,9 @@ export class MenuManager {
 
   togglePause() {
     if (this.state === 'none') {
-      this.state = 'pause';
-      this.selectedIdx = 0;
+      this.openPause();
     } else {
-      this.state = 'none';
+      this.resume();
     }
   }
 
@@ -39,7 +45,7 @@ export class MenuManager {
       return;
     }
 
-    // Navigation in menus
+    // Modal navigation
     if (input.isJustPressed('ArrowUp') || input.isJustPressed('KeyW')) {
       this.selectedIdx = Math.max(0, this.selectedIdx - 1);
     }
@@ -48,84 +54,102 @@ export class MenuManager {
     }
 
     if (this.state === 'pause') {
-      this.selectedIdx = Math.min(3, this.selectedIdx);
+      const maxIdx = 4;
+      this.selectedIdx = Math.min(maxIdx, this.selectedIdx);
+
       if (input.isJustPressed('Enter') || input.isJustPressed('Space')) {
         if (this.selectedIdx === 0) {
           this.resume();
         } else if (this.selectedIdx === 1) {
-          this.state = 'mission_log';
+          this.state = 'controls';
         } else if (this.selectedIdx === 2) {
-          if (audio) audio.toggleMute();
+          this.state = 'mission_log';
         } else if (this.selectedIdx === 3) {
-          // Restart to mission 1
+          if (audio) audio.toggleMute();
+        } else if (this.selectedIdx === 4) {
+          // Restart campaign from mission 1
           missions.loadMission(0);
           player.health = 100;
           player.armor = 50;
+          if (saveSystem) saveSystem.save(missions.currentIdx, player);
           this.resume();
         }
       }
-    } else if (this.state === 'mission_log') {
-      if (input.isJustPressed('Escape') || input.isJustPressed('Enter') || input.isJustPressed('Space')) {
+      if (input.isJustPressed('Escape')) {
+        this.resume();
+      }
+    } else if (this.state === 'controls' || this.state === 'mission_log') {
+      if (input.isJustPressed('Escape') || input.isJustPressed('Enter') || input.isJustPressed('Space') || input.isJustPressed('Backspace')) {
         this.state = 'pause';
       }
     } else if (this.state === 'victory') {
-      if (input.isJustPressed('Enter') || input.isJustPressed('Space')) {
+      if (input.isJustPressed('Enter') || input.isJustPressed('Space') || input.isJustPressed('Escape')) {
         this.state = 'none';
       }
     }
   }
 
-  render(ctx, w, h, missions, player) {
+  render(ctx, w, h, missions, player, audio) {
     if (this.state === 'none') return;
 
-    // Dark translucent background overlay
-    ctx.fillStyle = 'rgba(6, 8, 14, 0.88)';
+    // Frosted dark backdrop
+    ctx.save();
+    ctx.fillStyle = 'rgba(7, 10, 16, 0.90)';
     ctx.fillRect(0, 0, w, h);
 
     if (this.state === 'pause') {
-      this.renderPauseMenu(ctx, w, h);
+      this.renderPauseMenu(ctx, w, h, audio);
+    } else if (this.state === 'controls') {
+      this.renderControlsGuide(ctx, w, h);
     } else if (this.state === 'mission_log') {
       this.renderMissionLog(ctx, w, h, missions);
     } else if (this.state === 'victory') {
       this.renderVictoryScreen(ctx, w, h, player);
     }
+
+    ctx.restore();
   }
 
-  renderPauseMenu(ctx, w, h) {
+  renderPauseMenu(ctx, w, h, audio) {
     const cx = w * 0.5;
-    let cy = h * 0.28;
+    let cy = h * 0.22;
 
-    // Title
+    // Header Logo
     ctx.textAlign = 'center';
-    ctx.font = '900 48px "Arial Black", sans-serif';
+    ctx.font = '900 46px "Arial Black", sans-serif';
     ctx.fillStyle = '#ffbb00';
+    ctx.shadowColor = 'rgba(255, 187, 0, 0.4)';
+    ctx.shadowBlur = 12;
     ctx.fillText('NIGHTFALL CITY: VELA BAY', cx, cy);
+    ctx.shadowBlur = 0;
 
-    ctx.font = 'bold 18px sans-serif';
-    ctx.fillStyle = 'rgba(200, 210, 230, 0.75)';
-    ctx.fillText('GAME PAUSED', cx, cy + 34);
+    ctx.font = 'bold 16px sans-serif';
+    ctx.fillStyle = 'rgba(180, 205, 230, 0.85)';
+    ctx.fillText('SIMULATION PAUSED', cx, cy + 34);
 
-    // Options
+    const isMuted = audio ? audio.isMuted : false;
     const options = [
       'RESUME GAME',
-      'MISSION LOG & JOBS',
-      'TOGGLE AUDIO SYNTH',
+      'CONTROLS & SHORTCUTS',
+      'SYNDICATE MISSION LOG',
+      isMuted ? 'AUDIO: MUTED [UNMUTE]' : 'AUDIO: ENABLED [MUTE]',
       'RESTART TO MISSION 1',
     ];
 
-    cy += 95;
+    cy += 82;
     for (let i = 0; i < options.length; i++) {
       const isSel = i === this.selectedIdx;
       if (isSel) {
-        ctx.fillStyle = 'rgba(255, 187, 0, 0.25)';
-        ctx.fillRect(cx - 180, cy - 24, 360, 38);
+        ctx.fillStyle = 'rgba(255, 187, 0, 0.22)';
+        ctx.fillRect(cx - 210, cy - 24, 420, 40);
         ctx.strokeStyle = '#ffbb00';
         ctx.lineWidth = 2;
-        ctx.strokeRect(cx - 180, cy - 24, 360, 38);
+        ctx.strokeRect(cx - 210, cy - 24, 420, 40);
+
         ctx.fillStyle = '#ffea66';
-        ctx.font = '900 20px sans-serif';
+        ctx.font = '900 21px sans-serif';
       } else {
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = '#e2e8f0';
         ctx.font = 'bold 18px sans-serif';
       }
       ctx.fillText(options[i], cx, cy);
@@ -133,21 +157,71 @@ export class MenuManager {
     }
 
     ctx.font = '13px sans-serif';
-    ctx.fillStyle = 'rgba(180, 190, 205, 0.6)';
-    ctx.fillText('[W / S or Arrow Keys] Navigate    [Enter / Space] Select    [Esc] Resume', cx, h - 45);
+    ctx.fillStyle = 'rgba(160, 180, 205, 0.65)';
+    ctx.fillText('[W / S or Arrow Keys] Select    [Enter / Space] Confirm    [Esc] Resume', cx, h - 38);
+  }
+
+  renderControlsGuide(ctx, w, h) {
+    const cx = w * 0.5;
+    let cy = 70;
+
+    ctx.textAlign = 'center';
+    ctx.font = '900 34px "Arial Black", sans-serif';
+    ctx.fillStyle = '#ffbb00';
+    ctx.fillText('VELA BAY OPERATOR CONTROLS', cx, cy);
+
+    cy += 48;
+    const boxW = Math.min(800, w - 80);
+    const boxX = (w - boxW) * 0.5;
+
+    const keybinds = [
+      { key: 'W / A / S / D', action: 'Move Rook on Foot / Steer & Accelerate Vehicle' },
+      { key: 'Shift (Hold)', action: 'Sprint on foot / Nitro boost acceleration in cars' },
+      { key: 'Space', action: 'Handbrake Drift / Slide in vehicle / Jump on foot' },
+      { key: 'F / Enter', action: 'Enter or Exit nearby Vehicle' },
+      { key: 'Left Click', action: 'Fire Weapon (Pistol / SMG / Shotgun / Carbine)' },
+      { key: 'Right Click (Hold)', action: 'Aim Down Sights (Zoomed tactical camera)' },
+      { key: '1, 2, 3, 4', action: 'Equip Pistol, SMG, Shotgun, or Carbine' },
+      { key: 'R', action: 'Reload current weapon magazine' },
+      { key: 'E', action: 'Horn in vehicle / Interact with contacts' },
+      { key: 'H', action: 'Toggle Vehicle Headlights' },
+      { key: 'Esc / P', action: 'Pause Game / View Dossier' },
+    ];
+
+    for (let i = 0; i < keybinds.length; i++) {
+      const kb = keybinds[i];
+      ctx.fillStyle = i % 2 === 0 ? 'rgba(25, 33, 48, 0.8)' : 'rgba(18, 24, 36, 0.8)';
+      ctx.fillRect(boxX, cy, boxW, 36);
+
+      ctx.textAlign = 'left';
+      ctx.font = '900 14px monospace';
+      ctx.fillStyle = '#ffbb00';
+      ctx.fillText(kb.key, boxX + 18, cy + 23);
+
+      ctx.font = '14px sans-serif';
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillText(kb.action, boxX + 220, cy + 23);
+
+      cy += 40;
+    }
+
+    ctx.textAlign = 'center';
+    ctx.font = '14px sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('[Esc / Enter] Back to Menu', cx, h - 30);
   }
 
   renderMissionLog(ctx, w, h, missions) {
     const cx = w * 0.5;
-    let cy = 60;
+    let cy = 55;
 
     ctx.textAlign = 'center';
     ctx.font = '900 32px "Arial Black", sans-serif';
     ctx.fillStyle = '#ffbb00';
-    ctx.fillText('VELA BAY SYNDICATE MISSION LOG', cx, cy);
+    ctx.fillText('SYNDICATE CAMPAIGN CONTRACTS', cx, cy);
 
-    cy += 45;
-    const boxW = Math.min(840, w - 80);
+    cy += 42;
+    const boxW = Math.min(880, w - 80);
     const boxX = (w - boxW) * 0.5;
 
     for (let i = 0; i < missions.missions.length; i++) {
@@ -155,52 +229,55 @@ export class MenuManager {
       const isCurrent = i === missions.currentIdx;
       const isCompleted = i < missions.currentIdx;
 
-      ctx.fillStyle = isCurrent ? 'rgba(255, 187, 0, 0.18)' : 'rgba(20, 25, 35, 0.7)';
+      ctx.fillStyle = isCurrent ? 'rgba(255, 187, 0, 0.20)' : 'rgba(18, 23, 34, 0.75)';
       ctx.fillRect(boxX, cy, boxW, 56);
 
-      ctx.strokeStyle = isCurrent ? '#ffbb00' : 'rgba(70, 80, 100, 0.4)';
+      ctx.strokeStyle = isCurrent ? '#ffbb00' : 'rgba(75, 90, 115, 0.45)';
       ctx.lineWidth = isCurrent ? 2 : 1;
       ctx.strokeRect(boxX, cy, boxW, 56);
 
       ctx.textAlign = 'left';
-      ctx.font = 'bold 16px sans-serif';
-      ctx.fillStyle = isCurrent ? '#ffea66' : (isCompleted ? '#44ee77' : '#99aabf');
-      ctx.fillText(`${m.title} ${isCompleted ? '✓ COMPLETED' : (isCurrent ? '★ ACTIVE' : 'LOCKED')}`, boxX + 16, cy + 24);
+      ctx.font = 'bold 15px sans-serif';
+      ctx.fillStyle = isCurrent ? '#ffea66' : (isCompleted ? '#44ee77' : '#8899aa');
+      ctx.fillText(`${m.title} ${isCompleted ? '✓ COMPLETED' : (isCurrent ? '★ ACTIVE TARGET' : 'LOCKED')}`, boxX + 18, cy + 23);
 
       ctx.font = '13px sans-serif';
-      ctx.fillStyle = 'rgba(220, 225, 235, 0.8)';
-      ctx.fillText(m.desc, boxX + 16, cy + 44);
+      ctx.fillStyle = 'rgba(215, 225, 240, 0.85)';
+      ctx.fillText(m.desc, boxX + 18, cy + 43);
 
       ctx.textAlign = 'right';
-      ctx.font = 'bold 15px sans-serif';
+      ctx.font = '900 15px sans-serif';
       ctx.fillStyle = '#55ff77';
-      ctx.fillText(`$${m.rewardCash}`, boxX + boxW - 16, cy + 32);
+      ctx.fillText(`$${m.rewardCash.toLocaleString()}`, boxX + boxW - 18, cy + 32);
 
-      cy += 64;
+      cy += 63;
     }
 
     ctx.textAlign = 'center';
     ctx.font = '14px sans-serif';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText('[Esc or Enter] Back to Pause Menu', cx, h - 35);
+    ctx.fillText('[Esc / Enter] Back to Menu', cx, h - 25);
   }
 
   renderVictoryScreen(ctx, w, h, player) {
     const cx = w * 0.5;
-    let cy = h * 0.32;
+    let cy = h * 0.30;
 
     ctx.textAlign = 'center';
-    ctx.font = '900 44px "Arial Black", sans-serif';
+    ctx.font = '900 46px "Arial Black", sans-serif';
     ctx.fillStyle = '#ffbb00';
+    ctx.shadowColor = 'rgba(255, 187, 0, 0.6)';
+    ctx.shadowBlur = 18;
     ctx.fillText('CAMPAIGN COMPLETE!', cx, cy);
+    ctx.shadowBlur = 0;
 
     ctx.font = 'bold 22px sans-serif';
     ctx.fillStyle = '#55ff88';
-    ctx.fillText(`TOTAL REPUTATION & CASH: $${player.cash.toLocaleString()}`, cx, cy + 45);
+    ctx.fillText(`TOTAL REPUTATION & STASH: $${player.cash.toLocaleString()}`, cx, cy + 46);
 
     ctx.font = '16px sans-serif';
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText('You took down the Syndicate and conquered Nightfall City: Vela Bay.', cx, cy + 85);
-    ctx.fillText('Press [Enter] to continue exploring in Free Roam mode.', cx, cy + 125);
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillText('You toppled the Syndicate and conquered Nightfall City: Vela Bay.', cx, cy + 90);
+    ctx.fillText('Press [Enter] or [Space] to resume free-roaming exploration.', cx, cy + 130);
   }
 }

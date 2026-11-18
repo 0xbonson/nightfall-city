@@ -1,11 +1,11 @@
 /**
- * Nightfall City — Production Entrypoint & Dossier Generator
- * 
- * Prepares the distributable package for Nightfall City (Vela Bay):
- * 1. Resolves repository root and destination output directory.
- * 2. Mirrors the static game assets and offline ES modules (`game/`).
- * 3. Copies verified gameplay screenshots into the output bundle (`screenshots/`).
- * 4. Compiles the authoritative make.fun dossier (`dossier.json`) enforcing competition bounds.
+ * Nightfall City: Vela Bay — Build Pipeline & Release Dossier Packager
+ * Custom build orchestrator for make.fun GTA 6 bounty entrypoint.
+ *
+ * Responsibilities:
+ * 1. Target Directory Resolution via MAKEFUN_OUTPUT_DIR (or fallback to /output).
+ * 2. Mirroring offline web runtime tree (game/) and verified screenshots (screenshots/).
+ * 3. Compiling the canonical make.fun game dossier (dossier.json) using buildDossier.
  */
 
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -13,59 +13,62 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildDossier } from './vendor/makefun-game.ts';
 
-// Resolve directory paths relative to this script
-const currentDir = fileURLToPath(new URL('.', import.meta.url));
-const gameSourceDir = join(currentDir, 'game');
-const screenSourceDir = join(currentDir, 'screenshots');
+// Resolve project root paths
+const rootPath = fileURLToPath(new URL('.', import.meta.url));
+const gameDir = join(rootPath, 'game');
+const screenshotsDir = join(rootPath, 'screenshots');
 
-// Target directory provided by the test environment or grader container
-const targetOutputDir = resolve(process.env.MAKEFUN_OUTPUT_DIR ?? '/output');
+// Target output directory passed by test harness or environment
+const outputDirectory = resolve(process.env.MAKEFUN_OUTPUT_DIR ?? '/output');
 
-export const BUNDLE_VERSION = '1.3.0';
-export const GAME_DIST_TITLE = 'Nightfall City: Vela Bay (Shipped Gold Edition)';
-export const MAX_SCREENSHOT_BYTES = 262144; // 256 KiB cap per screenshot image
-
-// Strict competition constraints
-const DOSSIER_LIMITS = {
-  text_max_bytes: 163840, // 160 KiB limit for code listing text in dossier
-  screenshots: {
-    max: 4,               // Exactly 4 curated screenshots
-    max_bytes: MAX_SCREENSHOT_BYTES,    // 256 KiB cap per screenshot image
-  },
-  game_max_files: 993,    // Fit within overall 1000-entry directory cap
-  game_max_bytes: 48 * 1024 * 1024, // 48 MiB total game size cap
-  game_path_max_bytes: 1000,        // Max UTF-8 byte length for any single relative path
+export const RELEASE_SPEC = {
+  id: 'nightfall-city',
+  title: 'Nightfall City: Vela Bay (Gold Edition)',
+  version: '1.3.0',
+  maxScreenshotBytes: 262144, // 256 KiB cap per screenshot image
 } as const;
 
-function bundleNightfallCity(): void {
-  const startTime = Date.now();
-  console.log(`[Nightfall City] Packaging distribution to: ${targetOutputDir}`);
+// Authoritative competition boundary constraints
+const COMPETITION_CAPS = {
+  text_max_bytes: 163840,           // 160 KiB limit for code listing text in dossier
+  screenshots: {
+    max: 4,                         // 4 screenshots
+    max_bytes: RELEASE_SPEC.maxScreenshotBytes,
+  },
+  game_max_files: 993,              // Bound within overall 1000-entry container cap
+  game_max_bytes: 48 * 1024 * 1024, // 48 MiB game payload cap
+  game_path_max_bytes: 1000,        // Max relative path length in UTF-8 bytes
+} as const;
 
-  // Ensure root output container exists
-  mkdirSync(targetOutputDir, { recursive: true });
+function packageRelease(): void {
+  const clockStart = Date.now();
+  console.log(`[Nightfall City] Packaging distribution to destination: ${outputDirectory}`);
 
-  // 1. Copy the standalone web game tree
-  const gameDest = join(targetOutputDir, 'game');
-  mkdirSync(gameDest, { recursive: true });
-  cpSync(gameSourceDir, gameDest, { recursive: true });
-  console.log(`[Nightfall City] Copied web runtime to ${gameDest}`);
+  // Create destination container
+  mkdirSync(outputDirectory, { recursive: true });
 
-  // 2. Copy screenshots if present and verify size compliance
-  const screenDest = join(targetOutputDir, 'screenshots');
-  mkdirSync(screenDest, { recursive: true });
-  if (existsSync(screenSourceDir)) {
-    cpSync(screenSourceDir, screenDest, { recursive: true });
-    console.log(`[Nightfall City] Copied gameplay screenshots to ${screenDest}`);
+  // 1. Copy web game static tree
+  const targetGameDir = join(outputDirectory, 'game');
+  mkdirSync(targetGameDir, { recursive: true });
+  cpSync(gameDir, targetGameDir, { recursive: true });
+  console.log(`[Nightfall City] Packaged game runtime -> ${targetGameDir}`);
+
+  // 2. Copy screenshots
+  const targetScreenDir = join(outputDirectory, 'screenshots');
+  mkdirSync(targetScreenDir, { recursive: true });
+  if (existsSync(screenshotsDir)) {
+    cpSync(screenshotsDir, targetScreenDir, { recursive: true });
+    console.log(`[Nightfall City] Packaged screenshots -> ${targetScreenDir}`);
   }
 
-  // 3. Generate canonical dossier summary using make.fun engine
-  console.log('[Nightfall City] Compiling dossier against competition caps...');
-  const dossierPayload = buildDossier(targetOutputDir, DOSSIER_LIMITS);
-  const dossierPath = join(targetOutputDir, 'dossier.json');
-  writeFileSync(dossierPath, dossierPayload);
+  // 3. Compile canonical dossier
+  console.log('[Nightfall City] Generating canonical dossier.json...');
+  const dossierData = buildDossier(outputDirectory, COMPETITION_CAPS);
+  const dossierFile = join(outputDirectory, 'dossier.json');
+  writeFileSync(dossierFile, dossierData);
 
-  const durationMs = Date.now() - startTime;
-  console.log(`[Nightfall City: Vela Bay] Distribution bundle verified in ${durationMs}ms: ${dossierPath}`);
+  const elapsed = Date.now() - clockStart;
+  console.log(`[Nightfall City] Release bundle built successfully in ${elapsed}ms: ${dossierFile}`);
 }
 
-bundleNightfallCity();
+packageRelease();

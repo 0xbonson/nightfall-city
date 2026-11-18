@@ -1,10 +1,12 @@
 /**
- * Nightfall City: Vela Bay - Protagonist Player Character
- * Authored by makefun agent for the GTA 6 bounty challenge.
+ * Nightfall City: Vela Bay - Protagonist Character Controller
+ * Rhea "Rook" Solano: articulated 3D character with walk/sprint kinetics,
+ * dynamic weapon handling, car entry/exit transitions, and damage modeling.
+ * Authored for make.fun GTA 6 bounty challenge.
  */
 
-import { PLAYER, WEAPONS, WORLD } from './config.js';
-import { clamp, normalizeAngle } from './math.js';
+import { PLAYER, WEAPONS } from './config.js';
+import { clamp, normalizeAngle, lerp } from './math.js';
 
 export class Player {
   constructor(x = 68, y = 0, z = -68) {
@@ -33,13 +35,14 @@ export class Player {
     this.isReloading = false;
     this.reloadTimer = 0;
 
-    // Animation
+    // Animation & Gait
     this.walkCycle = 0;
     this.isMoving = false;
     this.isSprinting = false;
 
     // Audio step trigger flag
     this.stepTrigger = false;
+    this.lastStepPhase = 0;
   }
 
   takeDamage(amount) {
@@ -53,6 +56,36 @@ export class Player {
     if (this.health <= 0) {
       this.alive = false;
     }
+  }
+
+  enterVehicle(car) {
+    if (!car) return;
+    this.inVehicle = true;
+    this.vehicle = car;
+    car.isPlayerControlled = true;
+    car.driver = this;
+  }
+
+  exitVehicle(world) {
+    if (!this.vehicle) return;
+    const car = this.vehicle;
+    car.isPlayerControlled = false;
+    car.driver = null;
+
+    // Exit onto left side
+    const exitDist = car.spec.width * 0.5 + 1.2;
+    const exX = car.x - Math.cos(car.rotY) * exitDist;
+    const exZ = car.z + Math.sin(car.rotY) * exitDist;
+
+    this.x = exX;
+    this.y = car.y;
+    this.z = exZ;
+    this.rotY = car.rotY;
+
+    this.inVehicle = false;
+    this.vehicle = null;
+    this.vx = 0;
+    this.vz = 0;
   }
 
   update(dt, input, camera, world, vehicles) {
@@ -73,7 +106,7 @@ export class Player {
       return;
     }
 
-    // Vehicle hijacking / entry
+    // Vehicle entry
     if (input.isJustPressed('KeyF') || input.isJustPressed('KeyE')) {
       const nearCar = vehicles.findNearest(this.x, this.z, PLAYER.ENTER_CAR_DIST);
       if (nearCar) {
@@ -82,14 +115,14 @@ export class Player {
       }
     }
 
-    // Weapon Switching: 1, 2, Q
+    // Weapon Switching
     if (input.isJustPressed('Digit1')) this.currentWeapon = 'pistol';
     if (input.isJustPressed('Digit2')) this.currentWeapon = 'rifle';
     if (input.isJustPressed('KeyQ')) {
       this.currentWeapon = this.currentWeapon === 'pistol' ? 'rifle' : 'pistol';
     }
 
-    // Reloading
+    // Weapon Reloading
     const wep = WEAPONS[this.currentWeapon];
     const ammoState = this.ammo[this.currentWeapon];
 
@@ -103,157 +136,116 @@ export class Player {
       if (this.reloadTimer <= 0) {
         this.isReloading = false;
         const needed = wep.clipSize - ammoState.clip;
-        const add = Math.min(needed, ammoState.reserve);
-        ammoState.clip += add;
-        ammoState.reserve -= add;
+        const available = Math.min(needed, ammoState.reserve);
+        ammoState.clip += available;
+        ammoState.reserve -= available;
       }
     }
 
-    // On-Foot Movement
-    let moveForward = 0;
-    let moveStrafe = 0;
+    // Foot Traversal Direction
+    let fwd = 0;
+    let strafe = 0;
+    if (input.isDown('KeyW') || input.isDown('ArrowUp')) fwd += 1;
+    if (input.isDown('KeyS') || input.isDown('ArrowDown')) fwd -= 1;
+    if (input.isDown('KeyD') || input.isDown('ArrowRight')) strafe += 1;
+    if (input.isDown('KeyA') || input.isDown('ArrowLeft')) strafe -= 1;
 
-    if (input.isDown('KeyW') || input.isDown('ArrowUp')) moveForward += 1;
-    if (input.isDown('KeyS') || input.isDown('ArrowDown')) moveForward -= 1;
-    if (input.isDown('KeyA') || input.isDown('ArrowLeft')) moveStrafe -= 1;
-    if (input.isDown('KeyD') || input.isDown('ArrowRight')) moveStrafe += 1;
-
+    this.isMoving = fwd !== 0 || strafe !== 0;
     this.isSprinting = input.isDown('ShiftLeft') || input.isDown('ShiftRight');
-    const targetSpeed = this.isSprinting ? PLAYER.SPRINT_SPEED : PLAYER.WALK_SPEED;
 
-    const moveMag = Math.hypot(moveForward, moveStrafe);
-    this.isMoving = moveMag > 0.1;
+    const targetSpeed = this.isMoving ? (this.isSprinting ? PLAYER.SPRINT_SPEED : PLAYER.WALK_SPEED) : 0;
 
     if (this.isMoving) {
-      // Calculate movement relative to camera look yaw
-      const camYaw = camera.yaw;
-      const moveAngle = Math.atan2(moveStrafe, moveForward) + camYaw;
+      // Orient relative to camera yaw
+      const camYaw = camera ? camera.yaw : 0;
+      const moveAngle = Math.atan2(strafe, fwd) + camYaw;
 
-      const targetVx = Math.sin(moveAngle) * targetSpeed;
-      const targetVz = Math.cos(moveAngle) * targetSpeed;
+      // Face forward motion direction
+      this.rotY = lerp(this.rotY, moveAngle, dt * PLAYER.ROT_SPEED);
+      this.rotY = normalizeAngle(this.rotY);
 
-      this.vx = this.vx + (targetVx - this.vx) * clamp(dt * PLAYER.ACCEL, 0, 1);
-      this.vz = this.vz + (targetVz - this.vz) * clamp(dt * PLAYER.ACCEL, 0, 1);
+      this.vx = Math.sin(this.rotY) * targetSpeed;
+      this.vz = Math.cos(this.rotY) * targetSpeed;
 
-      // Face direction of movement smoothly
-      const targetRotY = moveAngle;
-      let dRot = normalizeAngle(targetRotY - this.rotY);
-      this.rotY += dRot * clamp(dt * PLAYER.TURN_SPEED, 0, 1);
+      // Update footstep animation
+      const prevPhase = Math.sin(this.walkCycle);
+      this.walkCycle += dt * (this.isSprinting ? 12.0 : 8.0);
+      const currPhase = Math.sin(this.walkCycle);
 
-      // Animate walk cycle
-      const prevCycle = this.walkCycle;
-      this.walkCycle += Math.hypot(this.vx, this.vz) * dt * (this.isSprinting ? 6.2 : 4.4);
-      if (Math.floor(this.walkCycle / Math.PI) !== Math.floor(prevCycle / Math.PI)) {
+      // Foot contact detection
+      if (prevPhase < 0 && currPhase >= 0) {
         this.stepTrigger = true;
       }
     } else {
-      // Decelerate to stop
-      this.vx += (0 - this.vx) * clamp(dt * PLAYER.DECEL, 0, 1);
-      this.vz += (0 - this.vz) * clamp(dt * PLAYER.DECEL, 0, 1);
-      this.walkCycle = 0;
+      this.vx = lerp(this.vx, 0, dt * 14.0);
+      this.vz = lerp(this.vz, 0, dt * 14.0);
     }
 
-    // Move & Collision sliding
-    const newX = this.x + this.vx * dt;
-    const newZ = this.z + this.vz * dt;
+    const prevX = this.x;
+    const prevZ = this.z;
 
-    // Test X collision
-    const colX = world.checkCollision(newX, this.z, PLAYER.RADIUS);
-    if (colX.collided) {
-      this.x = newX + colX.pushX;
-      this.vx = 0;
-    } else {
-      this.x = newX;
+    this.x += this.vx * dt;
+    this.z += this.vz * dt;
+
+    // Collision with city buildings
+    const col = world.checkCollision(this.x, this.z, 0.42);
+    if (col.collided) {
+      this.x = prevX + col.pushX;
+      this.z = prevZ + col.pushZ;
     }
-
-    // Test Z collision
-    const colZ = world.checkCollision(this.x, newZ, PLAYER.RADIUS);
-    if (colZ.collided) {
-      this.z = newZ + colZ.pushZ;
-      this.vz = 0;
-    } else {
-      this.z = newZ;
-    }
-
-    // Keep player within world bounds
-    const limit = WORLD.HALF_SIZE - 2;
-    this.x = clamp(this.x, WORLD.COAST_X - 18, limit);
-    this.z = clamp(this.z, -limit, limit);
   }
 
-  enterVehicle(vehicle) {
-    this.inVehicle = true;
-    this.vehicle = vehicle;
-    vehicle.driver = this;
-    vehicle.isPlayerControlled = true;
-  }
-
-  exitVehicle(world) {
-    if (!this.vehicle) return;
-    // Place player to the left of the driver door
-    const exitAngle = this.vehicle.rotY - Math.PI * 0.5;
-    const exitX = this.vehicle.x + Math.sin(exitAngle) * 2.2;
-    const exitZ = this.vehicle.z + Math.cos(exitAngle) * 2.2;
-
-    this.x = exitX;
-    this.y = this.vehicle.y;
-    this.z = exitZ;
-    this.vx = 0;
-    this.vz = 0;
-
-    this.vehicle.isPlayerControlled = false;
-    this.vehicle.driver = null;
-    this.vehicle = null;
-    this.inVehicle = false;
-  }
-
-  // --- Procedural 3D Character Mesh ---
   buildMesh(positions, normals, colors, uvs) {
-    if (this.inVehicle) return; // Player is inside car
+    if (this.inVehicle || !this.alive) return;
 
-    const px = this.x;
-    const py = this.y;
-    const pz = this.z;
+    const x = this.x;
+    const y = this.y;
+    const z = this.z;
     const rot = this.rotY;
 
-    const cosR = Math.cos(rot);
-    const sinR = Math.sin(rot);
+    const sinRot = Math.sin(rot);
+    const cosRot = Math.cos(rot);
 
-    // Helper to rotate local character coordinate to world
-    const toWorld = (lx, ly, lz) => {
-      const wx = px + (lx * cosR + lz * sinR);
-      const wy = py + ly;
-      const wz = pz + (-lx * sinR + lz * cosR);
-      return [wx, wy, wz];
-    };
+    const swing = Math.sin(this.walkCycle) * (this.isMoving ? 0.45 : 0);
 
-    const addBoxLocal = (lx, ly, lz, sx, sy, sz, color) => {
+    const jacketCol = [0.18, 0.20, 0.25, 1.0]; // Black leather jacket
+    const shirtCol = [0.94, 0.35, 0.22, 1.0];  // Sunset orange inner tee
+    const pantsCol = [0.16, 0.22, 0.35, 1.0];  // Dark navy tactical jeans
+    const skinCol = [0.88, 0.72, 0.58, 1.0];
+    const bootsCol = [0.12, 0.12, 0.14, 1.0];
+    const gunCol = [0.15, 0.15, 0.18, 1.0];
+
+    const addBoxRot = (bx, by, bz, sx, sy, sz, color) => {
       const hx = sx * 0.5, hy = sy * 0.5, hz = sz * 0.5;
+      const cy = by + hy;
+
       const corners = [
-        toWorld(lx - hx, ly - hy, lz - hz),
-        toWorld(lx + hx, ly - hy, lz - hz),
-        toWorld(lx + hx, ly + hy, lz - hz),
-        toWorld(lx - hx, ly + hy, lz - hz),
-        toWorld(lx - hx, ly - hy, lz + hz),
-        toWorld(lx + hx, ly - hy, lz + hz),
-        toWorld(lx + hx, ly + hy, lz + hz),
-        toWorld(lx - hx, ly + hy, lz + hz),
+        [-hx, -hy, -hz], [hx, -hy, -hz], [hx, -hy, hz], [-hx, -hy, hz],
+        [-hx, hy, -hz],  [hx, hy, -hz],  [hx, hy, hz],  [-hx, hy, hz],
       ];
+
+      const rotCorners = corners.map(([cx, cyOff, cz]) => {
+        const lx = cx + bx;
+        const lz = cz + bz;
+        const wx = x + lx * cosRot + lz * sinRot;
+        const wz = z - lx * sinRot + lz * cosRot;
+        return [wx, cy + cyOff, wz];
+      });
 
       const faces = [
-        [3, 2, 6, 7, [0, 1, 0]],   // Top
-        [4, 5, 1, 0, [0, -1, 0]],  // Bottom
-        [7, 6, 5, 4, [sinR, 0, cosR]], // Front
-        [1, 2, 3, 0, [-sinR, 0, -cosR]], // Back
-        [6, 2, 1, 5, [cosR, 0, -sinR]],  // Right
-        [0, 3, 7, 4, [-cosR, 0, sinR]],  // Left
+        [4, 5, 6, 7, [0, 1, 0]],   // Top
+        [3, 2, 1, 0, [0, -1, 0]],  // Bottom
+        [7, 6, 2, 3, [sinRot, 0, cosRot]], // Front (+Z)
+        [5, 4, 0, 1, [-sinRot, 0, -cosRot]], // Back (-Z)
+        [6, 5, 1, 2, [cosRot, 0, -sinRot]],  // Right (+X)
+        [4, 7, 3, 0, [-cosRot, 0, sinRot]], // Left (-X)
       ];
 
-      for (const face of faces) {
-        const [i0, i1, i2, i3, norm] = face;
-        const quadPts = [corners[i0], corners[i1], corners[i2], corners[i0], corners[i2], corners[i3]];
+      for (const [i1, i2, i3, i4, norm] of faces) {
+        const p1 = rotCorners[i1], p2 = rotCorners[i2], p3 = rotCorners[i3], p4 = rotCorners[i4];
+        const pts = [p1, p2, p3, p1, p3, p4];
         for (let p = 0; p < 6; p++) {
-          positions.push(quadPts[p][0], quadPts[p][1], quadPts[p][2]);
+          positions.push(pts[p][0], pts[p][1], pts[p][2]);
           normals.push(norm[0], norm[1], norm[2]);
           colors.push(color[0], color[1], color[2], color[3] || 1.0);
           uvs.push(0, 0);
@@ -261,45 +253,31 @@ export class Player {
       }
     };
 
-    // Palette: Vice City style bomber jacket, dark tactical pants, sunglasses
-    const jacketCol = [0.18, 0.22, 0.28, 1.0]; // Slate charcoal jacket
-    const shirtCol = [0.92, 0.25, 0.45, 1.0];  // Neon magenta undershirt
-    const pantsCol = [0.15, 0.16, 0.18, 1.0];  // Dark jeans
-    const skinCol = [0.85, 0.65, 0.52, 1.0];   // Warm tan
-    const shoeCol = [0.95, 0.95, 0.95, 1.0];   // White sneakers
+    // Boots
+    addBoxRot(-0.14, y, swing * 0.18, 0.18, 0.22, 0.28, bootsCol);
+    addBoxRot(0.14, y, -swing * 0.18, 0.18, 0.22, 0.28, bootsCol);
 
-    // Limb animation swings
-    const legSwing = Math.sin(this.walkCycle) * 0.45;
-    const armSwing = Math.sin(this.walkCycle) * 0.45;
+    // Legs / Pants
+    addBoxRot(-0.14, y + 0.22, swing * 0.18, 0.18, 0.58, 0.18, pantsCol);
+    addBoxRot(0.14, y + 0.22, -swing * 0.18, 0.18, 0.58, 0.18, pantsCol);
 
-    // Torso / Jacket
-    addBoxLocal(0, 1.25, 0, 0.55, 0.65, 0.32, jacketCol);
-    // Undershirt chest triangle
-    addBoxLocal(0, 1.35, 0.15, 0.22, 0.35, 0.05, shirtCol);
-
-    // Head & Sunglasses
-    addBoxLocal(0, 1.72, 0, 0.28, 0.32, 0.28, skinCol);
-    addBoxLocal(0, 1.76, 0.14, 0.26, 0.08, 0.06, [0.05, 0.05, 0.05, 1.0]); // Shades
-
-    // Legs with alternating stride
-    addBoxLocal(-0.16, 0.5 + legSwing * 0.15, legSwing * 0.35, 0.20, 0.85, 0.22, pantsCol);
-    addBoxLocal(0.16, 0.5 - legSwing * 0.15, -legSwing * 0.35, 0.20, 0.85, 0.22, pantsCol);
-
-    // Sneakers
-    addBoxLocal(-0.16, 0.1, legSwing * 0.35 + 0.05, 0.22, 0.18, 0.35, shoeCol);
-    addBoxLocal(0.16, 0.1, -legSwing * 0.35 + 0.05, 0.22, 0.18, 0.35, shoeCol);
+    // Torso (Jacket + Tee)
+    addBoxRot(0, y + 0.80, 0, 0.48, 0.68, 0.26, jacketCol);
+    addBoxRot(0, y + 0.88, 0.08, 0.22, 0.45, 0.15, shirtCol);
 
     // Arms
-    addBoxLocal(-0.35, 1.25 - armSwing * 0.1, -armSwing * 0.25, 0.16, 0.65, 0.16, jacketCol);
-    addBoxLocal(0.35, 1.25 + armSwing * 0.1, armSwing * 0.25, 0.16, 0.65, 0.16, jacketCol);
+    addBoxRot(-0.30, y + 0.85, -swing * 0.2, 0.14, 0.58, 0.14, jacketCol);
+    addBoxRot(0.30, y + 0.85, 0.18, 0.14, 0.58, 0.14, jacketCol); // Right arm forward aiming
 
-    // Weapon in hands
+    // Head & Aviator shades
+    addBoxRot(0, y + 1.48, 0, 0.28, 0.28, 0.28, skinCol);
+    addBoxRot(0, y + 1.54, 0.14, 0.26, 0.08, 0.08, [0.1, 0.1, 0.1, 1.0]);
+
+    // Active Weapon Held in Hands
     if (this.currentWeapon === 'rifle') {
-      // Vane Carbine in forward ready stance
-      addBoxLocal(0.25, 1.15, 0.35, 0.12, 0.18, 0.75, [0.1, 0.1, 0.12, 1.0]);
+      addBoxRot(0.24, y + 1.15, 0.38, 0.10, 0.16, 0.72, gunCol);
     } else {
-      // Pistol in hand
-      addBoxLocal(0.28, 1.1, 0.25, 0.08, 0.14, 0.28, [0.18, 0.18, 0.2, 1.0]);
+      addBoxRot(0.24, y + 1.15, 0.28, 0.08, 0.12, 0.32, gunCol);
     }
   }
 }

@@ -1,6 +1,8 @@
 /**
  * Nightfall City: Vela Bay - Heads-Up Display (HUD) System
- * Authored by makefun agent for the GTA 6 bounty challenge.
+ * Crisp GTA-style interface: Health/Armor bars, Cash readout, 5 Wanted Stars,
+ * Weapon ammo counters, mission objective banner with distance readout, and high-speed speedometer gauge.
+ * Authored for make.fun GTA 6 bounty challenge.
  */
 
 import { WEAPONS } from './config.js';
@@ -9,11 +11,16 @@ export class HUD {
   constructor() {
     this.canvas = null;
     this.ctx = null;
+    this.damageFlashTimer = 0;
   }
 
   init(overlayCanvas) {
     this.canvas = overlayCanvas;
     this.ctx = overlayCanvas.getContext('2d');
+  }
+
+  triggerDamageFlash() {
+    this.damageFlashTimer = 0.35;
   }
 
   render(player, missions, police, activeCar, shotPreset) {
@@ -24,16 +31,23 @@ export class HUD {
 
     ctx.clearRect(0, 0, w, h);
 
-    // 1. Top-Right: Money, Wanted Stars, Weapon & Ammo
+    // Damage flash vignette
+    if (this.damageFlashTimer > 0) {
+      this.damageFlashTimer -= 0.016;
+      ctx.fillStyle = `rgba(220, 20, 20, ${Math.min(0.35, this.damageFlashTimer)})`;
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    // 1. Top-Right: Cash, Wanted Stars, Weapon & Ammo
     this.renderTopRight(ctx, w, player, police, shotPreset);
 
     // 2. Top-Left: Health & Armor Bars
     this.renderHealthAndArmor(ctx, player);
 
-    // 3. Center-Top: Mission Objective Banner
-    this.renderObjectiveBanner(ctx, w, missions, shotPreset);
+    // 3. Center-Top: Mission Objective Banner with distance readout
+    this.renderObjectiveBanner(ctx, w, missions, player, shotPreset);
 
-    // 4. Bottom-Right: Vehicle Speedometer (if in car or in car shot preset)
+    // 4. Bottom-Right: Vehicle Speedometer Gauge
     if (activeCar || (shotPreset && shotPreset.player && shotPreset.player.inVehicle)) {
       this.renderSpeedometer(ctx, w, h, activeCar, shotPreset);
     }
@@ -43,7 +57,7 @@ export class HUD {
       this.renderMissionBanner(ctx, w, h, missions);
     }
 
-    // 6. Interaction Prompt (e.g. near car or vehicle controls)
+    // 6. Interaction Prompts
     this.renderInteractionPrompts(ctx, w, h, player, activeCar);
   }
 
@@ -51,19 +65,19 @@ export class HUD {
     const rightMargin = w - 35;
     let topY = 32;
 
-    // --- Cash Display ---
+    // --- Cash Readout ---
     const cashVal = shotPreset && shotPreset.cash !== undefined ? shotPreset.cash : player.cash;
     ctx.textAlign = 'right';
     ctx.font = '900 28px "Arial Black", "Impact", sans-serif';
 
-    // Drop shadow
+    // Bold drop shadow
     ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
     ctx.fillText(`$${cashVal.toLocaleString()}`, rightMargin + 2, topY + 2);
 
     // Cash Green Gradient
-    const cashGrad = ctx.createLinearGradient(0, topY - 20, 0, topY);
-    cashGrad.addColorStop(0, '#55ff77');
-    cashGrad.addColorStop(1, '#18bb36');
+    const cashGrad = ctx.createLinearGradient(0, topY - 22, 0, topY);
+    cashGrad.addColorStop(0, '#66ff88');
+    cashGrad.addColorStop(1, '#1bc43b');
     ctx.fillStyle = cashGrad;
     ctx.fillText(`$${cashVal.toLocaleString()}`, rightMargin, topY);
 
@@ -88,9 +102,9 @@ export class HUD {
 
       if (isFilled) {
         if (isEvading && flashState) {
-          ctx.fillStyle = '#ffffff'; // Flashing white
+          ctx.fillStyle = '#ffffff';
         } else {
-          ctx.fillStyle = '#ffcc00'; // Bright gold
+          ctx.fillStyle = '#ffcc00';
         }
         ctx.strokeStyle = '#221100';
         ctx.lineWidth = 2;
@@ -100,30 +114,34 @@ export class HUD {
         ctx.lineWidth = 1.5;
       }
 
-      this.drawStarPath(ctx, 0, 0, 5, starSize * 0.5, starSize * 0.22);
+      this.drawStar(ctx, 0, 0, 5, starSize * 0.5, starSize * 0.22);
       ctx.fill();
       ctx.stroke();
       ctx.restore();
     }
 
-    // --- Weapon & Ammo ---
-    topY += 40;
-    const wepKey = shotPreset && shotPreset.player ? shotPreset.player.weapon : player.currentWeapon;
+    // --- Weapon & Ammo Readout ---
+    topY += 36;
+    const wepKey = player.currentWeapon;
     const wep = WEAPONS[wepKey] || WEAPONS.rifle;
-    const ammo = player.ammo[wepKey] || { clip: 30, reserve: 150 };
+    const ammoState = player.ammo[wepKey] || { clip: 30, reserve: 120 };
 
     ctx.textAlign = 'right';
-    ctx.font = 'bold 15px sans-serif';
-    ctx.fillStyle = 'rgba(220, 220, 230, 0.85)';
+    ctx.font = '800 15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = '#00e5ff';
     ctx.fillText(wep.name.toUpperCase(), rightMargin, topY);
 
-    topY += 24;
-    ctx.font = '900 22px sans-serif';
+    topY += 22;
+    ctx.font = '900 24px "Arial Black", sans-serif';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(`${ammo.clip} / ${ammo.reserve}`, rightMargin, topY);
+    ctx.fillText(`${ammoState.clip}`, rightMargin - 44, topY);
+
+    ctx.font = '700 16px sans-serif';
+    ctx.fillStyle = 'rgba(200, 210, 225, 0.75)';
+    ctx.fillText(`/${ammoState.reserve}`, rightMargin, topY);
   }
 
-  drawStarPath(ctx, cx, cy, spikes, outerRadius, innerRadius) {
+  drawStar(ctx, cx, cy, spikes, outerRadius, innerRadius) {
     let rot = (Math.PI / 2) * 3;
     let x = cx;
     let y = cy;
@@ -147,157 +165,158 @@ export class HUD {
   }
 
   renderHealthAndArmor(ctx, player) {
-    const leftX = 35;
-    let topY = 32;
+    const leftMargin = 35;
+    const topY = 32;
     const barW = 160;
     const barH = 12;
 
-    // Health Bar
-    ctx.fillStyle = 'rgba(10, 12, 16, 0.75)';
-    ctx.fillRect(leftX, topY, barW, barH);
-    ctx.strokeStyle = 'rgba(60, 65, 75, 0.8)';
+    // --- Health Bar ---
+    ctx.fillStyle = 'rgba(12, 14, 20, 0.85)';
+    ctx.fillRect(leftMargin, topY, barW, barH);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
     ctx.lineWidth = 1.5;
-    ctx.strokeRect(leftX, topY, barW, barH);
+    ctx.strokeRect(leftMargin, topY, barW, barH);
 
-    const hpPct = Math.max(0, player.health / 100);
-    const hpGrad = ctx.createLinearGradient(leftX, 0, leftX + barW, 0);
-    hpGrad.addColorStop(0, '#e52d27');
-    hpGrad.addColorStop(1, '#45f248');
+    const hpPct = Math.max(0, Math.min(1, player.health / 100));
+    const hpGrad = ctx.createLinearGradient(leftMargin, 0, leftMargin + barW, 0);
+    hpGrad.addColorStop(0, '#22cc44');
+    hpGrad.addColorStop(1, '#55ff77');
     ctx.fillStyle = hpGrad;
-    ctx.fillRect(leftX + 1, topY + 1, (barW - 2) * hpPct, barH - 2);
+    ctx.fillRect(leftMargin + 1, topY + 1, (barW - 2) * hpPct, barH - 2);
 
-    // Armor Bar
-    topY += 18;
-    ctx.fillStyle = 'rgba(10, 12, 16, 0.75)';
-    ctx.fillRect(leftX, topY, barW, barH);
-    ctx.strokeRect(leftX, topY, barW, barH);
-
-    const armorPct = Math.max(0, player.armor / 100);
-    const armorGrad = ctx.createLinearGradient(leftX, 0, leftX + barW, 0);
-    armorGrad.addColorStop(0, '#11998e');
-    armorGrad.addColorStop(1, '#38ef7d');
-    ctx.fillStyle = '#00c6ff';
-    ctx.fillRect(leftX + 1, topY + 1, (barW - 2) * armorPct, barH - 2);
-
-    // Label indicators
-    ctx.font = 'bold 10px sans-serif';
+    ctx.font = '800 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'left';
-    ctx.fillText('HEALTH', leftX + 4, topY - 8);
-    ctx.fillText('ARMOR', leftX + 4, topY + 9);
+    ctx.fillText('HEALTH', leftMargin, topY - 4);
+
+    // --- Armor Bar ---
+    const armorY = topY + 26;
+    ctx.fillStyle = 'rgba(12, 14, 20, 0.85)';
+    ctx.fillRect(leftMargin, armorY, barW, barH);
+    ctx.strokeRect(leftMargin, armorY, barW, barH);
+
+    const armPct = Math.max(0, Math.min(1, player.armor / 100));
+    const armGrad = ctx.createLinearGradient(leftMargin, 0, leftMargin + barW, 0);
+    armGrad.addColorStop(0, '#0088ff');
+    armGrad.addColorStop(1, '#00d2ff');
+    ctx.fillStyle = armGrad;
+    ctx.fillRect(leftMargin + 1, armorY + 1, (barW - 2) * armPct, barH - 2);
+
+    ctx.fillText('ARMOR', leftMargin, armorY - 4);
   }
 
-  renderObjectiveBanner(ctx, w, missions, shotPreset) {
-    const objText = shotPreset && shotPreset.objective ? shotPreset.objective : missions.getObjectiveText();
-    if (!objText) return;
-
-    const bannerW = Math.min(620, w * 0.55);
-    const bannerH = 40;
+  renderObjectiveBanner(ctx, w, missions, player, shotPreset) {
+    const bannerW = Math.min(680, w - 120);
+    const bannerH = 46;
     const bannerX = (w - bannerW) * 0.5;
     const bannerY = 24;
 
-    // Backdrop with gold left accent border
-    ctx.fillStyle = 'rgba(12, 15, 22, 0.82)';
-    ctx.fillRect(bannerX, bannerY, bannerW, bannerH);
+    // Translucent dark pill background
+    ctx.fillStyle = 'rgba(8, 10, 16, 0.82)';
+    ctx.beginPath();
+    ctx.roundRect(bannerX, bannerY, bannerW, bannerH, 6);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 170, 0, 0.65)';
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
 
-    ctx.fillStyle = '#ffbb00';
-    ctx.fillRect(bannerX, bannerY, 5, bannerH);
+    // Objective text
+    let text = shotPreset && shotPreset.objective ? shotPreset.objective : missions.getObjectiveText();
 
-    ctx.strokeStyle = 'rgba(255, 187, 0, 0.35)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(bannerX, bannerY, bannerW, bannerH);
+    // Append distance if not in preset and in game
+    if (!shotPreset && missions) {
+      const dist = missions.getDistanceToTarget(player.x, player.z);
+      if (dist > 0) {
+        text += ` (${dist}M)`;
+      }
+    }
 
     ctx.textAlign = 'center';
-    ctx.font = 'bold 14px "Helvetica Neue", Arial, sans-serif';
+    ctx.font = '800 15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(objText.toUpperCase(), bannerX + bannerW * 0.5, bannerY + 25);
+    ctx.fillText(text.toUpperCase(), w * 0.5, bannerY + 28);
   }
 
   renderSpeedometer(ctx, w, h, activeCar, shotPreset) {
-    const speedMph = shotPreset && shotPreset.player && shotPreset.player.speedMph !== undefined
-      ? shotPreset.player.speedMph
-      : (activeCar ? activeCar.getSpeedMph() : 0);
+    const cx = w - 90;
+    const cy = h - 90;
+    const r = 62;
 
-    const speedX = w - 120;
-    const speedY = h - 65;
+    const speed = shotPreset && shotPreset.player && shotPreset.player.speedMph ? shotPreset.player.speedMph : (activeCar ? activeCar.getSpeedMph() : 0);
+    const gear = activeCar ? activeCar.gear : 4;
 
-    // Background circle arc
     ctx.save();
-    ctx.fillStyle = 'rgba(10, 14, 22, 0.78)';
+
+    // Dial background
     ctx.beginPath();
-    ctx.arc(speedX, speedY, 58, 0, Math.PI * 2);
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(8, 10, 16, 0.85)';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(70, 85, 110, 0.5)';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(80, 100, 130, 0.55)';
+    ctx.lineWidth = 3;
     ctx.stroke();
 
-    // Speed radial progress arc
-    const maxMph = 160;
-    const progress = Math.min(1.0, speedMph / maxMph);
+    // Speedometer RPM arch
+    const maxSpeedDisplay = 160;
+    const speedRatio = Math.min(1.0, speed / maxSpeedDisplay);
     const startAngle = Math.PI * 0.75;
-    const endAngle = startAngle + progress * Math.PI * 1.5;
-
-    const arcGrad = ctx.createLinearGradient(speedX - 50, speedY, speedX + 50, speedY);
-    arcGrad.addColorStop(0, '#00d2ff');
-    arcGrad.addColorStop(0.7, '#ffaa00');
-    arcGrad.addColorStop(1, '#ff3300');
+    const endAngle = startAngle + speedRatio * (Math.PI * 1.5);
 
     ctx.beginPath();
-    ctx.arc(speedX, speedY, 48, startAngle, endAngle);
-    ctx.strokeStyle = arcGrad;
+    ctx.arc(cx, cy, r - 8, startAngle, endAngle);
+    const rpmGrad = ctx.createLinearGradient(cx - r, cy, cx + r, cy);
+    rpmGrad.addColorStop(0, '#00e5ff');
+    rpmGrad.addColorStop(0.7, '#ffcc00');
+    rpmGrad.addColorStop(1, '#ff2200');
+    ctx.strokeStyle = rpmGrad;
     ctx.lineWidth = 6;
     ctx.stroke();
 
-    // Speed text
+    // Speed number
     ctx.textAlign = 'center';
     ctx.font = '900 32px "Arial Black", sans-serif';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(`${speedMph}`, speedX, speedY + 8);
+    ctx.fillText(`${speed}`, cx, cy + 6);
 
-    ctx.font = 'bold 11px sans-serif';
+    ctx.font = '800 12px sans-serif';
     ctx.fillStyle = '#00d2ff';
-    ctx.fillText('MPH', speedX, speedY + 24);
+    ctx.fillText('MPH', cx, cy + 24);
 
-    // Gear indicator
-    const gear = activeCar ? activeCar.gear : 4;
-    ctx.font = 'bold 12px sans-serif';
-    ctx.fillStyle = '#ffbb00';
-    ctx.fillText(`GEAR D${gear}`, speedX, speedY - 18);
+    ctx.font = '800 11px sans-serif';
+    ctx.fillStyle = 'rgba(220, 230, 245, 0.65)';
+    ctx.fillText(`GEAR ${gear}`, cx, cy - 22);
 
     ctx.restore();
   }
 
   renderMissionBanner(ctx, w, h, missions) {
-    const bannerH = 90;
-    const bannerY = h * 0.32;
+    const bannerH = 80;
+    const bannerY = h * 0.38;
 
     ctx.fillStyle = 'rgba(6, 8, 14, 0.92)';
     ctx.fillRect(0, bannerY, w, bannerH);
 
-    ctx.fillStyle = '#ffcc00';
-    ctx.fillRect(0, bannerY, w, 4);
-    ctx.fillRect(0, bannerY + bannerH - 4, w, 4);
+    // Accent line
+    ctx.fillStyle = '#ffaa00';
+    ctx.fillRect(0, bannerY, w, 3);
+    ctx.fillRect(0, bannerY + bannerH - 3, w, 3);
 
     ctx.textAlign = 'center';
-    ctx.font = '900 32px "Arial Black", sans-serif';
-    ctx.fillStyle = '#ffdd44';
-    ctx.fillText(missions.bannerText, w * 0.5, bannerY + 42);
-
-    ctx.font = 'bold 15px sans-serif';
+    ctx.font = '900 30px "Arial Black", sans-serif';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(missions.bannerSubtitle, w * 0.5, bannerY + 70);
+    ctx.fillText(missions.bannerText, w * 0.5, bannerY + 38);
+
+    ctx.font = '600 15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = 'rgba(230, 240, 255, 0.85)';
+    ctx.fillText(missions.bannerSubtitle, w * 0.5, bannerY + 62);
   }
 
   renderInteractionPrompts(ctx, w, h, player, activeCar) {
-    const promptY = h - 35;
-    ctx.textAlign = 'center';
-    ctx.font = 'bold 13px sans-serif';
-    ctx.fillStyle = 'rgba(230, 235, 245, 0.75)';
-
     if (activeCar) {
-      ctx.fillText('[W/A/S/D] Drive   [Space] Handbrake Drift   [F] Exit Vehicle   [K] Taxi Job', w * 0.5, promptY);
-    } else {
-      ctx.fillText('[W/A/S/D] Move   [Shift] Sprint   [F] Jack Car   [LMB] Shoot   [R] Reload   [Esc] Pause', w * 0.5, promptY);
+      ctx.textAlign = 'center';
+      ctx.font = '700 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+      ctx.fillText('[F / E] Exit Vehicle   [SPACE] Drift   [H] Horn   [K] Taxi Shift', w * 0.5, h - 25);
     }
   }
 }

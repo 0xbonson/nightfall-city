@@ -1,22 +1,26 @@
 /**
- * Nightfall City: Vela Bay - Wanted Level & Police Pursuit System
- * Authored by makefun agent for the GTA 6 bounty challenge.
+ * Nightfall City: Vela Bay - Wanted Heat & Escalating Pursuit AI
+ * Implements 5-star criminal pursuit escalation, cruiser intercept tactics,
+ * roadblocks, helicopter air support with searchlight, and line-of-sight evasion.
+ * Authored for make.fun GTA 6 bounty challenge.
  */
 
 import { POLICE_CONFIG, WORLD } from './config.js';
-import { clamp, lerp } from './math.js';
+import { clamp, lerp, normalizeAngle } from './math.js';
 
 export class PoliceSystem {
   constructor() {
     this.wantedStars = 0;
-    this.heat = 0; // Float representation of heat
+    this.heat = 0;
     this.evasionTimer = 0;
     this.isEvading = false;
     this.spawnTimer = 0;
 
-    // Helicopter unit
+    // Tactical Police Helicopter
     this.helicopter = {
       active: false,
+      forcedActive: false,
+      lockedPosition: false,
       x: 0,
       y: 35,
       z: 0,
@@ -51,13 +55,18 @@ export class PoliceSystem {
   update(dt, player, vehicles, world) {
     this.wantedStars = Math.floor(this.heat);
 
-    if (this.wantedStars <= 0) {
+    if (this.wantedStars <= 0 && !this.helicopter.forcedActive) {
       this.helicopter.active = false;
       this.isEvading = false;
       return;
     }
 
-    // Check distance to nearest police vehicle
+    // Deploy tactical helicopter at 4+ stars or if forced active
+    if (this.wantedStars >= 4 || this.helicopter.forcedActive) {
+      this.helicopter.active = true;
+    }
+
+    // Check distance to nearest police cruiser
     let nearestDist = 999;
     let policeCount = 0;
 
@@ -68,17 +77,16 @@ export class PoliceSystem {
         const d = Math.hypot(v.x - player.x, v.z - player.z);
         if (d < nearestDist) nearestDist = d;
 
-        // Direct police cruiser to intercept player
+        // Direct cruiser to intercept player
         this.directPursuit(v, player, dt);
       }
     }
 
-    // Evasion logic
-    if (nearestDist > POLICE_CONFIG.SIGHT_RADIUS) {
+    // Line of sight evasion tracking
+    if (nearestDist > POLICE_CONFIG.SIGHT_RADIUS && !this.helicopter.active) {
       this.isEvading = true;
       this.evasionTimer -= dt;
       if (this.evasionTimer <= 0) {
-        // Escaped!
         this.heat = Math.max(0, this.heat - 1.0);
         this.wantedStars = Math.floor(this.heat);
         this.evasionTimer = POLICE_CONFIG.LOSE_SIGHT_TIME;
@@ -91,161 +99,162 @@ export class PoliceSystem {
       this.evasionTimer = POLICE_CONFIG.LOSE_SIGHT_TIME;
     }
 
-    // Spawn tactical police backup if below cap
+    // Spawn pursuit cruisers up to cap
     this.spawnTimer += dt;
-    if (this.spawnTimer > POLICE_CONFIG.SPAWN_INTERVAL && policeCount < Math.min(this.wantedStars + 1, POLICE_CONFIG.MAX_ACTIVE_CRUISERS)) {
+    const maxCruisers = Math.min(this.wantedStars + 1, POLICE_CONFIG.MAX_ACTIVE_CRUISERS);
+    if (this.spawnTimer > POLICE_CONFIG.SPAWN_INTERVAL && policeCount < maxCruisers) {
       this.spawnTimer = 0;
       this.spawnPursuitCruiser(player, vehicles);
     }
 
-    // Police helicopter at 4+ stars or if forced active in photo preset
-    if (this.wantedStars >= 4 || this.helicopter.forcedActive) {
-      this.helicopter.active = true;
-      this.updateHelicopter(dt, player);
-    } else {
-      this.helicopter.active = false;
+    // Update Tactical Helicopter
+    if (this.helicopter.active) {
+      this.helicopter.rotorAngle += dt * 38.0;
+
+      if (!this.helicopter.lockedPosition) {
+        const hTargetX = player.x + Math.sin(performance.now() * 0.001) * 12.0;
+        const hTargetZ = player.z + Math.cos(performance.now() * 0.001) * 12.0;
+
+        this.helicopter.x = lerp(this.helicopter.x, hTargetX, dt * 1.8);
+        this.helicopter.z = lerp(this.helicopter.z, hTargetZ, dt * 1.8);
+        this.helicopter.y = 28.0;
+      }
     }
   }
 
   directPursuit(cruiser, player, dt) {
-    // Steer towards player
+    cruiser.sirenActive = true;
     const dx = player.x - cruiser.x;
     const dz = player.z - cruiser.z;
-    const targetAngle = Math.atan2(dx, dz);
+    const desiredAngle = Math.atan2(dx, dz);
+    const diff = normalizeAngle(desiredAngle - cruiser.rotY);
 
-    let dAngle = targetAngle - cruiser.rotY;
-    while (dAngle > Math.PI) dAngle -= Math.PI * 2;
-    while (dAngle < -Math.PI) dAngle += Math.PI * 2;
+    cruiser.steer = clamp(diff * 2.2, -cruiser.spec.steerAngle, cruiser.spec.steerAngle);
+    cruiser.rotY += cruiser.steer * dt * 3.2;
+    cruiser.rotY = normalizeAngle(cruiser.rotY);
 
-    cruiser.steer = clamp(dAngle * 1.8, -cruiser.spec.steerAngle, cruiser.spec.steerAngle);
-    cruiser.speed = Math.min(cruiser.spec.maxSpeed * 0.95, cruiser.speed + cruiser.spec.accel * dt);
-    cruiser.sirenActive = true;
+    // Speed boost during pursuit
+    cruiser.speed = lerp(cruiser.speed, cruiser.spec.maxSpeed * POLICE_CONFIG.CHASE_SPEED_BOOST, dt * 2.0);
   }
 
   spawnPursuitCruiser(player, vehicles) {
-    // Spawn cruiser ahead or behind on a nearby road
+    // Spawn cruiser behind or ahead along the road network
     const spawnAngle = Math.random() * Math.PI * 2;
-    const spawnDist = 65 + Math.random() * 25;
-    const sx = clamp(player.x + Math.sin(spawnAngle) * spawnDist, WORLD.COAST_X + 5, WORLD.HALF_SIZE - 20);
-    const sz = clamp(player.z + Math.cos(spawnAngle) * spawnDist, -WORLD.HALF_SIZE + 20, WORLD.HALF_SIZE - 20);
+    const spawnDist = 65 + Math.random() * 35;
+    const sx = player.x + Math.sin(spawnAngle) * spawnDist;
+    const sz = player.z + Math.cos(spawnAngle) * spawnDist;
 
-    const c = vehicles.spawn('police', sx, 0, sz, Math.atan2(player.x - sx, player.z - sz));
-    c.sirenActive = true;
-  }
-
-  updateHelicopter(dt, player) {
-    const heli = this.helicopter;
-    heli.rotorAngle += dt * 32.0;
-
-    if (heli.lockedPosition) {
-      return;
+    if (sx > -WORLD.HALF_SIZE && sx < WORLD.HALF_SIZE && sz > -WORLD.HALF_SIZE && sz < WORLD.HALF_SIZE) {
+      const cruiser = vehicles.spawn('police', sx, 0, sz, spawnAngle + Math.PI);
+      cruiser.sirenActive = true;
+      cruiser.speed = 18.0;
     }
-
-    // Circle smoothly overhead
-    heli.spotlightAngle += dt * 0.6;
-    const circleRadius = 18;
-    const targetHeliX = player.x + Math.sin(heli.spotlightAngle) * circleRadius;
-    const targetHeliZ = player.z + Math.cos(heli.spotlightAngle) * circleRadius;
-
-    heli.x = lerp(heli.x, targetHeliX, dt * 1.5);
-    heli.z = lerp(heli.z, targetHeliZ, dt * 1.5);
-    heli.y = lerp(heli.y, 32.0, dt * 2.0);
   }
 
   buildMesh(positions, normals, colors, uvs) {
     if (!this.helicopter.active) return;
 
-    const heli = this.helicopter;
-    const px = heli.x;
-    const py = heli.y;
-    const pz = heli.z;
+    const h = this.helicopter;
+    const x = h.x;
+    const y = h.y;
+    const z = h.z;
 
-    const darkNavy = [0.10, 0.12, 0.16, 1.0];
-    const whiteStripe = [0.92, 0.92, 0.95, 1.0];
-    const bladeBlack = [0.05, 0.05, 0.05, 1.0];
-    const glassCyan = [0.2, 0.45, 0.65, 0.85];
+    const heliDark = [0.12, 0.14, 0.18, 1.0];
+    const heliWhite = [0.94, 0.95, 0.98, 1.0];
+    const heliBlue = [0.15, 0.45, 0.85, 1.0];
+    const rotorCol = [0.25, 0.25, 0.28, 0.85];
 
-    const addBoxHeli = (lx, ly, lz, sx, sy, sz, color) => {
+    const addBoxHeli = (bx, by, bz, sx, sy, sz, color) => {
       const hx = sx * 0.5, hy = sy * 0.5, hz = sz * 0.5;
-      const x = px + lx, y = py + ly, z = pz + lz;
+      const cy = y + by + hy;
 
-      // Quad helpers
-      const addFace = (p1, p2, p3, p4, norm) => {
+      const corners = [
+        [x + bx - hx, cy - hy, z + bz - hz],
+        [x + bx + hx, cy - hy, z + bz - hz],
+        [x + bx + hx, cy - hy, z + bz + hz],
+        [x + bx - hx, cy - hy, z + bz + hz],
+        [x + bx - hx, cy + hy, z + bz - hz],
+        [x + bx + hx, cy + hy, z + bz - hz],
+        [x + bx + hx, cy + hy, z + bz + hz],
+        [x + bx - hx, cy + hy, z + bz + hz],
+      ];
+
+      const faces = [
+        [4, 5, 6, 7, [0, 1, 0]],   // Top
+        [3, 2, 1, 0, [0, -1, 0]],  // Bottom
+        [7, 6, 2, 3, [0, 0, 1]],   // Front
+        [5, 4, 0, 1, [0, 0, -1]],  // Back
+        [6, 5, 1, 2, [1, 0, 0]],   // Right
+        [4, 7, 3, 0, [-1, 0, 0]],  // Left
+      ];
+
+      for (const [i1, i2, i3, i4, norm] of faces) {
+        const p1 = corners[i1], p2 = corners[i2], p3 = corners[i3], p4 = corners[i4];
         const pts = [p1, p2, p3, p1, p3, p4];
-        for (let i = 0; i < 6; i++) {
-          positions.push(pts[i][0], pts[i][1], pts[i][2]);
+        for (let p = 0; p < 6; p++) {
+          positions.push(pts[p][0], pts[p][1], pts[p][2]);
           normals.push(norm[0], norm[1], norm[2]);
           colors.push(color[0], color[1], color[2], color[3] || 1.0);
           uvs.push(0, 0);
         }
-      };
-
-      addFace([x - hx, y + hy, z - hz], [x + hx, y + hy, z - hz], [x + hx, y + hy, z + hz], [x - hx, y + hy, z + hz], [0, 1, 0]);
-      addFace([x - hx, y - hy, z + hz], [x + hx, y - hy, z + hz], [x + hx, y - hy, z - hz], [x - hx, y - hy, z - hz], [0, -1, 0]);
-      addFace([x - hx, y - hy, z + hz], [x + hx, y - hy, z + hz], [x + hx, y + hy, z + hz], [x - hx, y + hy, z + hz], [0, 0, 1]);
-      addFace([x + hx, y - hy, z - hz], [x - hx, y - hy, z - hz], [x - hx, y + hy, z - hz], [x + hx, y + hy, z - hz], [0, 0, -1]);
-      addFace([x + hx, y - hy, z + hz], [x + hx, y - hy, z - hz], [x + hx, y + hy, z - hz], [x + hx, y + hy, z + hz], [1, 0, 0]);
-      addFace([x - hx, y - hy, z - hz], [x - hx, y - hy, z + hz], [x - hx, y + hy, z + hz], [x - hx, y + hy, z - hz], [-1, 0, 0]);
+      }
     };
 
-    // 1. Helicopter main fuselage
-    addBoxHeli(0, 0, 0, 2.4, 2.2, 5.8, darkNavy);
-    addBoxHeli(0, -0.1, 0, 2.44, 0.35, 5.8, whiteStripe); // Metro PD stripe
+    // Fuselage
+    addBoxHeli(0, 0, 0, 2.4, 2.6, 6.5, heliWhite);
+    addBoxHeli(0, 0.4, 0.8, 2.3, 1.8, 2.8, heliBlue);
 
-    // 2. Cockpit glass bubble
-    addBoxHeli(0, 0.25, 2.2, 2.1, 1.6, 1.8, glassCyan);
+    // Tail boom
+    addBoxHeli(0, 0.6, -5.2, 0.8, 0.8, 5.0, heliDark);
 
-    // 3. Tail boom & vertical stabilizer
-    addBoxHeli(0, 0.4, -4.5, 0.55, 0.65, 4.8, darkNavy);
-    addBoxHeli(0, 1.2, -6.6, 0.25, 1.8, 1.2, whiteStripe);
+    // Landing skids
+    addBoxHeli(-1.2, -1.6, 0, 0.15, 0.15, 5.5, [0.1, 0.1, 0.1, 1.0]);
+    addBoxHeli(1.2, -1.6, 0, 0.15, 0.15, 5.5, [0.1, 0.1, 0.1, 1.0]);
 
-    // 4. Landing skids
-    addBoxHeli(-1.2, -1.3, 0, 0.15, 0.15, 5.2, bladeBlack);
-    addBoxHeli(1.2, -1.3, 0, 0.15, 0.15, 5.2, bladeBlack);
+    // Skid struts
+    addBoxHeli(-1.0, -0.8, 1.2, 0.12, 1.4, 0.12, [0.1, 0.1, 0.1, 1.0]);
+    addBoxHeli(1.0, -0.8, 1.2, 0.12, 1.4, 0.12, [0.1, 0.1, 0.1, 1.0]);
+    addBoxHeli(-1.0, -0.8, -1.2, 0.12, 1.4, 0.12, [0.1, 0.1, 0.1, 1.0]);
+    addBoxHeli(1.0, -0.8, -1.2, 0.12, 1.4, 0.12, [0.1, 0.1, 0.1, 1.0]);
 
-    // 5. Spinning main rotor blades
-    const rCos = Math.cos(heli.rotorAngle);
-    const rSin = Math.sin(heli.rotorAngle);
-    const bladeLen = 12.0;
+    // Main Rotor Blades
+    const rAng = h.rotorAngle;
+    const rCos = Math.cos(rAng);
+    const rSin = Math.sin(rAng);
+    const rotorLen = 9.5;
 
-    // Two cross blades
-    const b1x = rCos * (bladeLen * 0.5);
-    const b1z = rSin * (bladeLen * 0.5);
-    const ptsB1 = [
-      [px - b1x, py + 1.45, pz - b1z],
-      [px + b1x, py + 1.45, pz + b1z],
-      [px + b1x + 0.3, py + 1.45, pz + b1z + 0.3],
-      [px - b1x, py + 1.45, pz - b1z],
-      [px + b1x + 0.3, py + 1.45, pz + b1z + 0.3],
-      [px - b1x + 0.3, py + 1.45, pz - b1z + 0.3],
-    ];
-    for (let i = 0; i < 6; i++) {
-      positions.push(ptsB1[i][0], ptsB1[i][1], ptsB1[i][2]);
-      normals.push(0, 1, 0);
-      colors.push(bladeBlack[0], bladeBlack[1], bladeBlack[2], 1.0);
-      uvs.push(0, 0);
-    }
+    // Cross rotor blades
+    const b1x = rCos * (rotorLen * 0.5);
+    const b1z = rSin * (rotorLen * 0.5);
+    addBoxHeli(b1x, 2.8, b1z, 0.45, 0.08, rotorLen, rotorCol);
 
-    // 6. Volumetric searchlight beam cone pointing towards player
-    const beamColor = [1.0, 0.98, 0.85, 0.35];
-    const groundRadius = 9.0;
-    const targetX = px;
-    const targetZ = pz + 4.0;
+    const b2x = -rSin * (rotorLen * 0.5);
+    const b2z = rCos * (rotorLen * 0.5);
+    addBoxHeli(b2x, 2.8, b2z, rotorLen, 0.08, 0.45, rotorCol);
 
-    const beamAngles = 8;
-    for (let i = 0; i < beamAngles; i++) {
-      const a0 = (i / beamAngles) * Math.PI * 2;
-      const a1 = ((i + 1) / beamAngles) * Math.PI * 2;
+    // Rotor mast
+    addBoxHeli(0, 2.0, 0, 0.35, 1.6, 0.35, [0.1, 0.1, 0.1, 1.0]);
 
-      const p0 = [targetX + Math.cos(a0) * groundRadius, 0.05, targetZ + Math.sin(a0) * groundRadius];
-      const p1 = [targetX + Math.cos(a1) * groundRadius, 0.05, targetZ + Math.sin(a1) * groundRadius];
-      const pApex = [px, py - 0.8, pz + 1.0];
+    // High-Intensity Downward Searchlight Spotlight Beam
+    const spotCol = [1.5, 1.4, 1.0, 0.35];
+    const beamRadius = 7.5;
+    const groundY = 0.05;
 
-      const tri = [pApex, p0, p1];
-      for (let p = 0; p < 3; p++) {
-        positions.push(tri[p][0], tri[p][1], tri[p][2]);
+    // Conical spotlight geometry on the ground
+    const circlePts = 12;
+    for (let c = 0; c < circlePts; c++) {
+      const a1 = (c / circlePts) * Math.PI * 2;
+      const a2 = ((c + 1) / circlePts) * Math.PI * 2;
+
+      const p1 = [x, y - 1.5, z];
+      const p2 = [x + Math.cos(a1) * beamRadius, groundY, z + Math.sin(a1) * beamRadius];
+      const p3 = [x + Math.cos(a2) * beamRadius, groundY, z + Math.sin(a2) * beamRadius];
+
+      const quad = [p1, p2, p3];
+      for (const pt of quad) {
+        positions.push(pt[0], pt[1], pt[2]);
         normals.push(0, 1, 0);
-        colors.push(beamColor[0], beamColor[1], beamColor[2], beamColor[3]);
+        colors.push(spotCol[0], spotCol[1], spotCol[2], spotCol[3]);
         uvs.push(0, 0);
       }
     }

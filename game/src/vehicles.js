@@ -1,6 +1,8 @@
 /**
- * Nightfall City: Vela Bay - Vehicle Physics & Autonomous Traffic
- * Authored by makefun agent for the GTA 6 bounty challenge.
+ * Nightfall City: Vela Bay - Vehicle Physics & Autonomous Traffic System
+ * 6 detailed vehicle classes (sports, muscle, police, sedan, taxi, truck),
+ * arcade drifting mechanics with handbrake slide, tire smoke, traffic AI, and police sirens.
+ * Authored for make.fun GTA 6 bounty challenge.
  */
 
 import { CAR_TYPES, WORLD } from './config.js';
@@ -29,9 +31,10 @@ export class Vehicle {
 
     // Visuals & sirens
     this.isPolice = this.spec.isPolice || false;
+    this.isTaxi = this.spec.isTaxi || false;
     this.sirenActive = this.isPolice;
     this.sirenTimer = 0;
-    this.tireSmokeActive = false;
+    this.isDrifting = false;
     this.bodyRoll = 0;
     this.bodyPitch = 0;
 
@@ -55,7 +58,7 @@ export class Vehicle {
       this.updateAIPhysics(dt, world, otherCars);
     }
 
-    // Engine RPM & Gear Simulation for dynamic audio
+    // Engine RPM & Gear Simulation
     const absSpeed = Math.abs(this.speed);
     if (absSpeed < 8) {
       this.gear = 1;
@@ -71,7 +74,7 @@ export class Vehicle {
       this.engineRPM = 3200 + ((absSpeed - 30) / 15) * 4300;
     }
 
-    // Siren strobe animation
+    // Siren strobe timing
     if (this.sirenActive) {
       this.sirenTimer += dt * 8.0;
     }
@@ -89,7 +92,7 @@ export class Vehicle {
     if (input.isDown('KeyA') || input.isDown('ArrowLeft')) steerInput += 1;
     if (input.isDown('KeyD') || input.isDown('ArrowRight')) steerInput -= 1;
 
-    // Speed-sensitive steering (tighter at low speeds, stable at high speeds)
+    // Speed-dependent steering ratio
     const steerLimit = spec.steerAngle * clamp(1.0 - (Math.abs(this.speed) / spec.maxSpeed) * 0.55, 0.45, 1.0);
     const targetSteer = steerInput * steerLimit;
     this.steer = lerp(this.steer, targetSteer, dt * spec.steerSpeed);
@@ -97,176 +100,181 @@ export class Vehicle {
     // Acceleration & Braking
     if (throttle > 0) {
       if (this.speed < 0) {
-        // Braking while reversing
-        this.speed += spec.brake * dt;
+        this.speed = Math.min(0, this.speed + spec.brake * dt);
       } else {
-        // Accelerate forward
         this.speed = Math.min(spec.maxSpeed, this.speed + spec.accel * dt);
       }
-      this.bodyPitch = lerp(this.bodyPitch, -0.05, dt * 6.0); // Squat
     } else if (throttle < 0) {
-      if (this.speed > 0.5) {
-        // Foot brake
+      if (this.speed > 0) {
         this.speed = Math.max(0, this.speed - spec.brake * dt);
-        this.bodyPitch = lerp(this.bodyPitch, 0.08, dt * 8.0); // Dive
       } else {
-        // Reverse
-        this.speed = Math.max(-spec.reverseSpeed, this.speed - spec.accel * 0.6 * dt);
+        this.speed = Math.max(-spec.reverseSpeed, this.speed - spec.accel * 0.5 * dt);
       }
     } else {
-      // Natural rolling resistance drag
-      const drag = 12.0;
-      if (this.speed > 0) this.speed = Math.max(0, this.speed - drag * dt);
-      else if (this.speed < 0) this.speed = Math.min(0, this.speed + drag * dt);
-      this.bodyPitch = lerp(this.bodyPitch, 0, dt * 5.0);
+      // Natural rolling drag
+      this.speed *= Math.pow(0.96, dt * 60);
+      if (Math.abs(this.speed) < 0.1) this.speed = 0;
     }
 
-    // Handbrake drift mechanics
-    this.tireSmokeActive = false;
+    // Handbrake Drifting
     if (handbrake && Math.abs(this.speed) > 10.0) {
-      this.speed *= (1.0 - dt * 0.35); // Slow down gradually
-      this.rotY += this.steer * dt * 2.8 * Math.sign(this.speed);
-      this.tireSmokeActive = true;
-      this.bodyRoll = lerp(this.bodyRoll, -this.steer * 0.18, dt * 8.0);
+      this.isDrifting = true;
+      this.speed *= Math.pow(0.94, dt * 60);
+      // Extra yaw rotation when sliding
+      this.rotY += this.steer * dt * 3.8 * Math.sign(this.speed);
     } else {
-      // Normal turning yaw rate
-      if (Math.abs(this.speed) > 0.1) {
-        const turnRadius = (this.speed / spec.length) * Math.tan(this.steer);
-        this.rotY += turnRadius * dt;
-        this.bodyRoll = lerp(this.bodyRoll, -this.steer * (Math.abs(this.speed) / spec.maxSpeed) * 0.14, dt * 6.0);
-      } else {
-        this.bodyRoll = lerp(this.bodyRoll, 0, dt * 6.0);
-      }
+      this.isDrifting = false;
+      this.rotY += (this.speed / spec.length) * Math.tan(this.steer) * dt;
     }
 
-    // Velocity vector based on heading
-    this.vx = Math.sin(this.rotY) * this.speed;
-    this.vz = Math.cos(this.rotY) * this.speed;
+    this.rotY = normalizeAngle(this.rotY);
 
-    // Movement & Collision detection
-    this.moveAndCollide(dt, world, otherCars);
-  }
+    // Body roll into turns
+    const lateralG = (this.speed * this.speed * Math.sin(this.steer)) / spec.length;
+    this.bodyRoll = lerp(this.bodyRoll, clamp(-lateralG * 0.04, -0.15, 0.15), dt * 8.0);
 
-  updateAIPhysics(dt, world, otherCars) {
-    const spec = this.spec;
-
-    // Autonomous navigation along streets
-    const cruiseSpeed = this.isPolice ? spec.maxSpeed * 0.85 : 16.0;
-
-    // Forward raycast to check for vehicles ahead
-    let obstacleAhead = false;
-    const checkDist = 12.0;
-    const forwardX = Math.sin(this.rotY);
-    const forwardZ = Math.cos(this.rotY);
-
-    for (let i = 0; i < otherCars.length; i++) {
-      const oc = otherCars[i];
-      if (oc === this) continue;
-      const dx = oc.x - this.x;
-      const dz = oc.z - this.z;
-      const dist = Math.hypot(dx, dz);
-      if (dist < checkDist) {
-        // Dot product to see if obstacle is ahead
-        const dot = (dx * forwardX + dz * forwardZ) / dist;
-        if (dot > 0.6) {
-          obstacleAhead = true;
-          break;
-        }
-      }
-    }
-
-    if (obstacleAhead) {
-      // Brake
-      this.speed = Math.max(0, this.speed - spec.brake * dt);
-    } else {
-      // Cruise forward
-      this.speed = Math.min(cruiseSpeed, this.speed + spec.accel * 0.6 * dt);
-    }
-
-    this.vx = Math.sin(this.rotY) * this.speed;
-    this.vz = Math.cos(this.rotY) * this.speed;
-
-    this.moveAndCollide(dt, world, otherCars);
-  }
-
-  moveAndCollide(dt, world, otherCars) {
+    // Apply forward motion
     const prevX = this.x;
     const prevZ = this.z;
+
+    this.vx = Math.sin(this.rotY) * this.speed;
+    this.vz = Math.cos(this.rotY) * this.speed;
 
     this.x += this.vx * dt;
     this.z += this.vz * dt;
 
-    // Building collision
-    const col = world.checkCollision(this.x, this.z, this.spec.width * 0.55);
+    // Check collision with city buildings
+    const col = world.checkCollision(this.x, this.z, spec.width * 0.6);
     if (col.collided) {
       this.x = prevX + col.pushX;
       this.z = prevZ + col.pushZ;
-      this.speed *= -0.3; // Rebound
-      this.takeDamage(12);
+      this.speed *= -0.3; // Rebound bounce
     }
 
-    // World border wrap / bounce
-    const limit = WORLD.HALF_SIZE - 4;
-    if (this.x > limit || this.x < WORLD.COAST_X - 10) {
-      this.x = clamp(this.x, WORLD.COAST_X - 8, limit);
-      this.speed *= -0.5;
-    }
-    if (this.z > limit || this.z < -limit) {
-      this.z = clamp(this.z, -limit, limit);
-      this.speed *= -0.5;
+    // Inter-car collision
+    for (let i = 0; i < otherCars.length; i++) {
+      const other = otherCars[i];
+      if (other === this) continue;
+      const d = Math.hypot(this.x - other.x, this.z - other.z);
+      const minD = (spec.length + other.spec.length) * 0.42;
+      if (d < minD && d > 0.001) {
+        const overlap = minD - d;
+        const nx = (this.x - other.x) / d;
+        const nz = (this.z - other.z) / d;
+        this.x += nx * overlap * 0.6;
+        this.z += nz * overlap * 0.6;
+        this.speed *= 0.7;
+        other.speed *= 0.7;
+      }
     }
   }
 
-  // --- Procedural 3D Car Geometry ---
+  updateAIPhysics(dt, world, otherCars) {
+    const spec = this.spec;
+    const cruiseSpeed = this.isPolice ? spec.maxSpeed * 0.95 : 14.0;
+
+    // Target lane navigation
+    if (!this.targetNode || Math.hypot(this.x - this.targetNode.x, this.z - this.targetNode.z) < 12.0) {
+      this.pickNextAINode(world);
+    }
+
+    if (this.targetNode) {
+      const dx = this.targetNode.x - this.x;
+      const dz = this.targetNode.z - this.z;
+      const desiredAngle = Math.atan2(dx, dz);
+      let angleDiff = normalizeAngle(desiredAngle - this.rotY);
+
+      this.steer = clamp(angleDiff * 1.5, -spec.steerAngle, spec.steerAngle);
+      this.rotY += this.steer * dt * 2.5;
+      this.rotY = normalizeAngle(this.rotY);
+    }
+
+    // Accelerate towards cruising speed
+    this.speed = lerp(this.speed, cruiseSpeed, dt * 1.5);
+
+    // Check car ahead to prevent rear-ending
+    for (let i = 0; i < otherCars.length; i++) {
+      const other = otherCars[i];
+      if (other === this) continue;
+      const d = Math.hypot(this.x - other.x, this.z - other.z);
+      if (d < 16.0) {
+        // Dot product to test if car is ahead
+        const fwdX = Math.sin(this.rotY);
+        const fwdZ = Math.cos(this.rotY);
+        const toOtherX = (other.x - this.x) / d;
+        const toOtherZ = (other.z - this.z) / d;
+        if (fwdX * toOtherX + fwdZ * toOtherZ > 0.7) {
+          // Slow down
+          this.speed = Math.max(0, other.speed - 2.0);
+        }
+      }
+    }
+
+    this.vx = Math.sin(this.rotY) * this.speed;
+    this.vz = Math.cos(this.rotY) * this.speed;
+
+    this.x += this.vx * dt;
+    this.z += this.vz * dt;
+  }
+
+  pickNextAINode(world) {
+    if (!world.roadNodes || world.roadNodes.length === 0) return;
+    const candidates = world.roadNodes.filter((n) => {
+      const d = Math.hypot(this.x - n.x, this.z - n.z);
+      return d > 20 && d < 120;
+    });
+    if (candidates.length > 0) {
+      this.targetNode = candidates[Math.floor(Math.random() * candidates.length)];
+    }
+  }
+
   buildMesh(positions, normals, colors, uvs) {
-    const px = this.x;
-    const py = this.y;
-    const pz = this.z;
+    const x = this.x;
+    const y = this.y;
+    const z = this.z;
     const rot = this.rotY;
+    const spec = this.spec;
 
-    const cosR = Math.cos(rot);
-    const sinR = Math.sin(rot);
+    const sinRot = Math.sin(rot);
+    const cosRot = Math.cos(rot);
 
-    const toWorld = (lx, ly, lz) => {
-      // Apply body roll & pitch
-      const rollX = lx * Math.cos(this.bodyRoll) - ly * Math.sin(this.bodyRoll);
-      const rollY = lx * Math.sin(this.bodyRoll) + ly * Math.cos(this.bodyRoll);
-      const pitchY = rollY * Math.cos(this.bodyPitch) - lz * Math.sin(this.bodyPitch);
-      const pitchZ = rollY * Math.sin(this.bodyPitch) + lz * Math.cos(this.bodyPitch);
+    const bodyCol = spec.color;
+    const roofCol = spec.roofColor || spec.color;
+    const glassCol = [0.15, 0.22, 0.32, 0.95];
+    const tireCol = [0.12, 0.12, 0.14, 1.0];
+    const wheelChrome = [0.85, 0.88, 0.92, 1.0];
 
-      const wx = px + (rollX * cosR + pitchZ * sinR);
-      const wy = py + pitchY;
-      const wz = pz + (-rollX * sinR + pitchZ * cosR);
-      return [wx, wy, wz];
-    };
-
-    const addBoxLocal = (lx, ly, lz, sx, sy, sz, color) => {
+    const addBoxRot = (bx, by, bz, sx, sy, sz, color) => {
       const hx = sx * 0.5, hy = sy * 0.5, hz = sz * 0.5;
+      const cy = by + hy;
+
       const corners = [
-        toWorld(lx - hx, ly - hy, lz - hz),
-        toWorld(lx + hx, ly - hy, lz - hz),
-        toWorld(lx + hx, ly + hy, lz - hz),
-        toWorld(lx - hx, ly + hy, lz - hz),
-        toWorld(lx - hx, ly - hy, lz + hz),
-        toWorld(lx + hx, ly - hy, lz + hz),
-        toWorld(lx + hx, ly + hy, lz + hz),
-        toWorld(lx - hx, ly + hy, lz + hz),
+        [-hx, -hy, -hz], [hx, -hy, -hz], [hx, -hy, hz], [-hx, -hy, hz],
+        [-hx, hy, -hz],  [hx, hy, -hz],  [hx, hy, hz],  [-hx, hy, hz],
       ];
+
+      const rotCorners = corners.map(([cx, cyOff, cz]) => {
+        const lx = cx + bx;
+        const lz = cz + bz;
+        const wx = x + lx * cosRot + lz * sinRot;
+        const wz = z - lx * sinRot + lz * cosRot;
+        return [wx, cy + cyOff, wz];
+      });
 
       const faces = [
-        [3, 2, 6, 7, [0, 1, 0]],
-        [4, 5, 1, 0, [0, -1, 0]],
-        [7, 6, 5, 4, [sinR, 0, cosR]],
-        [1, 2, 3, 0, [-sinR, 0, -cosR]],
-        [6, 2, 1, 5, [cosR, 0, -sinR]],
-        [0, 3, 7, 4, [-cosR, 0, sinR]],
+        [4, 5, 6, 7, [0, 1, 0]],   // Top
+        [3, 2, 1, 0, [0, -1, 0]],  // Bottom
+        [7, 6, 2, 3, [sinRot, 0, cosRot]], // Front (+Z)
+        [5, 4, 0, 1, [-sinRot, 0, -cosRot]], // Back (-Z)
+        [6, 5, 1, 2, [cosRot, 0, -sinRot]],  // Right (+X)
+        [4, 7, 3, 0, [-cosRot, 0, sinRot]], // Left (-X)
       ];
 
-      for (const face of faces) {
-        const [i0, i1, i2, i3, norm] = face;
-        const quadPts = [corners[i0], corners[i1], corners[i2], corners[i0], corners[i2], corners[i3]];
+      for (const [i1, i2, i3, i4, norm] of faces) {
+        const p1 = rotCorners[i1], p2 = rotCorners[i2], p3 = rotCorners[i3], p4 = rotCorners[i4];
+        const pts = [p1, p2, p3, p1, p3, p4];
         for (let p = 0; p < 6; p++) {
-          positions.push(quadPts[p][0], quadPts[p][1], quadPts[p][2]);
+          positions.push(pts[p][0], pts[p][1], pts[p][2]);
           normals.push(norm[0], norm[1], norm[2]);
           colors.push(color[0], color[1], color[2], color[3] || 1.0);
           uvs.push(0, 0);
@@ -274,78 +282,86 @@ export class Vehicle {
       }
     };
 
-    const spec = this.spec;
-    const carColor = spec.color;
-    const roofColor = spec.roofColor || carColor;
-    const glassColor = [0.12, 0.16, 0.22, 0.9];
-    const wheelColor = [0.15, 0.15, 0.16, 1.0];
-    const headlightCol = [1.0, 0.96, 0.82, 1.0];
-    const taillightCol = [0.95, 0.15, 0.10, 1.0];
+    // 1. Lower Chassis
+    addBoxRot(0, y + 0.22, 0, spec.width, spec.height * 0.45, spec.length, bodyCol);
 
-    const w = spec.width;
-    const l = spec.length;
-    const h = spec.height;
+    // 2. Cabin & Windows
+    const cabinLen = spec.length * 0.52;
+    const cabinW = spec.width * 0.88;
+    const cabinH = spec.height * 0.55;
+    addBoxRot(0, y + 0.22 + spec.height * 0.45, -spec.length * 0.08, cabinW, cabinH, cabinLen, roofCol);
 
-    // 1. Lower chassis / body
-    addBoxLocal(0, 0.45, 0, w, 0.55, l, carColor);
+    // Windshield & Rear glass
+    addBoxRot(0, y + 0.22 + spec.height * 0.48, spec.length * 0.16, cabinW * 0.94, cabinH * 0.88, 0.25, glassCol);
+    addBoxRot(0, y + 0.22 + spec.height * 0.48, -spec.length * 0.32, cabinW * 0.94, cabinH * 0.88, 0.25, glassCol);
 
-    // 2. Cabin / Greenhouse
-    const cabinL = l * 0.52;
-    const cabinW = w * 0.86;
-    const cabinH = h * 0.55;
-    addBoxLocal(0, 0.45 + cabinH * 0.5 + 0.25, -l * 0.08, cabinW, cabinH, cabinL, roofColor);
+    // 3. Wheels & Rims
+    const wR = 0.38;
+    const wW = 0.32;
+    const wheelY = y + wR * 0.5;
+    const fWheelZ = spec.length * 0.32;
+    const rWheelZ = -spec.length * 0.32;
+    const wheelX = spec.width * 0.5 - 0.05;
 
-    // 3. Tinted windshield & windows
-    addBoxLocal(0, 0.45 + cabinH * 0.5 + 0.25, -l * 0.08 + cabinL * 0.5 + 0.05, cabinW - 0.1, cabinH * 0.85, 0.12, glassColor);
-    addBoxLocal(0, 0.45 + cabinH * 0.5 + 0.25, -l * 0.08 - cabinL * 0.5 - 0.05, cabinW - 0.1, cabinH * 0.85, 0.12, glassColor);
+    addBoxRot(-wheelX, wheelY, fWheelZ, wW, wR * 2, wR * 2, tireCol);
+    addBoxRot(wheelX, wheelY, fWheelZ, wW, wR * 2, wR * 2, tireCol);
+    addBoxRot(-wheelX, wheelY, rWheelZ, wW, wR * 2, wR * 2, tireCol);
+    addBoxRot(wheelX, wheelY, rWheelZ, wW, wR * 2, wR * 2, tireCol);
 
-    // 4. Headlights (+Z front)
-    addBoxLocal(-w * 0.36, 0.48, l * 0.5 + 0.05, 0.45, 0.24, 0.1, headlightCol);
-    addBoxLocal(w * 0.36, 0.48, l * 0.5 + 0.05, 0.45, 0.24, 0.1, headlightCol);
+    // Shiny alloy hubcaps
+    addBoxRot(-wheelX - 0.02, wheelY, fWheelZ, 0.05, wR, wR, wheelChrome);
+    addBoxRot(wheelX + 0.02, wheelY, fWheelZ, 0.05, wR, wR, wheelChrome);
+    addBoxRot(-wheelX - 0.02, wheelY, rWheelZ, 0.05, wR, wR, wheelChrome);
+    addBoxRot(wheelX + 0.02, wheelY, rWheelZ, 0.05, wR, wR, wheelChrome);
 
-    // 5. Taillights (-Z rear)
-    addBoxLocal(-w * 0.36, 0.52, -l * 0.5 - 0.05, 0.48, 0.22, 0.1, taillightCol);
-    addBoxLocal(w * 0.36, 0.52, -l * 0.5 - 0.05, 0.48, 0.22, 0.1, taillightCol);
+    // 4. Headlights (Bright Xenon Gold/White)
+    const hlCol = [1.2, 1.15, 0.9, 1.0];
+    const tlCol = [1.2, 0.15, 0.1, 1.0];
+    const fZ = spec.length * 0.5 + 0.02;
+    const bZ = -spec.length * 0.5 - 0.02;
+    const hlW = 0.35, hlH = 0.18;
 
-    // 6. Wheels (4 corners)
-    const wheelR = 0.38;
-    const wheelW = 0.32;
-    const frontZ = l * 0.34;
-    const rearZ = -l * 0.34;
-    const sideX = w * 0.5 + 0.02;
+    addBoxRot(-spec.width * 0.35, y + 0.45, fZ, hlW, hlH, 0.06, hlCol);
+    addBoxRot(spec.width * 0.35, y + 0.45, fZ, hlW, hlH, 0.06, hlCol);
 
-    addBoxLocal(-sideX, wheelR, frontZ, wheelW, wheelR * 2, wheelR * 2, wheelColor);
-    addBoxLocal(sideX, wheelR, frontZ, wheelW, wheelR * 2, wheelR * 2, wheelColor);
-    addBoxLocal(-sideX, wheelR, rearZ, wheelW, wheelR * 2, wheelR * 2, wheelColor);
-    addBoxLocal(sideX, wheelR, rearZ, wheelW, wheelR * 2, wheelR * 2, wheelColor);
+    // Taillights
+    addBoxRot(-spec.width * 0.35, y + 0.55, bZ, hlW, hlH, 0.06, tlCol);
+    addBoxRot(spec.width * 0.35, y + 0.55, bZ, hlW, hlH, 0.06, tlCol);
 
-    // 7. Police Strobe Lightbar
-    if (spec.hasLightbar) {
-      const barY = 0.45 + cabinH + 0.32;
-      addBoxLocal(0, barY, -l * 0.08, w * 0.68, 0.16, 0.38, [0.15, 0.15, 0.15, 1.0]);
-
-      // Alternating flash
-      const isRed = Math.sin(this.sirenTimer) > 0;
-      const redLight = isRed ? [1.0, 0.05, 0.05, 1.0] : [0.3, 0.02, 0.02, 1.0];
-      const blueLight = !isRed ? [0.05, 0.35, 1.0, 1.0] : [0.02, 0.08, 0.3, 1.0];
-
-      addBoxLocal(-w * 0.22, barY + 0.08, -l * 0.08, 0.24, 0.12, 0.32, redLight);
-      addBoxLocal(w * 0.22, barY + 0.08, -l * 0.08, 0.24, 0.12, 0.32, blueLight);
-    }
-
-    // 8. Sports car GT wing / spoiler
+    // 5. Special vehicle accoutrements
     if (spec.hasSpoiler) {
-      const wingY = 0.45 + cabinH * 0.65;
-      const wingZ = -l * 0.48;
-      addBoxLocal(-w * 0.35, wingY - 0.15, wingZ, 0.08, 0.35, 0.18, carColor);
-      addBoxLocal(w * 0.35, wingY - 0.15, wingZ, 0.08, 0.35, 0.18, carColor);
-      addBoxLocal(0, wingY + 0.05, wingZ, w * 0.92, 0.08, 0.42, carColor);
+      const spY = y + 0.22 + spec.height * 0.55;
+      const spZ = -spec.length * 0.44;
+      addBoxRot(-spec.width * 0.35, spY, spZ, 0.08, 0.32, 0.18, [0.1, 0.1, 0.1, 1.0]);
+      addBoxRot(spec.width * 0.35, spY, spZ, 0.08, 0.32, 0.18, [0.1, 0.1, 0.1, 1.0]);
+      addBoxRot(0, spY + 0.32, spZ, spec.width * 0.95, 0.06, 0.45, bodyCol);
     }
 
-    // 9. Taxi roof sign
-    if (spec.hasTaxiSign) {
-      const signY = 0.45 + cabinH + 0.34;
-      addBoxLocal(0, signY, -l * 0.08, 0.75, 0.22, 0.35, [1.0, 0.95, 0.82, 1.0]);
+    if (spec.hasHoodScoop) {
+      addBoxRot(0, y + 0.22 + spec.height * 0.45, spec.length * 0.22, 0.65, 0.15, 0.85, [0.1, 0.1, 0.1, 1.0]);
+    }
+
+    if (this.isTaxi) {
+      // Illuminated yellow taxi roof sign
+      const signY = y + 0.22 + spec.height;
+      addBoxRot(0, signY, -spec.length * 0.08, 0.75, 0.22, 0.35, [1.0, 0.95, 0.2, 1.0]);
+    }
+
+    if (this.isPolice) {
+      // Heavy Push-bar on front bumper
+      addBoxRot(0, y + 0.38, fZ + 0.12, spec.width * 0.65, 0.45, 0.15, [0.15, 0.15, 0.15, 1.0]);
+
+      // Roof Emergency Flasher Lightbar (Red and Blue LEDs)
+      const barY = y + 0.22 + spec.height + 0.05;
+      const barZ = -spec.length * 0.08;
+
+      const flashPhase = Math.sin(this.sirenTimer * 2.0);
+      const redLED = flashPhase > 0 ? [1.5, 0.1, 0.1, 1.0] : [0.35, 0.02, 0.02, 1.0];
+      const blueLED = flashPhase <= 0 ? [0.1, 0.4, 1.5, 1.0] : [0.02, 0.05, 0.35, 1.0];
+
+      addBoxRot(-0.45, barY, barZ, 0.42, 0.14, 0.30, redLED);
+      addBoxRot(0.45, barY, barZ, 0.42, 0.14, 0.30, blueLED);
+      addBoxRot(0, barY, barZ, 0.22, 0.12, 0.25, [0.9, 0.9, 0.9, 1.0]);
     }
   }
 }
@@ -355,51 +371,69 @@ export class VehicleManager {
     this.vehicles = [];
   }
 
-  spawn(typeId, x, y, z, rotY = 0) {
-    const v = new Vehicle(typeId, x, y, z, rotY);
+  initCityTraffic(world) {
+    const lanes = [
+      { x: 125.5, zStart: -240, zEnd: 240, rot: Math.PI, types: ['sedan', 'taxi', 'sports'] },
+      { x: 136.5, zStart: 240, zEnd: -240, rot: 0, types: ['muscle', 'sedan', 'truck'] },
+      { x: -102.0, zStart: -240, zEnd: 240, rot: Math.PI, types: ['sports', 'taxi'] },
+      { x: -108.0, zStart: 240, zEnd: -240, rot: 0, types: ['sedan', 'muscle'] },
+      { x: 45.0, zStart: -180, zEnd: 180, rot: Math.PI, types: ['sports', 'police'] },
+    ];
+
+    let vCount = 0;
+    for (const lane of lanes) {
+      for (let z = lane.zStart; Math.abs(z - lane.zEnd) > 40; z += (lane.zEnd > lane.zStart ? 55 : -55)) {
+        if (vCount++ > 18) break;
+        const type = lane.types[Math.floor(Math.random() * lane.types.length)];
+        const car = this.spawn(type, lane.x, 0, z, lane.rot);
+        car.speed = 12.0 + Math.random() * 8.0;
+      }
+    }
+  }
+
+  spawn(type, x, y, z, rot = 0) {
+    const v = new Vehicle(type, x, y, z, rot);
     this.vehicles.push(v);
     return v;
   }
 
-  initCityTraffic(world) {
-    // Populate the city grid with active traffic cars
-    const types = ['sports', 'muscle', 'sedan', 'taxi', 'truck'];
-
-    // Spawn 16 cars at various road coordinates
-    const spawnPoints = [
-      { x: -105, z: 20, rot: 0, type: 'sports' },
-      { x: -105, z: 120, rot: 0, type: 'sedan' },
-      { x: -105, z: -80, rot: Math.PI, type: 'muscle' },
-      { x: 0, z: -140, rot: 0, type: 'taxi' },
-      { x: 0, z: 60, rot: Math.PI, type: 'sedan' },
-      { x: 45, z: -60, rot: 0, type: 'police' },
-      { x: 45, z: 80, rot: Math.PI, type: 'sports' },
-      { x: 115, z: -110, rot: 0, type: 'sedan' },
-      { x: 115, z: 40, rot: Math.PI, type: 'taxi' },
-      { x: 185, z: 120, rot: 0, type: 'truck' },
-      { x: 185, z: -50, rot: Math.PI, type: 'sedan' },
-      { x: 68, z: -68, rot: 0, type: 'sports' }, // Near player starting point
-    ];
-
-    for (const sp of spawnPoints) {
-      this.spawn(sp.type, sp.x, 0, sp.z, sp.rot);
-    }
-  }
-
-  findNearest(x, z, maxDist) {
-    let nearest = null;
+  findNearest(x, z, maxDist = 4.0) {
+    let best = null;
     let minDist = maxDist;
-
     for (let i = 0; i < this.vehicles.length; i++) {
       const v = this.vehicles[i];
       if (v.isPlayerControlled) continue;
       const d = Math.hypot(v.x - x, v.z - z);
       if (d < minDist) {
         minDist = d;
-        nearest = v;
+        best = v;
       }
     }
-    return nearest;
+    return best;
+  }
+
+  getPoliceSirens() {
+    // Locate up to 2 active cruisers to send dynamic light to shaders
+    const activePolice = this.vehicles.filter((v) => v.isPolice && v.sirenActive);
+    if (activePolice.length === 0) return null;
+
+    const p1 = activePolice[0];
+    const s1Col = [1.6, 0.2, 0.2]; // High-intensity pursuit strobe red
+
+    let s2Pos = [0, -100, 0];
+    let s2Col = [0, 0, 0];
+    if (activePolice.length > 1) {
+      const p2 = activePolice[1];
+      s2Pos = [p2.x, p2.y + 1.8, p2.z];
+      s2Col = [0.2, 0.5, 1.8]; // High-intensity pursuit strobe blue
+    }
+
+    return {
+      s1Pos: [p1.x, p1.y + 1.8, p1.z],
+      s1Col,
+      s2Pos,
+      s2Col,
+    };
   }
 
   update(dt, input, world) {
@@ -412,36 +446,5 @@ export class VehicleManager {
     for (let i = 0; i < this.vehicles.length; i++) {
       this.vehicles[i].buildMesh(positions, normals, colors, uvs);
     }
-  }
-
-  getPoliceSirens() {
-    // Find active police cruisers for dynamic emergency lighting
-    let s1 = null, s2 = null;
-    for (let i = 0; i < this.vehicles.length; i++) {
-      const v = this.vehicles[i];
-      if (v.isPolice && v.sirenActive) {
-        if (!s1) s1 = v;
-        else if (!s2) { s2 = v; break; }
-      }
-    }
-
-    const res = {
-      s1Pos: [0, -100, 0],
-      s1Col: [0, 0, 0],
-      s2Pos: [0, -100, 0],
-      s2Col: [0, 0, 0],
-    };
-
-    if (s1) {
-      res.s1Pos = [s1.x, s1.y + 1.8, s1.z];
-      const isRed = Math.sin(s1.sirenTimer) > 0;
-      res.s1Col = isRed ? [1.2, 0.1, 0.1] : [0.1, 0.4, 1.4];
-    }
-    if (s2) {
-      res.s2Pos = [s2.x, s2.y + 1.8, s2.z];
-      const isRed = Math.sin(s2.sirenTimer + Math.PI) > 0;
-      res.s2Col = isRed ? [1.2, 0.1, 0.1] : [0.1, 0.4, 1.4];
-    }
-    return res;
   }
 }

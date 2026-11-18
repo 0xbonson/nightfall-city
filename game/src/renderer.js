@@ -1,6 +1,17 @@
 /**
- * Nightfall City: Vela Bay - Hand-Written Pure WebGL Renderer
+ * Nightfall City: Vela Bay - High-Fidelity WebGL Renderer
  * Authored by makefun agent for the GTA 6 bounty challenge.
+ *
+ * Implements:
+ * - Direct warm sunset sunlight with wrap-around diffuse shading
+ * - Hemispheric sky ambient and warm ground bounce
+ * - Roadway asphalt sun sheen and specular reflection highlight
+ * - Vertical facade procedural window grid & street storefront neon illumination
+ * - Real-time contact shadow / crevice ambient occlusion darkening
+ * - Dynamic dual-tone police strobe light attenuation
+ * - Dynamic harmonic ocean wave displacement and crest foam specular
+ * - Multi-stop sunset atmospheric sky dome with solar corona and sun disc
+ * - Soft golden-hour distance depth fog
  */
 
 import { M4, V3 } from './math.js';
@@ -17,7 +28,7 @@ export class Renderer {
     });
 
     if (!this.gl) {
-      throw new Error('WebGL not supported on this platform');
+      throw new Error('WebGL rendering context initialization failed');
     }
 
     const gl = this.gl;
@@ -33,7 +44,6 @@ export class Renderer {
     this.matProj = M4.create();
     this.matView = M4.create();
     this.matModel = M4.create();
-    this.matNormal = M4.create();
 
     this.initShaders();
     this.initSkyMesh();
@@ -46,9 +56,9 @@ export class Renderer {
     gl.shaderSource(shader, source);
     gl.compileShader(shader);
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-      const info = gl.getShaderInfoLog(shader);
+      const err = gl.getShaderInfoLog(shader);
       gl.deleteShader(shader);
-      throw new Error(`Shader compilation failure: ${info}\n${source}`);
+      throw new Error(`Shader compilation error: ${err}\nSource:\n${source}`);
     }
     return shader;
   }
@@ -57,23 +67,23 @@ export class Renderer {
     const gl = this.gl;
     const vs = this.createShader(gl.VERTEX_SHADER, vsSource);
     const fs = this.createShader(gl.FRAGMENT_SHADER, fsSource);
-    const program = gl.createProgram();
-    gl.attachShader(program, vs);
-    gl.attachShader(program, fs);
-    gl.linkProgram(program);
+    const prog = gl.createProgram();
+    gl.attachShader(prog, vs);
+    gl.attachShader(prog, fs);
+    gl.linkProgram(prog);
 
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      const info = gl.getProgramInfoLog(program);
-      gl.deleteProgram(program);
-      throw new Error(`Program link failure: ${info}`);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+      const err = gl.getProgramInfoLog(prog);
+      gl.deleteProgram(prog);
+      throw new Error(`Program link error: ${err}`);
     }
-    return program;
+    return prog;
   }
 
   initShaders() {
     const gl = this.gl;
 
-    // --- World & Entity Shader ---
+    // --- World & Entities Shader ---
     const vsWorld = `
       precision highp float;
       attribute vec3 a_pos;
@@ -93,7 +103,6 @@ export class Renderer {
       void main() {
         vec4 worldPos = u_model * vec4(a_pos, 1.0);
         v_worldPos = worldPos.xyz;
-        // Approximation for non-shearing model matrices
         v_normal = normalize((u_model * vec4(a_norm, 0.0)).xyz);
         v_color = a_col;
         v_uv = a_uv;
@@ -117,7 +126,7 @@ export class Renderer {
       uniform float u_fogDen;
       uniform float u_time;
 
-      // Emergency flasher dynamic lights (police sirens)
+      // Dynamic emergency flashers (police cruisers)
       uniform vec3 u_siren1Pos;
       uniform vec3 u_siren1Col;
       uniform vec3 u_siren2Pos;
@@ -127,50 +136,61 @@ export class Renderer {
         vec3 N = normalize(v_normal);
         vec3 L = normalize(u_sunDir);
         vec3 V = normalize(u_camPos - v_worldPos);
-
-        // Sunlight diffuse
-        float NdotL = max(dot(N, L), 0.0);
-        vec3 direct = u_sunCol * NdotL;
-
-        // Sky hemisphere ambient (upwards vs downwards normals)
-        float hemi = clamp(N.y * 0.5 + 0.5, 0.0, 1.0);
-        vec3 ambient = mix(u_ambCol * 0.7, u_skyCol, hemi);
-
-        // Specular highlight for glossy car paint, windows, wet asphalt
         vec3 H = normalize(L + V);
-        float spec = pow(max(dot(N, H), 0.0), 28.0) * 0.35;
+
+        // 1. Wrap-around sun direct diffuse for warm, soft lighting
+        float softNdotL = max((dot(N, L) + 0.22) / 1.22, 0.0);
+        vec3 directSun = u_sunCol * softNdotL;
+
+        // 2. Dual-hemisphere ambient (sky dome down, warm ground bounce up)
+        float hemi = clamp(N.y * 0.5 + 0.5, 0.0, 1.0);
+        vec3 groundBounce = vec3(0.68, 0.55, 0.45);
+        vec3 ambient = mix(groundBounce * 0.75, u_skyCol, hemi) * 1.25;
+
+        // 3. Ground contact ambient shadow / crevice occlusion (applied to walls/underhangs, not open ground)
+        float contactAO = (N.y > 0.7) ? 1.0 : clamp(v_worldPos.y * 0.25 + 0.75, 0.75, 1.0);
+
+        // 4. Asphalt roadway & car paint specular sheen
+        float specPower = (N.y > 0.85) ? 22.0 : 36.0;
+        float specIntensity = (N.y > 0.85) ? 0.42 : 0.65;
+        float spec = pow(max(dot(N, H), 0.0), specPower) * specIntensity;
         vec3 specular = u_sunCol * spec;
 
-        // Dynamic emergency lightbars (police red and blue strobes)
-        vec3 dSiren1 = u_siren1Pos - v_worldPos;
-        float dist1 = length(dSiren1);
-        float atten1 = max(0.0, 1.0 - dist1 / 24.0);
-        vec3 sirenLit = u_siren1Col * (atten1 * atten1 * max(dot(N, normalize(dSiren1)), 0.0) * 0.75);
-
-        vec3 dSiren2 = u_siren2Pos - v_worldPos;
-        float dist2 = length(dSiren2);
-        float atten2 = max(0.0, 1.0 - dist2 / 24.0);
-        sirenLit += u_siren2Col * (atten2 * atten2 * max(dot(N, normalize(dSiren2)), 0.0) * 0.75);
-
-        // Procedural window illumination on tall buildings
+        // 5. Procedural storefront & office window illumination
         vec4 baseCol = v_color;
-        if (abs(N.y) < 0.2 && v_worldPos.y > 4.0 && v_color.b > 0.3) {
-          // Window grid pattern
-          vec2 winUv = fract(vec2(v_worldPos.x + v_worldPos.z, v_worldPos.y * 0.7));
-          if (winUv.x > 0.25 && winUv.x < 0.75 && winUv.y > 0.3 && winUv.y < 0.8) {
-            // Illuminated dusk window glint
-            baseCol.rgb += vec3(0.55, 0.45, 0.25) * 0.65;
+        if (abs(N.y) < 0.25 && v_worldPos.y > 0.5) {
+          // Ground level storefront warm neon display glow
+          if (v_worldPos.y < 4.8) {
+            float shopGlow = sin((v_worldPos.x + v_worldPos.z) * 0.8) * 0.5 + 0.5;
+            baseCol.rgb += vec3(0.85, 0.62, 0.32) * (0.35 * shopGlow);
+          } else {
+            // Skyscraper office window grid
+            vec2 winUv = fract(vec2((v_worldPos.x + v_worldPos.z) * 0.38, v_worldPos.y * 0.28));
+            if (winUv.x > 0.22 && winUv.x < 0.78 && winUv.y > 0.25 && winUv.y < 0.75) {
+              baseCol.rgb += vec3(0.95, 0.82, 0.45) * 0.55;
+            }
           }
         }
 
-        vec3 lit = baseCol.rgb * (ambient + direct) + specular + sirenLit;
+        // 6. Emergency strobe lights
+        vec3 dSiren1 = u_siren1Pos - v_worldPos;
+        float dist1 = length(dSiren1);
+        float atten1 = max(0.0, 1.0 - dist1 / 28.0);
+        vec3 sirenLit = u_siren1Col * (atten1 * atten1 * max(dot(N, normalize(dSiren1)), 0.0) * 0.95);
 
-        // Atmospheric distance fog (warm golden twilight)
+        vec3 dSiren2 = u_siren2Pos - v_worldPos;
+        float dist2 = length(dSiren2);
+        float atten2 = max(0.0, 1.0 - dist2 / 28.0);
+        sirenLit += u_siren2Col * (atten2 * atten2 * max(dot(N, normalize(dSiren2)), 0.0) * 0.95);
+
+        // Composite lit surface
+        vec3 lit = (baseCol.rgb * (ambient + directSun) * contactAO) + specular + sirenLit;
+
+        // 7. Atmospheric distance fog (warm golden dusk)
         float distCam = length(u_camPos - v_worldPos);
-        float fogFactor = 1.0 - exp(-distCam * u_fogDen);
-        fogFactor = clamp(fogFactor, 0.0, 0.88);
-
+        float fogFactor = clamp(1.0 - exp(-distCam * u_fogDen), 0.0, 0.78);
         vec3 finalColor = mix(lit, u_fogCol, fogFactor);
+
         gl_FragColor = vec4(finalColor, baseCol.a);
       }
     `;
@@ -203,17 +223,15 @@ export class Renderer {
 
       void main() {
         vec3 p = a_pos;
-        // Animated dual harmonic ocean wave displacement
-        float wave = sin(p.x * 0.12 + u_time * 2.2) * 0.32 +
-                     cos(p.z * 0.09 + u_time * 1.6) * 0.22;
+        float wave = sin(p.x * 0.14 + u_time * 2.4) * 0.35 +
+                     cos(p.z * 0.10 + u_time * 1.8) * 0.24;
         p.y += wave;
 
         vec4 worldPos = u_model * vec4(p, 1.0);
         v_worldPos = worldPos.xyz;
 
-        // Wave normal perturbation
-        float dWdx = cos(p.x * 0.12 + u_time * 2.2) * 0.12 * 0.32;
-        float dWdz = -sin(p.z * 0.09 + u_time * 1.6) * 0.09 * 0.22;
+        float dWdx = cos(p.x * 0.14 + u_time * 2.4) * 0.14 * 0.35;
+        float dWdz = -sin(p.z * 0.10 + u_time * 1.8) * 0.10 * 0.24;
         vec3 perturbedN = normalize(vec3(-dWdx, 1.0, -dWdz));
 
         v_normal = (u_model * vec4(perturbedN, 0.0)).xyz;
@@ -243,25 +261,24 @@ export class Renderer {
         vec3 L = normalize(u_sunDir);
         vec3 V = normalize(u_camPos - v_worldPos);
 
-        // Ocean depth color
-        vec3 waterBase = vec3(0.04, 0.38, 0.54);
+        vec3 waterBase = vec3(0.06, 0.44, 0.62);
 
-        // Specular sun glint across wave peaks
+        // Sun path reflection across waves
         vec3 H = normalize(L + V);
-        float spec = pow(max(dot(N, H), 0.0), 90.0) * 1.8;
+        float spec = pow(max(dot(N, H), 0.0), 80.0) * 2.2;
         vec3 sunGlint = u_sunCol * spec;
 
-        // Foam highlights on crests
-        float foam = smoothstep(0.18, 0.35, v_normal.x * 0.5 + v_normal.z * 0.5);
-        vec3 waterColor = mix(waterBase, vec3(0.75, 0.90, 0.98), foam * 0.45);
+        // Foam highlights on wave crests
+        float foam = smoothstep(0.16, 0.34, v_normal.x * 0.5 + v_normal.z * 0.5);
+        vec3 waterCol = mix(waterBase, vec3(0.85, 0.94, 1.0), foam * 0.55);
 
-        vec3 lit = waterColor * 0.85 + sunGlint;
+        vec3 lit = waterCol * 0.92 + sunGlint;
 
         float distCam = length(u_camPos - v_worldPos);
-        float fogFactor = clamp(1.0 - exp(-distCam * u_fogDen), 0.0, 0.88);
+        float fogFactor = clamp(1.0 - exp(-distCam * u_fogDen), 0.0, 0.78);
         vec3 finalCol = mix(lit, u_fogCol, fogFactor);
 
-        gl_FragColor = vec4(finalCol, 0.94);
+        gl_FragColor = vec4(finalCol, 0.95);
       }
     `;
 
@@ -272,7 +289,7 @@ export class Renderer {
       'u_camPos', 'u_fogCol', 'u_fogDen', 'u_time',
     ]);
 
-    // --- Atmospheric Sunset Sky Shader ---
+    // --- Atmospheric Sunset Sky Dome Shader ---
     const vsSky = `
       precision highp float;
       attribute vec2 a_pos;
@@ -292,34 +309,30 @@ export class Renderer {
       uniform vec3 u_camPos;
 
       void main() {
-        // Reconstruct ray direction in world space
         vec4 ndc = vec4(v_uv * 2.0 - 1.0, 1.0, 1.0);
         vec4 worldPos = u_invViewProj * ndc;
         vec3 ray = normalize(worldPos.xyz / worldPos.w - u_camPos);
 
-        // Sky gradient: Horizon peach/gold to Zenith deep twilight blue
+        // Sky multi-stop vertical gradient
         float h = clamp(ray.y, 0.0, 1.0);
-        vec3 zenithCol = vec3(0.18, 0.38, 0.72);
-        vec3 midCol = vec3(0.55, 0.65, 0.85);
-        vec3 horizonCol = vec3(0.98, 0.74, 0.52);
+        vec3 zenithCol = vec3(0.16, 0.38, 0.74);   // Twilight cobalt
+        vec3 midCol = vec3(0.56, 0.68, 0.88);      // Periwinkle azure
+        vec3 horizonCol = vec3(1.0, 0.76, 0.50);    // Warm golden peach
 
-        vec3 skyGrad = mix(horizonCol, midCol, pow(h, 0.45));
-        skyGrad = mix(skyGrad, zenithCol, pow(h, 1.4));
+        vec3 skyGrad = mix(horizonCol, midCol, pow(h, 0.42));
+        skyGrad = mix(skyGrad, zenithCol, pow(h, 1.35));
 
-        // Warm horizon haze band
-        float haze = exp(-max(ray.y, 0.0) * 3.5);
-        skyGrad = mix(skyGrad, vec3(0.98, 0.68, 0.45), haze * 0.6);
+        // Atmospheric haze along horizon
+        float haze = exp(-max(ray.y, 0.0) * 3.2);
+        skyGrad = mix(skyGrad, vec3(1.0, 0.68, 0.42), haze * 0.65);
 
-        // Sun disc & solar corona flare
+        // Solar corona & sharp sun disc
         vec3 L = normalize(u_sunDir);
         float sunDot = max(dot(ray, L), 0.0);
 
-        // Corona glow
-        vec3 corona = u_sunCol * pow(sunDot, 12.0) * 0.85;
-
-        // Sharp sun disc
-        float sunDisc = smoothstep(0.997, 0.9985, sunDot);
-        vec3 sunColor = vec3(1.0, 0.96, 0.85) * sunDisc * 2.5;
+        vec3 corona = u_sunCol * pow(sunDot, 10.0) * 0.95;
+        float sunDisc = smoothstep(0.9968, 0.9984, sunDot);
+        vec3 sunColor = vec3(1.0, 0.98, 0.88) * sunDisc * 2.8;
 
         gl_FragColor = vec4(skyGrad + corona + sunColor, 1.0);
       }
@@ -342,7 +355,6 @@ export class Renderer {
 
   initSkyMesh() {
     const gl = this.gl;
-    // Fullscreen quad in NDC
     const quadVertices = new Float32Array([
       -1, -1,
        1, -1,
@@ -359,7 +371,6 @@ export class Renderer {
   uploadWorldMesh(world) {
     const gl = this.gl;
 
-    // Static world geometry VBOs
     this.buffers.world = {
       pos: gl.createBuffer(),
       norm: gl.createBuffer(),
@@ -380,7 +391,6 @@ export class Renderer {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buffers.world.uv);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(world.uvs), gl.STATIC_DRAW);
 
-    // Water VBOs
     this.buffers.water = {
       pos: gl.createBuffer(),
       norm: gl.createBuffer(),
@@ -404,7 +414,6 @@ export class Renderer {
 
   initDynamicMeshBuffers() {
     const gl = this.gl;
-    // Shared dynamic VBO for vehicles, player, pedestrians, helicopter, props
     this.buffers.dynamic = {
       pos: gl.createBuffer(),
       norm: gl.createBuffer(),
@@ -420,11 +429,9 @@ export class Renderer {
     gl.uniformMatrix4fv(u.u_proj, false, this.matProj);
     gl.uniformMatrix4fv(u.u_view, false, this.matView);
 
-    // Normalized sun direction
     const sunD = V3.create();
     V3.norm(sunD, LIGHTING.SUN_DIR);
     gl.uniform3fv(u.u_sunDir, sunD);
-
     gl.uniform3fv(u.u_sunCol, LIGHTING.SUN_COLOR);
     gl.uniform3fv(u.u_skyCol, LIGHTING.SKY_COLOR);
     if (u.u_ambCol) gl.uniform3fv(u.u_ambCol, LIGHTING.AMBIENT_COLOR);
@@ -450,22 +457,19 @@ export class Renderer {
   renderWorld(camera, time, sirens) {
     const gl = this.gl;
 
-    // Viewport & Clear
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     const fog = LIGHTING.FOG_COLOR;
     gl.clearColor(fog[0], fog[1], fog[2], 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    // Setup Matrices
     const aspect = this.canvas.width / this.canvas.height;
-    M4.perspective(this.matProj, (camera.fov * Math.PI) / 180, aspect, 0.4, 600.0);
+    M4.perspective(this.matProj, (camera.fov * Math.PI) / 180, aspect, 0.4, 650.0);
     M4.lookAt(this.matView, camera.pos, camera.target, [0, 1, 0]);
 
-    // 0. Draw Atmospheric Sunset Sky & Sun Disc
+    // 0. Render Atmosphere Sky Dome & Sun Disc
     const progSky = this.programs.sky;
     gl.useProgram(progSky);
 
-    // Compute inverse View-Projection matrix
     const viewProj = M4.create();
     M4.mul(viewProj, this.matProj, this.matView);
     const invViewProj = M4.create();
@@ -487,7 +491,7 @@ export class Renderer {
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.enable(gl.DEPTH_TEST);
 
-    // 1. Draw Static World
+    // 1. Render Static Metropolis World Mesh
     const prog = this.programs.world;
     gl.useProgram(prog);
     this.setCommonUniforms(prog, camera, time, sirens);
@@ -498,7 +502,7 @@ export class Renderer {
     this.bindVBO(prog, this.buffers.world);
     gl.drawArrays(gl.TRIANGLES, 0, this.buffers.world.count);
 
-    // 2. Draw Ocean Water
+    // 2. Render Displaced Ocean Water
     const progW = this.programs.water;
     gl.useProgram(progW);
     this.setCommonUniforms(progW, camera, time, null);
@@ -542,7 +546,6 @@ export class Renderer {
     }
   }
 
-  // Draw dynamic batch of triangles (for vehicles, characters, helicopter, particles)
   drawDynamicMesh(positions, normals, colors, uvs, modelMatrix) {
     if (!positions.length) return;
     const gl = this.gl;

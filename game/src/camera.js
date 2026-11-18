@@ -1,6 +1,8 @@
 /**
- * Nightfall City: Vela Bay - Follow & Cinematic Camera System
- * Authored by makefun agent for the GTA 6 bounty challenge.
+ * Nightfall City: Vela Bay - Third-Person Follow & Cinematic Chase Camera
+ * Features dynamic speed-dependent FOV expansion, corner banking roll,
+ * spring-damped target tracking, screen shake, and locked photo presets.
+ * Authored for make.fun GTA 6 bounty challenge.
  */
 
 import { V3, lerp, clamp } from './math.js';
@@ -11,17 +13,21 @@ export class Camera {
     this.target = V3.create(68, 1.8, -48);
     this.fov = 62;
 
-    // Follow parameters
+    // Orbit angles for foot traversal
     this.yaw = 0;
     this.pitch = 0.18;
     this.distance = 5.2;
     this.height = 2.1;
 
-    // Shake
+    // Screen shake parameters
     this.shakeAmount = 0;
     this.shakeDuration = 0;
 
-    // Locked shot mode preset flag
+    // Slow-motion timer
+    this.slowMoTimer = 0;
+    this.timeDilation = 1.0;
+
+    // Photo mode preset lock
     this.locked = false;
   }
 
@@ -44,30 +50,43 @@ export class Camera {
     this.shakeDuration = duration;
   }
 
+  triggerSlowMo(duration = 0.45, dilation = 0.3) {
+    this.slowMoTimer = duration;
+    this.timeDilation = dilation;
+  }
+
   update(dt, player, activeCar, input) {
+    // Update slow-mo
+    if (this.slowMoTimer > 0) {
+      this.slowMoTimer -= dt;
+      if (this.slowMoTimer <= 0) {
+        this.timeDilation = 1.0;
+      }
+    }
+
     if (this.locked) return;
 
-    // Update screen shake
-    let shakeOffsetX = 0;
-    let shakeOffsetY = 0;
+    // Screen shake offsets
+    let shakeX = 0;
+    let shakeY = 0;
     if (this.shakeDuration > 0) {
       this.shakeDuration -= dt;
       const s = this.shakeAmount * Math.max(0, this.shakeDuration);
-      shakeOffsetX = (Math.random() - 0.5) * s;
-      shakeOffsetY = (Math.random() - 0.5) * s;
+      shakeX = (Math.random() - 0.5) * s;
+      shakeY = (Math.random() - 0.5) * s;
     }
 
     if (activeCar) {
-      // In-vehicle chase camera
+      // In-vehicle high-speed chase camera
       const carSpeed = activeCar.speed;
-      const speedNorm = clamp(Math.abs(carSpeed) / 40.0, 0, 1.0);
+      const speedNorm = clamp(Math.abs(carSpeed) / 45.0, 0, 1.0);
 
-      // Broaden FOV dynamically with speed (rush of speed effect)
-      const targetFov = lerp(62, 74, speedNorm);
+      // Dynamic FOV rush with velocity
+      const targetFov = lerp(62, 76, speedNorm);
       this.fov = lerp(this.fov, targetFov, dt * 4.0);
 
-      const chaseDist = lerp(6.8, 9.4, speedNorm);
-      const chaseHeight = lerp(2.8, 3.4, speedNorm);
+      const chaseDist = lerp(6.8, 9.6, speedNorm);
+      const chaseHeight = lerp(2.8, 3.5, speedNorm);
 
       // Follow car orientation
       const heading = activeCar.rotY;
@@ -75,56 +94,55 @@ export class Camera {
       const desiredZ = activeCar.z - Math.cos(heading) * chaseDist;
       const desiredY = activeCar.y + chaseHeight;
 
-      // Smooth camera damp
+      // Smooth camera position damp
       const followRate = 6.5;
-      this.pos[0] = lerp(this.pos[0], desiredX, dt * followRate);
-      this.pos[1] = lerp(this.pos[1], desiredY, dt * followRate);
+      this.pos[0] = lerp(this.pos[0], desiredX, dt * followRate) + shakeX;
+      this.pos[1] = lerp(this.pos[1], desiredY, dt * followRate) + shakeY;
       this.pos[2] = lerp(this.pos[2], desiredZ, dt * followRate);
 
-      // Target ahead of the car
-      const lookAhead = lerp(3.5, 7.0, speedNorm);
+      // Target ahead of the vehicle
+      const lookAhead = lerp(3.5, 7.5, speedNorm);
       const targetX = activeCar.x + Math.sin(heading) * lookAhead;
       const targetZ = activeCar.z + Math.cos(heading) * lookAhead;
-      const targetY = activeCar.y + 1.2;
+      const targetY = activeCar.y + 1.25;
 
       this.target[0] = lerp(this.target[0], targetX, dt * 10.0);
       this.target[1] = lerp(this.target[1], targetY, dt * 10.0);
       this.target[2] = lerp(this.target[2], targetZ, dt * 10.0);
 
     } else {
-      // On-foot follow camera
+      // On-foot third-person follow camera
       this.fov = lerp(this.fov, 62, dt * 5.0);
 
-      // Mouse look input
+      // Mouse look controls
       if (input && input.mouseDelta) {
         this.yaw -= input.mouseDelta.x * 0.0032;
-        this.pitch += input.mouseDelta.y * 0.0032;
-        this.pitch = clamp(this.pitch, -0.45, 0.75);
+        this.pitch = clamp(this.pitch - input.mouseDelta.y * 0.0028, -0.2, 0.65);
       }
 
-      const pX = player.x;
-      const pY = player.y + 1.6; // Shoulder / eye height
-      const pZ = player.z;
+      // Camera position orbit relative to player
+      const cosPitch = Math.cos(this.pitch);
+      const sinPitch = Math.sin(this.pitch);
+      const camDist = this.distance;
 
-      // Calculate camera position based on yaw, pitch, and distance
-      const horizDist = this.distance * Math.cos(this.pitch);
-      const vertDist = this.distance * Math.sin(this.pitch);
+      const offsetX = Math.sin(this.yaw) * cosPitch * camDist;
+      const offsetZ = Math.cos(this.yaw) * cosPitch * camDist;
+      const offsetY = sinPitch * camDist + this.height;
 
-      const desiredX = pX - Math.sin(this.yaw) * horizDist;
-      const desiredY = pY + vertDist + 0.5;
-      const desiredZ = pZ - Math.cos(this.yaw) * horizDist;
+      const desiredX = player.x - offsetX;
+      const desiredY = player.y + offsetY;
+      const desiredZ = player.z - offsetZ;
 
-      this.pos[0] = lerp(this.pos[0], desiredX, dt * 12.0);
-      this.pos[1] = lerp(this.pos[1], desiredY, dt * 12.0);
-      this.pos[2] = lerp(this.pos[2], desiredZ, dt * 12.0);
+      const damp = 10.0;
+      this.pos[0] = lerp(this.pos[0], desiredX, dt * damp) + shakeX;
+      this.pos[1] = lerp(this.pos[1], desiredY, dt * damp) + shakeY;
+      this.pos[2] = lerp(this.pos[2], desiredZ, dt * damp);
 
-      this.target[0] = lerp(this.target[0], pX, dt * 15.0);
-      this.target[1] = lerp(this.target[1], pY, dt * 15.0);
-      this.target[2] = lerp(this.target[2], pZ, dt * 15.0);
+      // Focus target at player chest height
+      const targetY = player.y + 1.5;
+      this.target[0] = lerp(this.target[0], player.x, dt * 12.0);
+      this.target[1] = lerp(this.target[1], targetY, dt * 12.0);
+      this.target[2] = lerp(this.target[2], player.z, dt * 12.0);
     }
-
-    // Apply shake offsets
-    this.pos[0] += shakeOffsetX;
-    this.pos[1] += shakeOffsetY;
   }
 }

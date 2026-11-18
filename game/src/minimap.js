@@ -1,20 +1,30 @@
 /**
- * Nightfall City: Vela Bay - Circular Radar Minimap
+ * Nightfall City: Vela Bay - High-Fidelity Tactical GPS Minimap
  * Authored by makefun agent for the GTA 6 bounty challenge.
+ *
+ * Renders a circular navigation radar with:
+ * - Dynamic ocean water & marina coastline
+ * - District-shaded city blocks and arterial road network
+ * - Multi-layer traffic pips, flashing dual-tone police indicators
+ * - Glowing mission objective beacons with edge clamping
+ * - Distinct compass markers and North indicator
+ * - Articulated player heading chevron with heading sweep
  */
 
 import { WORLD } from './config.js';
 
 export class Minimap {
-  constructor(radius = 72) {
+  constructor(radius = 76) {
     this.radius = radius;
-    this.cx = radius + 30;
-    this.cy = 0; // Set dynamically from canvas height
-    this.scale = 0.58; // World meters to radar pixels
+    this.cx = radius + 32;
+    this.cy = 0; // Updated dynamically from viewport height
+    this.scale = 0.55; // World meters to radar pixels (shows ~138m radius)
+    this.pulsePhase = 0;
   }
 
   render(ctx, h, player, vehicles, police, missions, combat) {
-    this.cy = h - this.radius - 30;
+    this.cy = h - this.radius - 32;
+    this.pulsePhase = (this.pulsePhase + 0.05) % (Math.PI * 2);
 
     const cx = this.cx;
     const cy = this.cy;
@@ -22,64 +32,112 @@ export class Minimap {
 
     ctx.save();
 
-    // 1. Outer radar bezel & glass
+    // 1. Radar Glass Outer Ring & Shadow
     ctx.beginPath();
-    ctx.arc(cx, cy, r + 4, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(8, 10, 16, 0.88)';
+    ctx.arc(cx, cy, r + 6, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(10, 14, 22, 0.92)';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.75)';
+    ctx.shadowBlur = 14;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(80, 95, 120, 0.65)';
-    ctx.lineWidth = 3;
+    ctx.shadowBlur = 0;
+
+    // Bezel border
+    ctx.strokeStyle = 'rgba(100, 130, 170, 0.55)';
+    ctx.lineWidth = 2.5;
     ctx.stroke();
 
-    // 2. Circular Clipping Mask for radar contents
+    // Secondary inner decorative bezel ring
+    ctx.beginPath();
+    ctx.arc(cx, cy, r + 2, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(30, 45, 65, 0.8)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // 2. Circular Clipping Mask for internal contents
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.clip();
 
-    // Background fill (city block base)
-    ctx.fillStyle = '#181b22';
+    // City ground base
+    ctx.fillStyle = '#171b24';
     ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
 
-    // Coordinate transform: center on player
+    // Transform setup: player-centric coordinate space
     const px = player.x;
     const pz = player.z;
-
     const toRadarX = (wx) => cx + (wx - px) * this.scale;
     const toRadarY = (wz) => cy + (wz - pz) * this.scale;
 
-    // 3. Render Ocean Water (West of WORLD.COAST_X)
+    // 3. Render Ocean Water & Marina Coastline
     const coastRadarX = toRadarX(WORLD.COAST_X);
     if (coastRadarX > cx - r) {
-      ctx.fillStyle = '#0a354c';
-      ctx.fillRect(cx - r, cy - r, Math.min(r * 2, coastRadarX - (cx - r)), r * 2);
+      // Ocean deep blue
+      const oceanRight = Math.min(cx + r, coastRadarX);
+      ctx.fillStyle = '#0a324b';
+      ctx.fillRect(cx - r, cy - r, oceanRight - (cx - r), r * 2);
+
+      // Surf / Shoreline foam fringe
+      ctx.strokeStyle = 'rgba(120, 200, 240, 0.45)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(coastRadarX, cy - r);
+      ctx.lineTo(coastRadarX, cy + r);
+      ctx.stroke();
+
+      // Marina Pier Docks (west jutting wooden slips)
+      ctx.fillStyle = '#3a4450';
+      const pierZList = [-80, -20, 40, 100];
+      for (const pzVal of pierZList) {
+        const pzRad = toRadarY(pzVal);
+        if (pzRad >= cy - r - 10 && pzRad <= cy + r + 10) {
+          ctx.fillRect(coastRadarX - 22, pzRad - 2.5, 22, 5);
+        }
+      }
     }
 
-    // 4. Render Main Roads
-    ctx.strokeStyle = '#2d3340';
+    // 4. District Area Shading
+    // Industrial Docks (South-West)
+    const docksX0 = toRadarX(-120);
+    const docksZ0 = toRadarY(60);
+    const docksW = 90 * this.scale;
+    const docksH = 160 * this.scale;
+    ctx.fillStyle = 'rgba(60, 45, 30, 0.25)';
+    ctx.fillRect(docksX0, docksZ0, docksW, docksH);
+
+    // Downtown (Central high-rise grid)
+    const dtX0 = toRadarX(-30);
+    const dtZ0 = toRadarY(-80);
+    const dtW = 120 * this.scale;
+    const dtH = 140 * this.scale;
+    ctx.fillStyle = 'rgba(30, 60, 90, 0.22)';
+    ctx.fillRect(dtX0, dtZ0, dtW, dtH);
+
+    // 5. Road Network Grid
+    ctx.strokeStyle = '#2d3545';
     ctx.lineWidth = WORLD.ROAD_WIDTH * this.scale;
 
-    // North-South avenues
+    // North-South Avenues
     const nsRoads = [-105, -55, 0, 45, 115, 185];
     for (const rx of nsRoads) {
-      const rxRadar = toRadarX(rx);
+      const rxRad = toRadarX(rx);
       ctx.beginPath();
-      ctx.moveTo(rxRadar, cy - r);
-      ctx.lineTo(rxRadar, cy + r);
+      ctx.moveTo(rxRad, cy - r);
+      ctx.lineTo(rxRad, cy + r);
       ctx.stroke();
     }
 
-    // East-West streets
+    // East-West Streets
     const ewRoads = [-180, -115, -50, 20, 85, 150, 215];
     for (const rz of ewRoads) {
-      const rzRadar = toRadarY(rz);
+      const rzRad = toRadarY(rz);
       ctx.beginPath();
-      ctx.moveTo(cx - r, rzRadar);
-      ctx.lineTo(cx + r, rzRadar);
+      ctx.moveTo(cx - r, rzRad);
+      ctx.lineTo(cx + r, rzRad);
       ctx.stroke();
     }
 
-    // Overpass (highlighted in cyan/grey)
-    ctx.strokeStyle = '#4a5568';
+    // Elevated Highway / Overpass (cyan tinted double-line)
+    ctx.strokeStyle = '#4e6278';
     ctx.lineWidth = WORLD.OVERPASS_WIDTH * this.scale;
     const overpassXRadar = toRadarX(WORLD.OVERPASS_X);
     ctx.beginPath();
@@ -87,61 +145,62 @@ export class Minimap {
     ctx.lineTo(overpassXRadar, toRadarY(WORLD.OVERPASS_Z_END));
     ctx.stroke();
 
-    // 5. Traffic & Police Vehicle Blips
-    for (let i = 0; i < vehicles.vehicles.length; i++) {
-      const v = vehicles.vehicles[i];
-      if (v.isPlayerControlled) continue;
+    // Concentric Range Rings (Subtle radar grid)
+    ctx.strokeStyle = 'rgba(120, 160, 210, 0.12)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.4, 0, Math.PI * 2);
+    ctx.arc(cx, cy, r * 0.75, 0, Math.PI * 2);
+    ctx.stroke();
 
-      const vx = toRadarX(v.x);
-      const vy = toRadarY(v.z);
-      const d = Math.hypot(vx - cx, vy - cy);
-      if (d > r - 2) continue;
+    // 6. Traffic & Police Vehicles
+    if (vehicles && vehicles.vehicles) {
+      for (let i = 0; i < vehicles.vehicles.length; i++) {
+        const v = vehicles.vehicles[i];
+        if (v.isPlayerControlled) continue;
 
-      if (v.isPolice) {
-        // Flashing red & blue police pip
-        const isRed = Math.sin(v.sirenTimer) > 0;
-        ctx.fillStyle = isRed ? '#ff2222' : '#2288ff';
+        const vx = toRadarX(v.x);
+        const vy = toRadarY(v.z);
+        const dist = Math.hypot(vx - cx, vy - cy);
+        if (dist > r - 3) continue;
+
+        if (v.isPolice) {
+          // Flashing siren blip
+          const flash = Math.sin(v.sirenTimer * 2) > 0;
+          ctx.fillStyle = flash ? '#ff2a2a' : '#2288ff';
+          ctx.beginPath();
+          ctx.arc(vx, vy, 4.5, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        } else {
+          // Normal civilian vehicle blip
+          ctx.fillStyle = '#8b9bb4';
+          ctx.fillRect(vx - 2.5, vy - 2.5, 5, 5);
+        }
+      }
+    }
+
+    // Police Chopper (if airborne)
+    if (police && police.helicopter && police.helicopter.active) {
+      const hx = toRadarX(police.helicopter.x);
+      const hy = toRadarY(police.helicopter.z);
+      if (Math.hypot(hx - cx, hy - cy) < r - 4) {
+        ctx.fillStyle = '#ff0055';
         ctx.beginPath();
-        ctx.arc(vx, vy, 4, 0, Math.PI * 2);
+        ctx.arc(hx, hy, 5, 0, Math.PI * 2);
         ctx.fill();
-      } else {
-        // Normal car pip
-        ctx.fillStyle = '#8899aa';
-        ctx.fillRect(vx - 2, vy - 2, 4, 4);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
       }
     }
 
-    // 6. Mission Waypoint Blip
-    const target = missions.getTargetCoords();
-    if (target) {
-      let tx = toRadarX(target[0]);
-      let ty = toRadarY(target[2]);
-      const distToTarget = Math.hypot(tx - cx, ty - cy);
-
-      // Clamp to radar edge if out of radar view
-      if (distToTarget > r - 7) {
-        const angle = Math.atan2(ty - cy, tx - cx);
-        tx = cx + Math.cos(angle) * (r - 7);
-        ty = cy + Math.sin(angle) * (r - 7);
-      }
-
-      // Golden diamond marker
-      ctx.fillStyle = '#ffbb00';
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(tx, ty - 6);
-      ctx.lineTo(tx + 6, ty);
-      ctx.lineTo(tx, ty + 6);
-      ctx.lineTo(tx - 6, ty);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-    }
-
-    // 7. Enemy Blips (combat)
+    // 7. Hostile Syndicate Enforcer Blips
     if (combat && combat.enemies) {
-      ctx.fillStyle = '#ff3333';
+      ctx.fillStyle = '#ff2222';
       for (let i = 0; i < combat.enemies.length; i++) {
         const en = combat.enemies[i];
         if (!en.alive) continue;
@@ -149,41 +208,103 @@ export class Minimap {
         const ey = toRadarY(en.z);
         if (Math.hypot(ex - cx, ey - cy) < r - 2) {
           ctx.beginPath();
-          ctx.arc(ex, ey, 3, 0, Math.PI * 2);
+          ctx.arc(ex, ey, 3.5, 0, Math.PI * 2);
           ctx.fill();
         }
       }
     }
 
-    // 8. Player Heading Arrow (Center of radar)
+    // 8. Mission Objective Beacon (Glowing Diamond)
+    const target = missions.getTargetCoords();
+    if (target) {
+      let tx = toRadarX(target[0]);
+      let ty = toRadarY(target[2]);
+      const distToTarget = Math.hypot(tx - cx, ty - cy);
+
+      // Edge clamp if outside visible radius
+      const clamped = distToTarget > r - 8;
+      if (clamped) {
+        const angle = Math.atan2(ty - cy, tx - cx);
+        tx = cx + Math.cos(angle) * (r - 8);
+        ty = cy + Math.sin(angle) * (r - 8);
+      }
+
+      // Pulsing outer aura
+      const aura = 6 + Math.sin(this.pulsePhase) * 2;
+      ctx.fillStyle = 'rgba(255, 200, 40, 0.35)';
+      ctx.beginPath();
+      ctx.arc(tx, ty, aura, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Sharp golden diamond
+      ctx.fillStyle = '#ffc400';
+      ctx.strokeStyle = '#111111';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(tx, ty - 6.5);
+      ctx.lineTo(tx + 6.5, ty);
+      ctx.lineTo(tx, ty + 6.5);
+      ctx.lineTo(tx - 6.5, ty);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    // 9. Player Chevron (Rotated to heading)
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(player.rotY);
 
-    ctx.fillStyle = '#ffcc00';
-    ctx.strokeStyle = '#000000';
+    // Subtle forward view cone
+    ctx.fillStyle = 'rgba(255, 220, 80, 0.12)';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, 24, -Math.PI / 2 - 0.35, -Math.PI / 2 + 0.35);
+    ctx.closePath();
+    ctx.fill();
+
+    // Sharp player arrowhead
+    ctx.fillStyle = '#ffd500';
+    ctx.strokeStyle = '#05070a';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(0, 9);  // Pointing forward in direction of heading
-    ctx.lineTo(5, -6);
+    ctx.moveTo(0, 10);   // Forward tip
+    ctx.lineTo(5.5, -6);
     ctx.lineTo(0, -3);
-    ctx.lineTo(-5, -6);
+    ctx.lineTo(-5.5, -6);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
     ctx.restore();
 
-    ctx.restore(); // Restore clipping mask
+    ctx.restore(); // End clipping mask
 
-    // 9. Cardinal Directions (N, S, E, W)
-    ctx.font = 'bold 10px sans-serif';
+    // 10. Distinct North Badge & Compass Markings
+    ctx.save();
+    // North badge pill
+    const nBadgeY = cy - r - 12;
+    ctx.fillStyle = 'rgba(15, 20, 30, 0.9)';
+    ctx.beginPath();
+    ctx.arc(cx, nBadgeY, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#ff3344';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.font = '900 11px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText('N', cx, cy - r - 9);
-    ctx.fillText('S', cx, cy + r + 9);
-    ctx.fillText('E', cx + r + 9, cy);
-    ctx.fillText('W', cx - r - 9, cy);
+    ctx.fillText('N', cx, nBadgeY);
+
+    // Minor Cardinal labels
+    ctx.font = 'bold 9px sans-serif';
+    ctx.fillStyle = 'rgba(180, 200, 230, 0.75)';
+    ctx.fillText('S', cx, cy + r + 10);
+    ctx.fillText('E', cx + r + 11, cy);
+    ctx.fillText('W', cx - r - 11, cy);
+
+    ctx.restore();
   }
 }

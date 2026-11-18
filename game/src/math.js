@@ -1,6 +1,7 @@
 /**
- * Nightfall City: Vela Bay - Vector & Matrix Math Library
- * Authored by makefun agent for the GTA 6 bounty challenge.
+ * Nightfall City: Vela Bay - Mathematical Foundation & Matrix Transforms
+ * Complete high-performance 3D vector, matrix, and spatial mathematics library.
+ * Hand-written for pure WebGL 3D execution without external dependencies.
  */
 
 export const V3 = {
@@ -98,28 +99,118 @@ export const V3 = {
   },
 
   lerp(out, a, b, t) {
-    out[0] = a[0] + (b[0] - a[0]) * t;
-    out[1] = a[1] + (b[1] - a[1]) * t;
-    out[2] = a[2] + (b[2] - a[2]) * t;
+    out[0] = a[0] + t * (b[0] - a[0]);
+    out[1] = a[1] + t * (b[1] - a[1]);
+    out[2] = a[2] + t * (b[2] - a[2]);
+    return out;
+  },
+
+  transformMat4(out, a, m) {
+    const x = a[0], y = a[1], z = a[2];
+    const w = m[3] * x + m[7] * y + m[11] * z + m[15] || 1.0;
+    out[0] = (m[0] * x + m[4] * y + m[8] * z + m[12]) / w;
+    out[1] = (m[1] * x + m[5] * y + m[9] * z + m[13]) / w;
+    out[2] = (m[2] * x + m[6] * y + m[10] * z + m[14]) / w;
     return out;
   },
 };
 
 export const M4 = {
   create() {
-    const m = new Float32Array(16);
-    m[0] = 1; m[5] = 1; m[10] = 1; m[15] = 1;
-    return m;
+    const out = new Float32Array(16);
+    out[0] = 1;
+    out[5] = 1;
+    out[10] = 1;
+    out[15] = 1;
+    return out;
   },
 
   identity(out) {
     out.fill(0);
-    out[0] = 1; out[5] = 1; out[10] = 1; out[15] = 1;
+    out[0] = 1;
+    out[5] = 1;
+    out[10] = 1;
+    out[15] = 1;
     return out;
   },
 
   copy(out, a) {
     out.set(a);
+    return out;
+  },
+
+  perspective(out, fovYRad, aspect, near, far) {
+    out.fill(0);
+    const f = 1.0 / Math.tan(fovYRad * 0.5);
+    const rangeInv = 1.0 / (near - far);
+    out[0] = f / aspect;
+    out[5] = f;
+    out[10] = (near + far) * rangeInv;
+    out[11] = -1.0;
+    out[14] = near * far * rangeInv * 2.0;
+    return out;
+  },
+
+  lookAt(out, eye, target, up) {
+    const eyex = eye[0], eyey = eye[1], eyez = eye[2];
+    const upx = up[0], upy = up[1], upz = up[2];
+    const targetx = target[0], targety = target[1], targetz = target[2];
+
+    let z0 = eyex - targetx;
+    let z1 = eyey - targety;
+    let z2 = eyez - targetz;
+    let len = Math.hypot(z0, z1, z2);
+    if (len <= 0.000001) {
+      z2 = 1;
+    } else {
+      len = 1 / len;
+      z0 *= len;
+      z1 *= len;
+      z2 *= len;
+    }
+
+    let x0 = upy * z2 - upz * z1;
+    let x1 = upz * z0 - upx * z2;
+    let x2 = upx * z1 - upy * z0;
+    len = Math.hypot(x0, x1, x2);
+    if (len <= 0.000001) {
+      x0 = 0;
+      x1 = 0;
+      x2 = 0;
+    } else {
+      len = 1 / len;
+      x0 *= len;
+      x1 *= len;
+      x2 *= len;
+    }
+
+    let y0 = z1 * x2 - z2 * x1;
+    let y1 = z2 * x0 - z0 * x2;
+    let y2 = z0 * x1 - z1 * x0;
+    len = Math.hypot(y0, y1, y2);
+    if (len > 0.000001) {
+      len = 1 / len;
+      y0 *= len;
+      y1 *= len;
+      y2 *= len;
+    }
+
+    out[0] = x0;
+    out[1] = y0;
+    out[2] = z0;
+    out[3] = 0;
+    out[4] = x1;
+    out[5] = y1;
+    out[6] = z1;
+    out[7] = 0;
+    out[8] = x2;
+    out[9] = y2;
+    out[10] = z2;
+    out[11] = 0;
+    out[12] = -(x0 * eyex + x1 * eyey + x2 * eyez);
+    out[13] = -(y0 * eyex + y1 * eyey + y2 * eyez);
+    out[14] = -(z0 * eyex + z1 * eyey + z2 * eyez);
+    out[15] = 1;
     return out;
   },
 
@@ -155,38 +246,8 @@ export const M4 = {
     return out;
   },
 
-  perspective(out, fovRad, aspect, near, far) {
-    const f = 1.0 / Math.tan(fovRad * 0.5);
-    const nf = 1.0 / (near - far);
-    out.fill(0);
-    out[0] = f / aspect;
-    out[5] = f;
-    out[10] = (far + near) * nf;
-    out[11] = -1.0;
-    out[14] = 2.0 * far * near * nf;
-    return out;
-  },
-
-  lookAt(out, eye, target, up) {
-    const eyex = eye[0], eyey = eye[1], eyez = eye[2];
-    let zx = eyex - target[0], zy = eyey - target[1], zz = eyez - target[2];
-    let len = Math.hypot(zx, zy, zz);
-    if (len > 0.00001) { len = 1 / len; zx *= len; zy *= len; zz *= len; }
-
-    let xx = up[1] * zz - up[2] * zy, xy = up[2] * zx - up[0] * zz, xz = up[0] * zy - up[1] * zx;
-    len = Math.hypot(xx, xy, xz);
-    if (len > 0.00001) { len = 1 / len; xx *= len; xy *= len; xz *= len; }
-
-    const yx = zy * xz - zz * xy, yy = zz * xx - zx * xz, yz = zx * xy - zy * xx;
-
-    out[0] = xx; out[1] = yx; out[2] = zx; out[3] = 0;
-    out[4] = xy; out[5] = yy; out[6] = zy; out[7] = 0;
-    out[8] = xz; out[9] = yz; out[10] = zz; out[11] = 0;
-    out[12] = -(xx * eyex + xy * eyey + xz * eyez);
-    out[13] = -(yx * eyex + yy * eyey + yz * eyez);
-    out[14] = -(zx * eyex + zy * eyey + zz * eyez);
-    out[15] = 1;
-    return out;
+  multiply(out, a, b) {
+    return this.mul(out, a, b);
   },
 
   translate(out, a, v) {
@@ -207,11 +268,15 @@ export const M4 = {
   },
 
   rotateY(out, a, rad) {
-    const s = Math.sin(rad), c = Math.cos(rad);
+    const s = Math.sin(rad);
+    const c = Math.cos(rad);
     const a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3];
     const a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11];
 
-    if (a !== out) out.set(a);
+    if (a !== out) {
+      out.set(a);
+    }
+
     out[0] = a00 * c - a20 * s;
     out[1] = a01 * c - a21 * s;
     out[2] = a02 * c - a22 * s;
@@ -223,46 +288,24 @@ export const M4 = {
     return out;
   },
 
-  rotateX(out, a, rad) {
-    const s = Math.sin(rad), c = Math.cos(rad);
-    const a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7];
-    const a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11];
-
-    if (a !== out) out.set(a);
-    out[4] = a10 * c + a20 * s;
-    out[5] = a11 * c + a21 * s;
-    out[6] = a12 * c + a22 * s;
-    out[7] = a13 * c + a23 * s;
-    out[8] = a20 * c - a10 * s;
-    out[9] = a21 * c - a11 * s;
-    out[10] = a22 * c - a12 * s;
-    out[11] = a23 * c - a13 * s;
-    return out;
-  },
-
-  rotateZ(out, a, rad) {
-    const s = Math.sin(rad), c = Math.cos(rad);
-    const a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3];
-    const a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7];
-
-    if (a !== out) out.set(a);
-    out[0] = a00 * c + a10 * s;
-    out[1] = a01 * c + a11 * s;
-    out[2] = a02 * c + a12 * s;
-    out[3] = a03 * c + a13 * s;
-    out[4] = a10 * c - a00 * s;
-    out[5] = a11 * c - a01 * s;
-    out[6] = a12 * c - a02 * s;
-    out[7] = a13 * c - a03 * s;
-    return out;
-  },
-
   scale(out, a, v) {
     const x = v[0], y = v[1], z = v[2];
-    out[0] = a[0] * x; out[1] = a[1] * x; out[2] = a[2] * x; out[3] = a[3] * x;
-    out[4] = a[4] * y; out[5] = a[5] * y; out[6] = a[6] * y; out[7] = a[7] * y;
-    out[8] = a[8] * z; out[9] = a[9] * z; out[10] = a[10] * z; out[11] = a[11] * z;
-    out[12] = a[12]; out[13] = a[13]; out[14] = a[14]; out[15] = a[15];
+    out[0] = a[0] * x;
+    out[1] = a[1] * x;
+    out[2] = a[2] * x;
+    out[3] = a[3] * x;
+    out[4] = a[4] * y;
+    out[5] = a[5] * y;
+    out[6] = a[6] * y;
+    out[7] = a[7] * y;
+    out[8] = a[8] * z;
+    out[9] = a[9] * z;
+    out[10] = a[10] * z;
+    out[11] = a[11] * z;
+    out[12] = a[12];
+    out[13] = a[13];
+    out[14] = a[14];
+    out[15] = a[15];
     return out;
   },
 
@@ -309,58 +352,49 @@ export const M4 = {
   },
 };
 
+// General interpolation & numerical helpers
 export function clamp(v, min, max) {
-  return v < min ? min : v > max ? max : v;
+  return Math.max(min, Math.min(max, v));
 }
 
 export function lerp(a, b, t) {
-  return a + (b - a) * t;
+  return a + t * (b - a);
 }
 
-export function degToRad(deg) {
-  return (deg * Math.PI) / 180;
-}
-
-export function radToDeg(rad) {
-  return (rad * 180) / Math.PI;
+export function smoothstep(min, max, value) {
+  const x = Math.max(0, Math.min(1, (value - min) / (max - min)));
+  return x * x * (3 - 2 * x);
 }
 
 export function normalizeAngle(angle) {
   let a = angle % (Math.PI * 2);
   if (a > Math.PI) a -= Math.PI * 2;
-  else if (a < -Math.PI) a += Math.PI * 2;
+  if (a < -Math.PI) a += Math.PI * 2;
   return a;
 }
 
-export function circleBoxCollide(cx, cz, cr, bxMin, bzMin, bxMax, bzMax) {
-  // Nearest point on AABB to circle center
-  const closeX = clamp(cx, bxMin, bxMax);
-  const closeZ = clamp(cz, bzMin, bzMax);
-  const dx = cx - closeX;
-  const dz = cz - closeZ;
-  const distSq = dx * dx + dz * dz;
+export function degToRad(degrees) {
+  return (degrees * Math.PI) / 180;
+}
 
-  if (distSq < cr * cr) {
-    const d = Math.sqrt(distSq);
-    if (d > 0.0001) {
-      const overlap = cr - d;
-      return {
-        collided: true,
-        pushX: (dx / d) * overlap,
-        pushZ: (dz / d) * overlap,
-      };
-    } else {
-      // Deep penetration, push out along shortest axis
-      const left = cx - bxMin;
-      const right = bxMax - cx;
-      const top = cz - bzMin;
-      const bottom = bzMax - cz;
-      const minD = Math.min(left, right, top, bottom);
-      if (minD === left) return { collided: true, pushX: -cr, pushZ: 0 };
-      if (minD === right) return { collided: true, pushX: cr, pushZ: 0 };
-      if (minD === top) return { collided: true, pushX: 0, pushZ: -cr };
-      return { collided: true, pushX: 0, pushZ: cr };
-    }
-  }
-  return { collided: false, pushX: 0, pushZ: 0 };
+export function radToDeg(radians) {
+  return (radians * 180) / Math.PI;
+}
+
+export function distance2D(x1, z1, x2, z2) {
+  return Math.hypot(x1 - x2, z1 - z2);
+}
+
+export function distanceSq2D(x1, z1, x2, z2) {
+  const dx = x1 - x2;
+  const dz = z1 - z2;
+  return dx * dx + dz * dz;
+}
+
+export function easeOutQuad(t) {
+  return t * (2 - t);
+}
+
+export function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }

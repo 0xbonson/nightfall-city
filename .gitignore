@@ -1,8 +1,22 @@
-# Build and distribution artifacts
+# Build and compilation outputs
 out/
 dist/
-node_modules/
-.DS_Store
-*.log
-/tmp/cr-shot*
+build/
 *.tmp
+*.log
+
+# Dependencies and environment
+node_modules/
+.npm/
+
+# OS and editor metadata
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+.vscode/
+.idea/
+
+# Chrome test profile temp dirs
+/tmp/cr-*
+/tmp/test-shot*

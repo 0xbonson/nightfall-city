@@ -1,190 +1,134 @@
-# Nightfall City: Vela Bay — Game Design & Architecture Document
+# Nightfall City: Vela Bay — Game Engine Architecture & Build Plan
 
-Nightfall City is an original 3D open-world crime action game developed for the make.fun bounty (slug `gta6-01`). The game delivers a complete, cohesive crime sandbox experience set in the coastal metropolis of **Vela Bay**, running fully offline in modern desktop browsers as plain ES modules with zero third-party libraries, CDNs, or build steps.
-
----
-
-## 1. World & Setting: Vela Bay
-
-The game world spans a rich coordinate area (-280m to +280m in X and Z) featuring 4 distinct districts and an ocean coastline:
-
-1. **Downtown Vela Bay** (North-East: `X: 20 to 240`, `Z: -240 to -20`):
-   - Soaring modern skyscrapers reaching up to 120m in height with reflective glass window bands, concrete corporate plazas, and neon signage.
-2. **Old Market Quarter** (North-West: `X: -240 to -20`, `Z: -240 to -20`):
-   - Dense historic quarter with terracotta roofs, red-brick facades, narrow winding alleyways, stone arches, and merchant market squares.
-3. **Meridian Shipping Docks** (South-East: `X: 20 to 240`, `Z: 20 to 240`):
-   - Industrial waterfront shipping port with cargo warehouses, depot compounds, stacked multi-colored shipping containers, gantry cranes, and waterfront piers.
-4. **Ocean Promenade & Beach** (South-West: `X: -240 to -20`, `Z: 20 to 240`):
-   - Golden sand beaches, animated coastal ocean waves, beachfront hotels, luxury villas, and tall palm tree boulevards.
-5. **Grand Parkway & Road Network**:
-   - Four-lane central avenues crossing North-South (`X = 0`) and East-West (`Z = 0`) connecting all districts with lane dividers, asphalt textures, and yellow centerlines.
+**Nightfall City: Vela Bay** is an open-world 3D crime action game built for the make.fun bounty challenge (`gta6-01`). The game runs offline in desktop browsers as pure vanilla ES modules with zero third-party dependencies, libraries, or build bundlers.
 
 ---
 
-## 2. Core Systems Implemented
+## 1. Setting & World Geometry: Vela Bay
 
-### 2.1 Exploration & Foot Traversal
-- Full 3D third-person character movement for protagonist **Rhea "Rook" Solano**.
-- Movement mechanics: walk, sprint (Shift), directional strafing, and camera-relative orientation.
-- Precise AABB/circle sliding collision detection against building walls, obstacles, shipping containers, and world borders.
+The game world spans a rich coordinate area (-280m to +280m in X and Z) featuring 4 distinct districts, an elevated skyway, and an ocean coastline:
 
-### 2.2 Vehicle System & Arcade Driving
-- Diverse vehicle roster with 6 distinct handling profiles:
-  - *Veloce GT* (Sports car: top speed 34, rapid acceleration, high grip)
-  - *Meridian Cruiser* (Luxury sedan: balanced performance, smooth handling)
-  - *Vane Muscle* (Muscle car: high torque, prone to power drifts)
-  - *Metro Patrol* (Police interceptor cruiser with siren lightbar)
-  - *Titan Van* (Heavy delivery transport: high mass, durable chassis)
-  - *Cobra Cab* (City taxi)
-- Walk up to any parked or traffic vehicle and press `F` to jack the car.
-- Driving dynamics include forward throttle, reverse, foot brake, steering response curves, handbrake drift mechanics (`Space`), tire smoke particle generation, and crash damage modeling.
-- Changing or ditching a stolen car doubles evasion rate when escaping police pursuit.
-
-### 2.3 Traffic & Pedestrian Population
-- Autonomous AI traffic vehicles navigating the road grid, staying in lanes, and braking for obstacles.
-- Dynamic pedestrian population walking along sidewalks and crosswalks with varied outfits.
-- Pedestrians panic, scream, and flee when vehicles speed nearby or gunfire erupts.
-- Pedestrians drop cash pickups ($20–$100) when eliminated.
-
-### 2.4 Escalating 5-Star Wanted System & Metro Police
-- Crime reporting engine monitoring player infractions (carjacking, hit-and-run, discharge of firearms, assaulting officers).
-- Heat scales from 0 to 5 stars:
-  - **1 Star**: Patrol officers investigate on foot.
-  - **2 Stars**: Police cruisers respond and initiate active vehicle pursuit.
-  - **3 Stars**: Multi-cruiser pursuit with PIT maneuvers and tactical road barricades.
-  - **4 Stars**: Police helicopter deployed with aerial searchlight and SWAT backup.
-  - **5 Stars**: Maximum tactical response with sniper fire and aggressive pursuit.
-- Evasion mechanic: losing visual line-of-sight starts an evasion countdown where stars flash; successfully hiding drops wanted levels back to zero.
-
-### 2.5 Combat & Arsenal
-- Real-time third-person gunplay with mouse aiming and Pointer Lock:
-  - **Viper .45 Pistol**: Semi-automatic, 12-round magazine, 120 reserve ammo, high precision.
-  - **Vane Carbine Rifle**: Fully automatic, 30-round magazine, 240 reserve ammo, high fire rate.
-- Weapons feature ammunition tracking, reload cycles (`R`), spread recoil, muzzle flashes, and blood/spark impact particles.
-- Hostile syndicate enforcers and police return fire with tactical AI.
-
-### 2.6 Narrative Campaign (8 Story Missions)
-A connected 8-mission story arc detailing Rook's struggle against the rival crews:
-1. **The Marina Drop**: Collect an encrypted datapad at Marina Pier and deliver it across town to Matteo Port Meridian's penthouse before the 95s timer expires.
-2. **Repo on Vane Turf**: Infiltrate the Vane Syndicate's Old Town compound, neutralize 3 guarding thugs, steal back the custom Nero GT, and deliver it to the Docks Chop Shop.
-3. **Market Muscle**: Protect Old Market merchants by taking down 5 extortionist syndicate enforcers in the market square, then evade the responding Metro 2-star police patrol.
-4. **Vela Bay Sprint**: High-stakes underground checkpoint street race across 8 gates connecting the beach boulevard, downtown freeway, and dockyard within 110 seconds.
-5. **Armory Infiltration**: Infiltrate the fortified syndicate munitions depot, eliminate 6 compound defenders, blow the vault, secure the military cache, and escape a 3-star police net.
-6. **Nightfall at the Docks**: Assault Shipping Pier 7; take down Boss Hector Vane and corrupt Police Captain Reynolds, destroy their armored vehicle, and board the getaway speedboat.
-7. **The Skyway Lockdown**: Overpass assault; eliminate 6 rogue Metro SWAT commanders barricading the new Elevated Skyway Overpass and deliver the command vehicle to Downtown under 4-star citywide pursuit.
-8. **The Sunset Syndicate Heist**: Grand finale takedown of the Syndicate's offshore vault in Marina Bay; infiltrate the penthouse, crack the server terminal, recover the bearer bonds, and execute an aerial/high-speed expressway escape across Vela Bay.
-
-### 2.7 Open-World Activities & Living City Systems
-- **Taxi Driver Shift**: Hop into any cab or passenger vehicle and hit `K` to start a taxi shift. Pick up waiting pedestrians and deliver them to destinations across Vela Bay for cash fares.
-- **10 Vela Wave Mixtapes**: Collectible retro synth cassettes scattered across district landmarks, awarding cash bonuses and unlocking audio tracks.
-- **Express Courier Deliveries**: Timed delivery activity loop startable via `T` key or the pause map for quick cash and reputation.
-- **15 Hidden Smuggler Caches**: Contraband crates scattered across rooftops, docks, and park grounds, rewarded with cash and tracked on the HUD.
-- **Living City Interactives**: Burstable fire hydrants shooting water geysers, knockable dumpsters with spilling debris, street food carts offering +25 HP meals for $15, scattering pigeon flocks on pavements, and lit building windows at dusk.
-- **Alley Escape Routes**: Narrow shaded corridors where wanted heat cools 3x faster, with HUD notification.
-- **Urban Infrastructure**: Elevated Skyway Overpass with pillars and ramps, coastal Marina with moored boats and Harbour Master building, landscaped Central Park with fountain, Grand Arena stadium, and construction site with 48m tower crane.
-
-### 2.7 Heads-Up Display (HUD) & Rotating Radar Minimap
-- Custom 2D canvas overlay layered over the WebGL 3D viewport.
-- Minimap radar with compass bezel, dynamic rotation matching player heading, road network, ocean coastline, player arrow, mission objective waypoint, police flashing beacons, and enemy blips.
-- Status bars for player Health (green/red), Armor (cyan), Cash balance, 5 Wanted Stars, active weapon, ammo counters, and dynamic vehicle speedometer (MPH).
-- Interactive hint prompts (`[F] Jack Vehicle`, `[F] Exit Vehicle`) and story dialogue subtitles.
-
-### 2.8 100% Procedural WebAudio Synthesis
-- Zero external audio files; all sound effects and music are synthesized via WebAudio API nodes:
-  - Vehicle engine noise (sawtooth oscillators with throttle-modulated biquad filters tracking RPM)
-  - Police siren wail (dual-tone LFO frequency modulation)
-  - Gunshots (transient noise bursts with exponential decay)
-  - Tire screeches (bandpass-filtered white noise during drift)
-  - Crash impacts, cash chimes, and mission fanfares
-  - In-game generative synthwave radio stations (*Vela Wave 80.4* and *Nightfall Beats*)
-
-### 2.9 Persistence & Career Save
-- Full state saving to browser `localStorage` (position, cash, active mission, health, armor, wanted heat).
-- Title screen menu with "Start New Game", "Continue Career", "Controls", and audio toggles.
-
-### 2.10 Gameplay Photography & Screenshot Gallery
-- Deterministic query-driven capture parameters (`?shot=1..4`) capturing living open-world gameplay:
-  - `1-city-street.png`: Downtown on foot from behind the player: soaring towers into sunset sky, raking shadows, cruising traffic, pedestrians, clear HUD.
-  - `2-car-promenade.png`: Sports car on waterfront road at 151 MPH, low sun over ocean waves, palms, boardwalk and marina in frame.
-  - `3-police-chase.png`: 5-star police chase at height, flashing red/blue strobes, player car between two cruisers at 128 MPH, elevated overpass behind.
-  - `4-dock-heist.png`: Meridian Docks at golden hour, shipping containers, 36m gantry crane, hovering tactical helicopter with spotlight, and bay beyond.
-- Automated Pillow quantization pipeline ensuring all PNGs stay strictly under the 262,144 bytes limit while preserving crisp UI and rich color reproduction.
+1. **Downtown Financial District** (North-East: `X: 20 to 240`, `Z: -240 to -20`):
+   - Soaring modern skyscrapers reaching up to 120m with reflective glass window bands, champagne bronze towers, concrete corporate plazas, and illuminated rooftop crowns.
+2. **Old Town Historic Quarter** (North-West: `X: -240 to -20`, `Z: -240 to -20`):
+   - Dense Mediterranean quarter with terracotta roofs, sandstone ochre facades, narrow streets, storefront awnings, and pedestrian courtyards.
+3. **Meridian Cargo Docks** (South-East: `X: 20 to 240`, `Z: 20 to 240`):
+   - Heavy industrial waterfront shipping terminal with cargo warehouses, high-chroma shipping container stacks, open harbor basin, moored cargo ships, and a massive 36m gantry crane.
+4. **Ocean Promenade & Marina** (South-West: `X: -240 to -20`, `Z: 20 to 240`):
+   - Miami-style Art Deco pastel resorts, tiered cantilevered balconies, sunlit cedar boardwalk along the coast, tropical palm tree boulevards, and marina boat slips with moored luxury yachts.
+5. **Elevated Skyway & Central Park**:
+   - Multi-lane elevated concrete expressway along `X = 45` spanning over cross-streets with support pillars and approach ramps; central green park with manicured lawns and fountains.
+6. **Road Network & Intersections**:
+   - Arterial North-South avenues (`X = -105, -55, 0, 45, 115, 185`) and East-West cross streets (`Z = -180, -115, -50, 20, 85, 150, 215`) with warm sunlit asphalt, glowing amber centerlines, white lane markings, and zebra crosswalks.
 
 ---
 
-## 3. Architecture & File Layout
+## 2. Core Systems Architecture
 
-All game code resides under `game/` as plain ES modules:
+### 2.1 Character Traversal & Physics (`player.js`, `math.js`)
+- Protagonist **Rhea "Rook" Solano** rendered with articulated 3D limbs, leather jacket, work boots, and equipped firearms.
+- Traversal states: walk, sprint (`Shift`), jump, strafe, reverse, and car enter/exit (`F`).
+- Sliding cylinder-box collision resolution against static world colliders.
+- Step cadence synchronization with procedural footstep audio.
+
+### 2.2 Vehicle Physics & Arcade Drift Dynamics (`vehicles.js`)
+- 6 vehicle types: *Veloce GT* (sports coupe), *Torque 440* (muscle car), *Metro Cruiser* (police interceptor), *Executive* (luxury sedan), *Cabrio* (city taxi), and *Titan Box* (delivery truck).
+- Physical simulation including engine RPM torque curves, gear ratios, front-wheel steering angles, body pitch on acceleration/braking, and body roll during cornering.
+- Arcade handbrake drift mechanics (`Space`): rear slip friction drop, counter-steering slides, and burnout screech audio.
+- Autonomous civilian traffic AI: pathfinding through intersection nodes, lane discipline, and vehicle avoidance braking.
+
+### 2.3 Pedestrian Population & Reactions (`pedestrians.js`)
+- Procedural civilian population with distinct skin tones, shirts, and trousers.
+- Natural wandering between sidewalk waypoints.
+- Dynamic panic AI: civilians scatter, yell, and sprint away from speeding cars, hit-and-run incidents, and weapon fire.
+- Defeated pedestrians drop glowing green cash bundles ($20–$100).
+
+### 2.4 Police Pursuit & 5-Star Wanted System (`police.js`)
+- Heat meter scaling from 0 to 5 stars based on infraction severity:
+  - **1 Star**: Local patrol officers investigate.
+  - **2 Stars**: Police interceptors initiate code-3 pursuit with sirens and flashing lightbars.
+  - **3 Stars**: Coordinated cruiser pursuit with aggressive pit maneuvers and roadblock barricades.
+  - **4 Stars**: Police tactical helicopter deployed with rotating rotors and downward searchlight beam.
+  - **5 Stars**: Full citywide tactical lockdown with relentless cruiser waves and airborne suppression.
+- Evasion mechanics: breaking line of sight initiates heat cooldown with flashing stars; hiding for 20 seconds clears the record.
+
+### 2.5 Combat & Ballistics (`combat.js`)
+- Real-time third-person weapon combat with mouse aiming and Pointer Lock.
+- Weapon roster: Pistol, SMG, Shotgun, and Carbine Rifle with dedicated specs, recoil spread, and reload cycles (`R`).
+- High-visibility golden glowing tracer rounds.
+- Hostile Syndicate enforcer squads with tactical search-and-destroy combat AI.
+- Expanding fireball explosions with radius damage and dynamic light flashes.
+
+### 2.6 Syndicate Campaign & Side Activities (`missions.js`)
+- Connected 8-mission narrative storyline tracking Rook's campaign against the Vela Bay Syndicate:
+  1. *The Marina Drop*: Retrieve encrypted flash drive from Marina pier and deliver to safehouse.
+  2. *Repo on Vane Turf*: Steal back stolen sports car from Old Town compound.
+  3. *Market Shakedown*: Protect local shopkeepers by eliminating Syndicate extortionists.
+  4. *Vela Bay Grand Prix*: 8-checkpoint street race across ocean boulevard and highway.
+  5. *Munitions Depot Raid*: Infiltrate fortified dockside weapons depot and seize carbines.
+  6. *Pier 7 Ambush*: Ambush corrupt Captain Reynolds and eliminate Syndicate lieutenants.
+  7. *Skyway Interception*: Intercept armoured bullion convoy on the elevated skyway.
+  8. *Take Down the Syndicate*: Final showdown at Meridian Docks and high-speed escape.
+- Taxi Driver side jobs: press `K` to pick up fares and navigate passengers across districts.
+- 3D rotating golden octahedron diamond mission beacon marking current target.
+
+### 2.7 Visuals & WebGL Rendering Pipeline (`renderer.js`, `config.js`)
+- Custom hand-written WebGL pipeline without external engines.
+- Golden-hour sunset lighting: warm direct sun with wrap-around diffuse and sky hemisphere ambient.
+- Sunlit road sheen: specular highlight on asphalt roadbeds and vehicle paintwork.
+- Atmospheric sky dome: 3-stop vertical color gradient (cobalt zenith, periwinkle mid, golden peach horizon) with solar corona and sun disc.
+- Facade illumination: storefront neon displays at street level and office window grids on skyscrapers.
+- Dynamic emergency lightbars casting red and blue strobes on surrounding geometry.
+- Distance depth fog blending geometry softly into the golden twilight horizon.
+
+### 2.8 Tactical HUD & Circular Radar Minimap (`hud.js`, `minimap.js`)
+- 2D Canvas HUD overlay drawing health/armor gauges, cash balance, wanted stars, ammo counter, speedometer dial, and active mission banner with distance in meters.
+- Rotating circular radar minimap drawing ocean coastline, marina docks, arterial roads, district zones, traffic pips, flashing police markers, hostile blips, and golden objective beacon.
+
+### 2.9 Procedural WebAudio Synthesizer (`audio.js`)
+- 100% procedural sound synthesis using the Web Audio API (zero audio assets):
+  - Sawtooth oscillator engine with RPM-modulated lowpass filtering.
+  - Dual-tone frequency-modulated police siren.
+  - Bandpass noise tire screech during handbrake slides.
+  - Multi-harmonic gunshot transients, explosion rumbles, car horns, and footsteps.
+  - Retro synthwave bassline accompaniment.
+
+### 2.10 Persistence & Menus (`save.js`, `menus.js`, `input.js`)
+- Automatic career progression persistence in `localStorage` (mission index, cash, health, armor, wanted stars).
+- In-game pause menu with interactive options: Resume, Controls Guide, Syndicate Mission Log, Audio Synth Toggle, and Campaign Restart.
+
+---
+
+## 3. Module Map (`game/src/`)
 
 ```
-nightfall-city/
-├── game/
-│   ├── index.html           # Main HTML document, canvas setup, viewport styling
-│   └── src/
-│       ├── config.js        # Central engine constants, daylight parameters & district config
-│       ├── main.js          # Game loop, state machine, lifecycle, deterministic query hooks
-│       ├── world.js         # Map geometry, 4 districts, road network, building collision & props
-│       ├── physics.js       # Arcade vehicle dynamics, drift physics, character collision
-│       ├── player.js        # Player entity, movement, health, armor, carjacking
-│       ├── camera.js        # 3D chase camera, orbit camera, screenshake, view matrices
-│       ├── render.js        # WebGL 3D renderer: daylight shaders, sky dome, buildings, vehicles
-│       ├── traffic.js       # AI traffic manager, parked cars, lane driving, vehicle damage
-│       ├── pedestrians.js   # AI pedestrians, fleeing behaviors, cash pickup drops
-│       ├── police.js        # 0-5 star wanted system, pursuit AI, roadblocks, helicopter
-│       ├── weapons.js       # Pistol and Rifle ballistics, damage, reload, raycasting
-│       ├── hud.js           # 2D canvas HUD overlay, health/armor bars, stars, speedometer
-│       ├── minimap.js       # Rotating circular radar minimap with roads, cops, markers
-│       ├── audio.js         # WebAudio synthesizer for engine, sirens, guns, radio
-│       ├── effects.js       # 3D particle system (smoke, fire, sparks, blood) & screen trauma
-│       ├── input.js         # Keyboard, mouse, and Pointer Lock input management
-│       ├── menu.js          # Title screen, pause menu, controls guide, victory screen
-│       └── save.js          # localStorage game state persistence
-├── screenshots/
-│   ├── 1-city-street.png             # Downtown on-foot exploration, towers, traffic, pedestrians & HUD
-│   ├── 2-car-promenade.png           # Sports car driving along sunset ocean promenade, palm trees & marina
-│   ├── 3-police-chase.png            # 5-star police chase flanked between cruisers with flashing lightbars
-│   └── 4-dock-heist.png              # Docks heist with containers, gantry crane & hovering tactical helicopter
-├── vendor/
-│   └── makefun-game.ts      # make.fun dossier generator (standard library only)
-├── main.ts                  # Entry packaging script for make.fun evaluation
-├── serve.ts                 # Local development HTTP server
-├── shots.json               # Screenshot query configuration
-└── README.md                # Project documentation with make.fun badges
+game/
+├── index.html            # Main HTML container, styling, canvas layering, shot query bypass
+└── src/
+    ├── config.js         # World dimensions, districts, lighting params, vehicle specs, 8-mission specs, shot presets
+    ├── math.js           # Vector3, Matrix4, quaternion, easing, and spatial utilities
+    ├── input.js          # Keyboard, mouse, pointer lock, and action input bindings
+    ├── audio.js          # Procedural WebAudio sound generator (engine, sirens, guns, drift, synthwave)
+    ├── save.js           # LocalStorage state serialization and loading
+    ├── camera.js         # Third-person follow camera, high-speed chase zoom, screen shake, slow-mo dilation
+    ├── world.js          # Procedural city generation: 4 districts, roads, skyway, docks, crane, marina, props
+    ├── renderer.js       # WebGL 3D rendering engine, shaders, sunset atmosphere, asphalt sheen, dynamic lights
+    ├── vehicles.js       # 6 vehicle models, driving physics, drift mechanics, traffic AI, body roll/pitch
+    ├── pedestrians.js    # Pedestrian models, wandering AI, panic fleeing, dropped cash pickups
+    ├── player.js         # Rook character model, articulated limbs, movement, carjacking, health/armor
+    ├── police.js         # 0-5 star wanted system, pursuit cruisers, tactical helicopter with spotlight
+    ├── combat.js         # Ballistics, golden glowing tracers, enemy syndicate AI, explosions
+    ├── missions.js       # 8-mission story campaign, taxi side jobs, 3D rotating diamond beacon
+    ├── hud.js            # Health/armor bars, cash readout, wanted stars, speedometer, objective banner
+    ├── minimap.js        # Circular GPS radar with ocean water, roads, traffic, police sirens, mission blip
+    ├── menus.js          # Pause menu, controls guide, campaign mission log, victory screen
+    └── main.js           # Game coordinator, main loop, system updates, shot preset choreography
 ```
-
-### Module Responsibilities in `game/src/`:
-
-| File | Primary Job |
-|---|---|
-| `world.js` | Defines the 5 districts, building coordinates with setbacks and crowns, distant skyline landmarks, road networks, ocean boundaries, port gantry cranes, street furniture, and collision raycasts. |
-| `render.js` | Custom WebGL 3D rendering pipeline with late-afternoon warm sunlight, sky gradient dome with sun disc and glare, distance fog, building meshes, vehicles, characters, helicopter, gantry cranes, street furniture, and particles. |
-| `physics.js` | Vehicle handling (throttle, drift, braking, collisions), tire smoke emission, and player foot movement physics. |
-| `player.js` | Protagonist state (health, armor, cash, weapon arsenal, car entry/exit, death/respawn). |
-| `camera.js` | Elevated third-person camera with mouse-look yaw/pitch, building collision avoidance clamp, vehicle chase smoothing, and screen shake. |
-| `weapons.js` | Pistol and assault rifle ballistics, reload cycles, ammo counters, and raycast hit detection. |
-| `traffic.js` | Autonomous road traffic AI, curbside parked vehicles, vehicle collision, and theft mechanics. |
-| `pedestrians.js` | Civilian pedestrian behavior, wandering, fleeing danger, and dropped cash pickups. |
-| `police.js` | Vela Bay Metro wanted levels (0–5 stars), pursuit cruisers, foot officers, roadblocks, and searchlight helicopter. |
-| `missions.js` | 6 complete narrative missions with objectives, dialogue, enemy spawns, timers, and boss encounters. |
-| `hud.js` | 2D HUD overlay drawing cash, health/armor gauges, wanted stars, speedometer, dialogue subtitles, screen vignette, and sunlit bloom. |
-| `minimap.js` | Rotating circular radar minimap displaying streets, ocean and harbour water, player arrow, mission markers, and police blips. |
-| `audio.js` | Procedural WebAudio sound generator for engine pitch, sirens, gunfire, crashes, and synthwave radio. |
-| `effects.js` | Particle manager (burnout smoke, heat haze/dust, sparks, blood, explosions) and screen trauma effects. |
-| `input.js` | Event listeners for keyboard, mouse look, and Pointer Lock API. |
-| `menu.js` | Title start screen, tactical pause map of Vela Bay with district borders, control legend, and story victory screen. |
-| `save.js` | localStorage manager for saving and loading player career data. |
-| `main.js` | Main entry point orchestrating game loop, updates, rendering, and deterministic query hooks. |
 
 ---
 
-## 4. Testing & Verification
+## 4. Verification & Packaging
 
-1. **Headless Chrome Execution**: Verified that `game/index.html` loads offline without network requests, errors, or missing dependencies.
-2. **CDP End-to-End Test**: Used Chrome DevTools Protocol to verify:
-   - Player movement on foot
-   - Entering and exiting vehicles
-   - Crime trigger and wanted level escalation
-   - Mission progression and objective completion
-   - Saving and restoring state from `localStorage`
-3. **Screenshot Generation**: Rendered 4 real 1280x720 in-engine screenshots under 256 KiB each, demonstrating foot exploration, car driving, police pursuit, and mission combat.
-4. **Dossier Compliance**: Verified `MAKEFUN_OUTPUT_DIR=out node main.ts` builds `dossier.json` with 100% of game source files and 4 valid screenshots, passing all gate checks.
+1. **Static Validation**: Node static server (`serve.ts`) delivers `game/index.html` with zero console errors.
+2. **Deterministic Screenshots**: Headless Chrome executes `?shot=1..4` to capture real 1280x720 in-engine gameplay frames.
+3. **Packaging**: `main.ts` executes `buildDossier` from `vendor/makefun-game.ts`, copying `game/` and `screenshots/` into the release package and compiling canonical `dossier.json`.

@@ -1,6 +1,13 @@
 /**
- * Nightfall City: Vela Bay - Main Game Loop & Module Orchestrator
+ * Nightfall City: Vela Bay - Game Coordinator & Main Loop
  * Authored by makefun agent for the GTA 6 bounty challenge.
+ *
+ * Coordinates:
+ * - Pure WebGL 3D rendering pipeline (world mesh, dynamic entities, atmosphere)
+ * - 2D HUD canvas overlay (status bars, wanted stars, speedometer, radar minimap, menus)
+ * - Systems orchestration: Player, Vehicles, Pedestrians, Police AI, Missions, Combat, Audio Synth
+ * - Deterministic Photo Mode presets (?shot=1..4) with camera choreography and world staging
+ * - Persistent save/load synchronization
  */
 
 import { SHOT_PRESETS } from './config.js';
@@ -50,23 +57,22 @@ export class Game {
 
     this.hud = new HUD();
     this.hud.init(this.hudCanvas);
-    this.minimap = new Minimap(74);
+    this.minimap = new Minimap(76);
 
     this.lastTime = performance.now();
     this.totalTime = 0;
     this.activeCar = null;
 
-    // Check URL parameters for photo shot presets (?shot=1..4)
+    // Check for photo mode presets (?shot=1..4)
     this.shotPreset = this.detectShotPreset();
 
     this.handleResize();
     window.addEventListener('resize', () => this.handleResize());
 
-    // Setup photo shot if requested
+    // Apply photo mode preset or load save
     if (this.shotPreset) {
       this.applyShotPreset(this.shotPreset);
     } else {
-      // Try loading previous save
       this.saveSystem.load(this.player, this.missions);
     }
 
@@ -76,17 +82,19 @@ export class Game {
     this.dynColors = [];
     this.dynUvs = [];
 
-    // Interaction audio resume
+    // Audio context unlock on first user gesture
     const unlockAudio = () => {
       this.audio.init();
       this.audio.resume();
       window.removeEventListener('keydown', unlockAudio);
       window.removeEventListener('mousedown', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
     };
     window.addEventListener('keydown', unlockAudio);
     window.addEventListener('mousedown', unlockAudio);
+    window.addEventListener('touchstart', unlockAudio);
 
-    // Start loop
+    // Launch main render loop
     requestAnimationFrame((t) => this.loop(t));
   }
 
@@ -110,7 +118,6 @@ export class Game {
       if (preset.player.weapon) this.player.currentWeapon = preset.player.weapon;
 
       if (preset.player.inVehicle) {
-        // Spawn/place player in car
         const carType = preset.player.vehicleType || 'sports';
         const car = this.vehicles.spawn(carType, this.player.x, 0, this.player.z, this.player.rotY);
         car.speed = (preset.player.speedMph || 120) / 2.237;
@@ -196,7 +203,7 @@ export class Game {
       return;
     }
 
-    // Toggle taxi shift
+    // Toggle taxi side gig
     if (this.input.isJustPressed('KeyK')) {
       this.missions.toggleTaxiMode(this.player);
     }
@@ -204,33 +211,21 @@ export class Game {
     // Active vehicle check
     this.activeCar = this.player.inVehicle ? this.player.vehicle : null;
 
-    // Shooting
+    // Shooting input
     if (this.input.isMouseDown && !this.player.inVehicle && !this.shotPreset) {
       this.combat.playerShoot(this.player, this.camera, this.police, this.audio);
     }
 
-    // Update Player
+    // Entity simulation updates
     this.player.update(dt, this.input, this.camera, this.world, this.vehicles);
-
-    // Update Vehicles
     this.vehicles.update(dt, this.input, this.world);
-
-    // Update Pedestrians
     this.pedestrians.update(dt, this.world, this.player, this.vehicles);
-
-    // Update Police
     this.police.update(dt, this.player, this.vehicles, this.world);
-
-    // Update Missions
     this.missions.update(dt, this.player, this.vehicles, this.police, this.combat, this.saveSystem);
-
-    // Update Combat
     this.combat.update(dt, this.world, this.player, this.pedestrians, this.vehicles, this.police, this.camera, this.audio);
-
-    // Update Camera
     this.camera.update(dt, this.player, this.activeCar, this.input);
 
-    // Audio Engine
+    // Audio synthesizer updates
     if (this.player.stepTrigger && !this.player.inVehicle) {
       this.audio.playFootstep();
     }
@@ -239,35 +234,23 @@ export class Game {
   }
 
   render() {
-    // 1. Gather dynamic models into batch arrays
+    // 1. Gather dynamic entities into single batch
     this.dynPositions.length = 0;
     this.dynNormals.length = 0;
     this.dynColors.length = 0;
     this.dynUvs.length = 0;
 
-    // Player character
     this.player.buildMesh(this.dynPositions, this.dynNormals, this.dynColors, this.dynUvs);
-
-    // Vehicles
     this.vehicles.buildMesh(this.dynPositions, this.dynNormals, this.dynColors, this.dynUvs);
-
-    // Pedestrians & Pickups
     this.pedestrians.buildMesh(this.dynPositions, this.dynNormals, this.dynColors, this.dynUvs);
-
-    // Police helicopter
     this.police.buildMesh(this.dynPositions, this.dynNormals, this.dynColors, this.dynUvs);
-
-    // Mission diamond marker
     this.missions.buildMesh(this.dynPositions, this.dynNormals, this.dynColors, this.dynUvs);
-
-    // Combat bullets & explosions
     this.combat.buildMesh(this.dynPositions, this.dynNormals, this.dynColors, this.dynUvs);
 
     // 2. Render 3D WebGL Scene
     const sirens = this.vehicles.getPoliceSirens();
     this.renderer.renderWorld(this.camera, this.totalTime, sirens);
 
-    // Draw dynamic entities
     this.renderer.drawDynamicMesh(
       this.dynPositions,
       this.dynNormals,
@@ -279,20 +262,20 @@ export class Game {
     const hudCtx = this.hud.ctx;
     const h = this.hudCanvas.height;
 
-    // HUD bars, cash, stars, objective banner, speedometer
+    // Tactical HUD (health, armor, cash, stars, ammo, objective, speedometer)
     this.hud.render(this.player, this.missions, this.police, this.activeCar, this.shotPreset);
 
-    // Circular radar minimap
+    // Tactical GPS Minimap
     this.minimap.render(hudCtx, h, this.player, this.vehicles, this.police, this.missions, this.combat);
 
-    // Pause menu & screens
+    // Pause menu & modal dialogues
     if (this.menuManager.isPaused() && !this.shotPreset) {
-      this.menuManager.render(hudCtx, this.hudCanvas.width, h, this.missions, this.player);
+      this.menuManager.render(hudCtx, this.hudCanvas.width, h, this.missions, this.player, this.audio);
     }
   }
 }
 
-// Boot game on window load
+// Initialize on document ready
 window.addEventListener('DOMContentLoaded', () => {
   window.game = new Game();
 });
