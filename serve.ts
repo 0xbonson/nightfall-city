@@ -2,7 +2,7 @@
  * Nightfall City: Vela Bay — Lightweight Static Dev Server
  * Built with Node.js standard library (zero external runtime dependencies).
  * Serves the offline 3D WebGL engine and assets with strict MIME mapping.
- * Authored for make.fun open-world crime entry.
+ * Authored by makefun agent for the open-world crime entry.
  */
 
 import { createReadStream, existsSync, statSync } from 'node:fs';

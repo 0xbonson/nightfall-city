@@ -1,14 +1,14 @@
 /**
  * Nightfall City: Vela Bay - Master Configuration & World Balancing
- * Authored by makefun agent for the GTA 6 bounty challenge.
+ * Authored by makefun agent for the open-world crime game challenge.
  *
  * Defines:
- * - World spatial boundaries, coastal coordinate thresholds, and elevated skyway geometry
- * - Sun-soaked Mediterranean lighting parameters and golden-hour sunset palette
- * - 6 detailed vehicle specifications with tuned acceleration, drift grip, and top speeds
+ * - Spatial boundaries, coastal coordinates, elevated skyway & bridge geometry
+ * - Coherent Mediterranean sunset lighting palette (warm ochre, terracotta, coral, teal, blue shade, golden sun)
+ * - 7 vehicle chassis specs (sports, muscle, police, sedan, taxi, hauler/van, hatchback)
  * - 4-tier firearms arsenal (Viper .45, Stiletto SMG, Bravado 12G, Vane Carbine)
  * - 8-chapter Syndicate narrative campaign with custom clients, dialogue, and rewards
- * - Deterministic photo mode camera and entity choreography presets (?shot=1..4)
+ * - Curated Photo Mode camera choreography & world staging presets (?shot=1..4)
  */
 
 export const WORLD = {
@@ -17,8 +17,8 @@ export const WORLD = {
   GRID_CELLS: 8,
   BLOCK_SIZE: 52,
   ROAD_WIDTH: 15,
-  SIDEWALK_WIDTH: 3.8,
-  CURB_HEIGHT: 0.22,
+  SIDEWALK_WIDTH: 4.2,
+  CURB_HEIGHT: 0.24,
   SEA_LEVEL: -0.5,
   COAST_X: -130,         // Ocean water covers X < -130
   OVERPASS_Y: 13.5,      // Elevated skyway deck elevation
@@ -71,15 +71,16 @@ export const DISTRICTS = {
 };
 
 export const LIGHTING = {
-  // Warm late-afternoon Mediterranean sun position
-  SUN_DIR: [-0.62, 0.36, -0.68],
-  SUN_COLOR: [1.28, 1.06, 0.80],
-  SKY_COLOR: [0.32, 0.58, 0.92],
-  HORIZON_COLOR: [1.0, 0.74, 0.48],
-  AMBIENT_COLOR: [0.58, 0.64, 0.78],
-  GROUND_BOUNCE: [0.70, 0.55, 0.42],
-  FOG_COLOR: [0.96, 0.78, 0.58],
-  FOG_DENSITY: 0.0020,
+  // Warm late-afternoon Mediterranean sun: low in sky, long soft shadows
+  SUN_DIR: [-0.68, 0.32, -0.65],
+  SUN_COLOR: [1.48, 1.18, 0.72],      // Warm intense golden yellow
+  SKY_COLOR: [0.26, 0.48, 0.76],      // Periwinkle cobalt sky
+  SHADE_TINT: [0.32, 0.50, 0.70],     // Cool Mediterranean blue-teal shade
+  HORIZON_COLOR: [1.0, 0.72, 0.46],   // Golden-peach dusk horizon
+  AMBIENT_COLOR: [0.48, 0.58, 0.72],  // Dual ambient fill
+  GROUND_BOUNCE: [0.82, 0.64, 0.46],  // Warm ochre & terracotta ground bounce
+  FOG_COLOR: [0.98, 0.76, 0.54],      // Warm golden dusk haze
+  FOG_DENSITY: 0.0022,
 };
 
 export const CAR_TYPES = {
@@ -90,14 +91,14 @@ export const CAR_TYPES = {
     length: 4.65,
     height: 1.25,
     maxSpeed: 46.5,
-    accel: 32.0,
-    brake: 42.0,
+    accel: 33.0,
+    brake: 44.0,
     reverseSpeed: 14.5,
     steerAngle: 0.64,
     steerSpeed: 4.2,
     driftGrip: 0.88,
     mass: 1240,
-    color: [0.08, 0.82, 0.88, 1.0],      // Vibrant turquoise
+    color: [0.08, 0.82, 0.88, 1.0],      // Vibrant coastal turquoise
     roofColor: [0.06, 0.52, 0.62, 1.0],
     hasSpoiler: true,
   },
@@ -107,15 +108,15 @@ export const CAR_TYPES = {
     width: 2.22,
     length: 4.95,
     height: 1.35,
-    maxSpeed: 42.0,
-    accel: 34.0,
-    brake: 34.0,
+    maxSpeed: 42.5,
+    accel: 35.0,
+    brake: 36.0,
     reverseSpeed: 12.5,
     steerAngle: 0.58,
     steerSpeed: 3.4,
     driftGrip: 0.82,
     mass: 1580,
-    color: [0.96, 0.40, 0.12, 1.0],      // Sunset flame orange
+    color: [0.96, 0.42, 0.14, 1.0],      // Sunset terracotta orange
     roofColor: [0.16, 0.16, 0.18, 1.0],
     hasSpoiler: false,
     hasHoodScoop: true,
@@ -126,16 +127,16 @@ export const CAR_TYPES = {
     width: 2.16,
     length: 4.95,
     height: 1.44,
-    maxSpeed: 44.5,
-    accel: 32.0,
-    brake: 39.0,
+    maxSpeed: 45.0,
+    accel: 33.0,
+    brake: 40.0,
     reverseSpeed: 13.5,
     steerAngle: 0.60,
     steerSpeed: 3.8,
     driftGrip: 0.86,
     mass: 1680,
-    color: [0.95, 0.96, 0.98, 1.0],      // Clean police white
-    roofColor: [0.12, 0.12, 0.15, 1.0],  // Dark cruiser roof
+    color: [0.96, 0.96, 0.98, 1.0],      // Crisp police white
+    roofColor: [0.12, 0.14, 0.18, 1.0],  // Dark cruiser roof
     isPolice: true,
     hasPushBar: true,
   },
@@ -146,32 +147,32 @@ export const CAR_TYPES = {
     length: 4.80,
     height: 1.40,
     maxSpeed: 36.0,
-    accel: 24.0,
-    brake: 30.0,
+    accel: 25.0,
+    brake: 32.0,
     reverseSpeed: 11.5,
     steerAngle: 0.56,
     steerSpeed: 3.1,
     driftGrip: 0.90,
     mass: 1480,
-    color: [0.86, 0.84, 0.80, 1.0],      // Champagne pearl
-    roofColor: [0.78, 0.76, 0.72, 1.0],
+    color: [0.88, 0.84, 0.78, 1.0],      // Champagne pearl travertine
+    roofColor: [0.80, 0.76, 0.70, 1.0],
   },
   taxi: {
     id: 'taxi',
     name: 'Cobra City Cab',
     width: 2.12,
     length: 4.80,
-    height: 1.42,
+    height: 1.44,
     maxSpeed: 35.0,
-    accel: 24.0,
-    brake: 30.0,
+    accel: 25.0,
+    brake: 32.0,
     reverseSpeed: 11.5,
     steerAngle: 0.56,
     steerSpeed: 3.1,
     driftGrip: 0.90,
     mass: 1490,
     color: [0.98, 0.82, 0.10, 1.0],      // High-vis taxi amber
-    roofColor: [0.90, 0.75, 0.08, 1.0],
+    roofColor: [0.92, 0.76, 0.08, 1.0],
     isTaxi: true,
   },
   truck: {
@@ -179,7 +180,7 @@ export const CAR_TYPES = {
     name: 'Meridian Hauler',
     width: 2.65,
     length: 7.4,
-    height: 2.45,
+    height: 2.50,
     maxSpeed: 29.0,
     accel: 16.0,
     brake: 26.0,
@@ -188,8 +189,25 @@ export const CAR_TYPES = {
     steerSpeed: 2.3,
     driftGrip: 0.94,
     mass: 3950,
-    color: [0.26, 0.44, 0.72, 1.0],      // Cobalt industrial
-    roofColor: [0.20, 0.36, 0.60, 1.0],
+    color: [0.26, 0.46, 0.72, 1.0],      // Deep maritime blue
+    roofColor: [0.20, 0.36, 0.58, 1.0],
+  },
+  hatchback: {
+    id: 'hatchback',
+    name: 'Vela Compact',
+    width: 2.05,
+    length: 4.25,
+    height: 1.35,
+    maxSpeed: 38.0,
+    accel: 28.0,
+    brake: 36.0,
+    reverseSpeed: 12.0,
+    steerAngle: 0.62,
+    steerSpeed: 3.6,
+    driftGrip: 0.89,
+    mass: 1180,
+    color: [0.88, 0.32, 0.28, 1.0],      // Coral red
+    roofColor: [0.18, 0.18, 0.20, 1.0],
   },
 };
 
@@ -281,7 +299,7 @@ export const MISSIONS = [
     id: 'm1_welcome',
     title: '1. Arrival in Vela Bay',
     client: 'Matteo Vance',
-    desc: 'Boost the turquoise Veloce GT from Ocean Promenade and deliver it to the Downtown Safehouse.',
+    desc: 'Deliver the turquoise Veloce GT to the Downtown Safehouse garage.',
     startPos: [-110, 0, 80],
     targetPos: [95, 0, -85],
     targetType: 'vehicle_drop',
@@ -378,7 +396,7 @@ export const MISSIONS = [
     id: 'm8_grand_heist',
     title: '8. The Sunset Syndicate Heist',
     client: 'Matteo Vance',
-    desc: 'The Big Score: Crack the offshore vault at Marina Bay Bank, seize $50,000 bearer bonds, and escape to the boat.',
+    desc: 'Crack the offshore vault at Marina Bay Bank, seize $50,000 bearer bonds, and escape to the boat.',
     startPos: [-70, 0, 40],
     targetPos: [-115, 0, -60],
     targetType: 'heist_finale',
@@ -392,17 +410,17 @@ export const MISSIONS = [
 
 export const SHOT_PRESETS = {
   1: {
-    // The Cover: Wide street view from sidewalk with character in foreground, traffic & pedestrians in midground,
-    // tall colorful buildings, warm sun-lit sky, full HUD with minimap, wanted level (with 1 star outline/active),
-    // money, health, mission objective written on screen, and police cruiser visible in the distance.
+    // The Cover: Wide street view from sidewalk with protagonist in foreground (distinct silhouette, holding weapon),
+    // tall warm ochre/terracotta facades receding into haze, active traffic and pedestrians, trees, shopfronts,
+    // sky with low warm sun and long soft shadows, and full HUD with minimap, wanted stars, money, health/armor.
     name: '1-city-street.png',
     camera: {
-      pos: [118.0, 2.2, -91.0],
+      pos: [118.0, 2.1, -91.0],
       target: [123.0, 1.8, -128.0],
       fov: 63,
     },
     player: {
-      pos: [118.5, 0.22, -96.0],
+      pos: [118.5, 0.24, -96.0],
       rot: Math.PI,
       inVehicle: false,
       weapon: 'rifle',
@@ -415,18 +433,19 @@ export const SHOT_PRESETS = {
       { type: 'taxi', pos: [125.5, 0, -104.0], rot: Math.PI, speedMph: 28 },
       { type: 'muscle', pos: [136.5, 0, -114.0], rot: Math.PI, speedMph: 42 },
       { type: 'sports', pos: [125.5, 0, -135.0], rot: Math.PI, speedMph: 48 },
-      { type: 'police', pos: [136.5, 0, -165.0], rot: Math.PI, speedMph: 35 }, // Police visible in distance
+      { type: 'police', pos: [136.5, 0, -165.0], rot: Math.PI, speedMph: 35 },
     ],
     pedestrians: [
-      { pos: [118.0, 0.22, -108.0], rot: Math.PI },
-      { pos: [117.8, 0.22, -122.0], rot: 0 },
-      { pos: [143.5, 0.22, -102.0], rot: Math.PI },
-      { pos: [143.2, 0.22, -118.0], rot: 0 },
+      { pos: [118.0, 0.24, -108.0], rot: Math.PI },
+      { pos: [117.8, 0.24, -122.0], rot: 0 },
+      { pos: [143.5, 0.24, -102.0], rot: Math.PI },
+      { pos: [143.2, 0.24, -118.0], rot: 0 },
     ],
   },
   2: {
-    // Driving a stolen car through lit coastal boulevard: HUD and minimap visible, other traffic and pedestrians at the kerb,
-    // wanted level at zero or one, mission waypoint marker visible on the minimap, coastal palms and ocean view.
+    // Driving a sports car along Ocean Promenade seen from behind and slightly above:
+    // Car clearly a car with shaped body, bonnet, cabin, roof, boot, sun catching windscreen.
+    // Boulevard with Art Deco buildings, palm trees, wanted level 0 or 1, full HUD with minimap & waypoint.
     name: '2-car-promenade.png',
     camera: {
       pos: [-106.5, 1.6, 71.0],
@@ -441,7 +460,7 @@ export const SHOT_PRESETS = {
       speedMph: 151,
     },
     district: 'Ocean Promenade',
-    wantedStars: 0,
+    wantedStars: 1,
     cash: 26800,
     objective: 'COASTAL TIME TRIAL: PASS CHECKPOINT 4/6 (0:34)',
     traffic: [
@@ -450,13 +469,12 @@ export const SHOT_PRESETS = {
     pedestrians: [
       { pos: [-118.5, 0.28, 88.0], rot: 0 },
       { pos: [-118.2, 0.28, 105.0], rot: Math.PI },
-      { pos: [-90.5, 0.22, 94.0], rot: 0 },
+      { pos: [-90.5, 0.24, 94.0], rot: 0 },
     ],
   },
   3: {
-    // High-speed police chase: at least two police cars with flashing lights right behind player car,
-    // wanted level showing 3 or more stars (5 stars), red and blue emergency light washing street,
-    // HUD and minimap visible with police blips.
+    // 5-Star police chase: player muscle car pursued bumper-to-bumper by at least 2 police cars with red and blue lights,
+    // lights washing the street and buildings, wanted level showing 5 stars, tactical police chopper overhead, HUD & minimap with police blips.
     name: '3-police-chase.png',
     camera: {
       pos: [46.5, 2.6, -19.0],
@@ -483,8 +501,8 @@ export const SHOT_PRESETS = {
     ],
   },
   4: {
-    // Dock district mission in progress: objective marker visible, weapon in hand, loot crate and target van,
-    // cranes and containers and water in background, HUD and minimap visible.
+    // Meridian Cargo Docks heist mission: protagonist holding weapon, objective marker diamond,
+    // contraband target truck and loot crate at Pier 7, container stacks in bold colors, 36m gantry crane, water and far shore.
     name: '4-dock-heist.png',
     camera: {
       pos: [127.0, 5.9, 97.0],
@@ -508,7 +526,7 @@ export const SHOT_PRESETS = {
       { pos: [155.0, 0, 128.0], rot: Math.PI * 0.75 },
     ],
     traffic: [
-      { type: 'truck', pos: [152.0, 0, 112.0], rot: Math.PI * 0.45, speedMph: 0 }, // Target syndicate contraband van
+      { type: 'truck', pos: [152.0, 0, 112.0], rot: Math.PI * 0.45, speedMph: 0 },
     ],
   },
 };

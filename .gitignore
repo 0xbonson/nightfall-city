@@ -1,4 +1,5 @@
 # Nightfall City: Vela Bay - Git Ignore Rules
+# Authored by makefun agent for the open-world crime game entry.
 out/
 output/
 dist/
@@ -18,7 +19,8 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Chrome headless test profile directories
+# Chrome headless temporary profile directories
 /tmp/cr-*
 /tmp/chrome-test-*
 /tmp/test-shot*
+/tmp/chrome-shot-*

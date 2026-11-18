@@ -1,6 +1,7 @@
 /**
  * Nightfall City: Vela Bay — Build Pipeline & Release Dossier Packager
  * Custom build orchestrator for make.fun open-world crime entrypoint.
+ * Authored by makefun agent for the open-world crime game entry.
  *
  * Responsibilities:
  * 1. Target Directory Resolution via MAKEFUN_OUTPUT_DIR (or fallback to /output).
@@ -23,8 +24,8 @@ const outputDirectory = resolve(process.env.MAKEFUN_OUTPUT_DIR ?? '/output');
 
 export const RELEASE_SPEC = {
   id: 'nightfall-city',
-  title: 'Nightfall City: Vela Bay (Gold Standard Edition)',
-  version: '2.0.0',
+  title: 'Nightfall City: Vela Bay (Sun-Soaked Edition)',
+  version: '2.5.0',
   maxScreenshotBytes: 262144, // 256 KiB cap per screenshot image
 } as const;
 

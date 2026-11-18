@@ -1,13 +1,13 @@
 /**
  * Nightfall City: Vela Bay - Procedural WebAudio Synthesizer Engine
- * Authored by makefun agent for the GTA 6 bounty challenge.
+ * Authored by makefun agent for the open-world crime game entry.
  *
  * 100% code-synthesized sound effects and multi-station generative audio:
  * - Vehicle V8 / Turbo-4 engine rev synthesis with RPM-tracked pitch & lowpass cutoff
  * - Authentic dual-tone frequency-modulated police siren (650Hz to 1050Hz)
  * - Bandpass filtered tire screech during high-speed drifts and burnout slides
- * - Weapon acoustics: Viper .45, Stiletto SMG, Bravado 12G, and Vane Carbine
- * - Impact transients, explosion rumbles, car horns, footsteps, and mission fanfare
+ * - Weapon acoustics: Viper .45 pistol, Stiletto SMG, Bravado 12G shotgun, and Vane Carbine
+ * - Impact transients, explosion rumbles, car horns, footsteps, cash chimes, reload latches, and mission fanfare
  * - Multi-station generative radio: 80s Synthwave, Coastal Lounge, and Police Scanner
  * Zero external audio files, samples, or MP3 downloads required.
  */
@@ -175,7 +175,7 @@ export class AudioEngine {
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
 
-    if (weaponType === 'rifle') {
+    if (weaponType === 'carbine' || weaponType === 'rifle') {
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(240, t);
       osc.frequency.exponentialRampToValueAtTime(35, t + 0.12);
@@ -210,6 +210,48 @@ export class AudioEngine {
 
     osc.start(t);
     osc.stop(t + 0.25);
+  }
+
+  playReload() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(480, t);
+    osc.frequency.exponentialRampToValueAtTime(180, t + 0.15);
+
+    gain.gain.setValueAtTime(0.25, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+
+    osc.start(t);
+    osc.stop(t + 0.18);
+  }
+
+  playCashChime() {
+    if (!this.ctx) return;
+    const notes = [1046.5, 1318.5]; // C6, E6
+    notes.forEach((freq, idx) => {
+      const t = this.ctx.currentTime + idx * 0.08;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+
+      gain.gain.setValueAtTime(0.22, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.start(t);
+      osc.stop(t + 0.30);
+    });
   }
 
   playExplosion() {

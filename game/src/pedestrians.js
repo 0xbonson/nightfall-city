@@ -1,9 +1,15 @@
 /**
  * Nightfall City: Vela Bay - Pedestrian Population & Reactive Citizen AI
- * Diverse Mediterranean citizen models with articulated walking cycles,
- * sunglasses, shopping bags, ambient street wandering, panic fleeing from speeding
- * vehicles, gunfire and honking horns, with dropped cash bundles upon demise.
- * Authored for make.fun open-world crime entry.
+ * Authored by makefun agent for the open-world crime game entry.
+ *
+ * Implements:
+ * - Diverse Mediterranean coastal citizens with articulated walking kinematics
+ * - Distinct silhouettes: head, hair, sunglasses/hats, shirts/blazers, trousers/shorts, shoes
+ * - Mediterranean palette: terracotta, coral, washed ochre, seafoam teal, linen cream, navy
+ * - Directional ground shadows cast along the sun vector under each citizen
+ * - Accessories: shopping totes, leather briefcases, sunglasses, caps
+ * - Reactive AI: sidewalk navigation, panicking and fleeing from speeding cars & gunfire
+ * - Demise cash drops with spinning currency stacks
  */
 
 import { clamp, normalizeAngle } from './math.js';
@@ -29,30 +35,41 @@ export class Pedestrian {
     // Mediterranean coastal civilian styling
     const shirtColors = [
       [0.95, 0.42, 0.35, 1.0], // Sunset coral
-      [0.24, 0.70, 0.88, 1.0], // Vela teal
-      [0.96, 0.84, 0.25, 1.0], // Ochre sun
-      [0.28, 0.78, 0.48, 1.0], // Coastal mint
-      [0.96, 0.96, 0.98, 1.0], // White linen
-      [0.86, 0.48, 0.72, 1.0], // Bougainvillea magenta
-      [0.24, 0.26, 0.30, 1.0], // Espresso dark
+      [0.22, 0.68, 0.85, 1.0], // Vela teal
+      [0.96, 0.82, 0.28, 1.0], // Ochre sun
+      [0.28, 0.75, 0.52, 1.0], // Coastal mint
+      [0.96, 0.95, 0.92, 1.0], // Linen white
+      [0.85, 0.44, 0.68, 1.0], // Bougainvillea magenta
+      [0.22, 0.25, 0.32, 1.0], // Marine navy
+      [0.78, 0.48, 0.28, 1.0], // Terracotta orange
     ];
     const pantColors = [
       [0.18, 0.28, 0.45, 1.0], // Denim indigo
-      [0.64, 0.56, 0.44, 1.0], // Sand khaki
-      [0.16, 0.16, 0.18, 1.0], // Slate black
-      [0.86, 0.86, 0.88, 1.0], // Linen white
+      [0.72, 0.65, 0.52, 1.0], // Sand khaki
+      [0.15, 0.16, 0.18, 1.0], // Slate black
+      [0.88, 0.88, 0.85, 1.0], // Linen cream
+      [0.35, 0.42, 0.36, 1.0], // Olive sage
     ];
     const skinTones = [
       [0.92, 0.76, 0.62, 1.0],
-      [0.80, 0.60, 0.44, 1.0],
-      [0.55, 0.38, 0.28, 1.0],
+      [0.84, 0.66, 0.50, 1.0],
+      [0.62, 0.44, 0.32, 1.0],
+      [0.94, 0.80, 0.68, 1.0],
+    ];
+    const hairTones = [
+      [0.14, 0.12, 0.10, 1.0], // Espresso
+      [0.32, 0.20, 0.12, 1.0], // Chestnut
+      [0.75, 0.62, 0.42, 1.0], // Sun-bleached blonde
+      [0.10, 0.10, 0.12, 1.0], // Jet black
     ];
 
     this.shirtCol = shirtColors[Math.floor(Math.random() * shirtColors.length)];
     this.pantsCol = pantColors[Math.floor(Math.random() * pantColors.length)];
     this.skinCol = skinTones[Math.floor(Math.random() * skinTones.length)];
+    this.hairCol = hairTones[Math.floor(Math.random() * hairTones.length)];
     this.hasGlasses = Math.random() < 0.45;
     this.hasBag = Math.random() < 0.35;
+    this.hasHat = Math.random() < 0.25;
 
     this.targetDirTimer = 5 + Math.random() * 10;
   }
@@ -177,28 +194,64 @@ export class Pedestrian {
       }
     };
 
-    // Legs
-    addBoxRot(-0.12, y, swing * 0.15, 0.16, 0.72, 0.16, this.pantsCol);
-    addBoxRot(0.12, y, -swing * 0.15, 0.16, 0.72, 0.16, this.pantsCol);
+    // 0. Directional ground shadow cast along the sun vector (+X, +Z)
+    const shadowCol = [0.03, 0.05, 0.08, 0.38];
+    const shW = 0.32;
+    const shL = 1.05;
+    const shX = x + 0.30;
+    const shZ = z + 0.40;
+    const shGroundY = y + 0.012;
 
-    // Torso (Shirt)
-    addBoxRot(0, y + 0.72, 0, 0.44, 0.65, 0.24, this.shirtCol);
-
-    // Arms
-    addBoxRot(-0.28, y + 0.76, -swing * 0.15, 0.12, 0.55, 0.12, this.shirtCol);
-    addBoxRot(0.28, y + 0.76, swing * 0.15, 0.12, 0.55, 0.12, this.shirtCol);
-
-    // Optional Shopping Bag
-    if (this.hasBag) {
-      addBoxRot(0.32, y + 0.45, swing * 0.15, 0.10, 0.26, 0.22, [0.85, 0.72, 0.55, 1.0]);
+    const shQuad = [
+      [shX - shW, shGroundY, shZ - shW],
+      [shX + shW + 0.1, shGroundY, shZ - shW + 0.05],
+      [shX + shW + 0.1 + shL * 0.35, shGroundY, shZ + shW + shL],
+      [shX - shW, shGroundY, shZ - shW],
+      [shX + shW + 0.1 + shL * 0.35, shGroundY, shZ + shW + shL],
+      [shX - shW + shL * 0.25, shGroundY, shZ + shW + shL],
+    ];
+    for (const pt of shQuad) {
+      positions.push(pt[0], pt[1], pt[2]);
+      normals.push(0, 1, 0);
+      colors.push(shadowCol[0], shadowCol[1], shadowCol[2], shadowCol[3]);
+      uvs.push(0, 0);
     }
 
-    // Head
-    addBoxRot(0, y + 1.37, 0, 0.26, 0.26, 0.26, this.skinCol);
+    // 1. Shoes
+    const shoeCol = [0.12, 0.12, 0.14, 1.0];
+    addBoxRot(-0.12, y, swing * 0.16, 0.16, 0.12, 0.26, shoeCol);
+    addBoxRot(0.12, y, -swing * 0.16, 0.16, 0.12, 0.26, shoeCol);
 
-    // Optional Sunglasses
+    // 2. Trousers / Shorts
+    addBoxRot(-0.12, y + 0.12, swing * 0.16, 0.16, 0.62, 0.16, this.pantsCol);
+    addBoxRot(0.12, y + 0.12, -swing * 0.16, 0.16, 0.62, 0.16, this.pantsCol);
+
+    // 3. Torso / Shirt
+    addBoxRot(0, y + 0.74, 0, 0.44, 0.64, 0.24, this.shirtCol);
+
+    // 4. Arms & Hands
+    addBoxRot(-0.28, y + 0.78, -swing * 0.16, 0.12, 0.40, 0.12, this.shirtCol);
+    addBoxRot(-0.28, y + 0.58, -swing * 0.16, 0.10, 0.22, 0.10, this.skinCol);
+
+    addBoxRot(0.28, y + 0.78, swing * 0.16, 0.12, 0.40, 0.12, this.shirtCol);
+    addBoxRot(0.28, y + 0.58, swing * 0.16, 0.10, 0.22, 0.10, this.skinCol);
+
+    // 5. Head & Hair
+    addBoxRot(0, y + 1.40, 0, 0.26, 0.26, 0.26, this.skinCol);
+    addBoxRot(0, y + 1.54, -0.01, 0.28, 0.12, 0.28, this.hairCol);
+
+    // 6. Accessories
     if (this.hasGlasses) {
-      addBoxRot(0, y + 1.44, 0.14, 0.24, 0.07, 0.06, [0.12, 0.12, 0.14, 1.0]);
+      addBoxRot(0, y + 1.46, 0.14, 0.24, 0.07, 0.06, [0.10, 0.10, 0.12, 1.0]);
+    }
+
+    if (this.hasHat) {
+      addBoxRot(0, y + 1.58, 0, 0.42, 0.06, 0.42, [0.85, 0.78, 0.62, 1.0]); // Straw fedora brim
+      addBoxRot(0, y + 1.64, 0, 0.28, 0.12, 0.28, [0.85, 0.78, 0.62, 1.0]); // Crown
+    }
+
+    if (this.hasBag) {
+      addBoxRot(0.32, y + 0.42, swing * 0.16, 0.12, 0.28, 0.22, [0.88, 0.75, 0.55, 1.0]);
     }
   }
 }
@@ -287,7 +340,7 @@ export class PedestrianManager {
     }
   }
 
-  notifyHorn(hx, hz, radius = 18) {
+  notifyHorn(hx, hz, radius = 22) {
     for (let i = 0; i < this.pedestrians.length; i++) {
       const p = this.pedestrians[i];
       if (p.alive && Math.hypot(p.x - hx, p.z - hz) < radius) {

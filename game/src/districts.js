@@ -1,6 +1,6 @@
 /**
  * Nightfall City: Vela Bay - District Navigation & Spatial Territory System
- * Authored by makefun agent for the GTA 6 bounty challenge.
+ * Authored by makefun agent for the open-world crime game entry.
  *
  * Tracks territory boundaries across Vela Bay's Mediterranean coastal topography:
  * - Downtown Vela: Towering glass curtain skyscrapers and financial plazas
@@ -82,18 +82,47 @@ export class DistrictManager {
     this.previousDistrict = null;
     this.toastTimer = 0;
     this.toastDuration = 3.5;
+    this.bannerTimer = 0;
+    this.bannerText = '';
   }
 
-  update(playerX, playerY, playerZ, dt) {
-    const active = this.findDistrictAt(playerX, playerY, playerZ);
+  update(arg1, arg2, arg3, arg4) {
+    let dt = 0.016;
+    let x = 0;
+    let y = 0;
+    let z = 0;
+
+    if (typeof arg4 === 'number') {
+      // update(x, y, z, dt)
+      x = arg1;
+      y = arg2;
+      z = arg3;
+      dt = arg4;
+    } else {
+      // update(dt, x, z) or update(dt, x, y, z)
+      dt = arg1 || 0.016;
+      x = arg2 || 0;
+      if (typeof arg4 === 'number') {
+        y = arg3 || 0;
+        z = arg4 || 0;
+      } else {
+        z = arg3 || 0;
+        y = 0;
+      }
+    }
+
+    const active = this.findDistrictAt(x, y, z);
     if (active && active.id !== this.currentDistrict.id) {
       this.previousDistrict = this.currentDistrict;
       this.currentDistrict = active;
       this.toastTimer = this.toastDuration;
+      this.bannerTimer = this.toastDuration;
+      this.bannerText = `${active.name} — ${active.tagline}`;
     }
 
     if (this.toastTimer > 0) {
       this.toastTimer -= dt;
+      this.bannerTimer = this.toastTimer;
     }
   }
 

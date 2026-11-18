@@ -2,7 +2,7 @@
   {
     "name": "1-city-street.png",
     "query": "?shot=1",
-    "description": "Cover shot: wide street view from Downtown sidewalk with protagonist Rhea 'Rook' Solano in the foreground, vibrant colorful Mediterranean building facades, warm sunlit sky, active traffic and pedestrians, distant police cruiser on patrol, and complete HUD with rotating minimap, health/armor, cash stash, wanted stars, and active safehouse mission objective.",
+    "description": "Cover shot: wide street view from Downtown sidewalk with protagonist Rhea 'Rook' Solano in the foreground, vibrant colorful Mediterranean building facades with balconies, awnings, and rooftop water tanks, warm sunlit sky, active traffic and pedestrians, distant police cruiser on patrol, and complete HUD with rotating minimap, health/armor, cash stash, wanted stars, and active safehouse mission objective.",
     "camera": {
       "pos": [118.0, 2.1, -91.0],
       "target": [123.0, 1.8, -128.0],
@@ -16,7 +16,7 @@
   {
     "name": "2-car-promenade.png",
     "query": "?shot=2",
-    "description": "High-speed coastal cruise in a stolen Veloce GT along Ocean Promenade: open turquoise bay waters, sun sinking on horizon, swaying palm trees and cypress grove, pedestrians along the promenade curb, full tactical HUD with speedometer showing 151 MPH and mission waypoint diamond on the radar minimap.",
+    "description": "High-speed coastal cruise in a sports car along Ocean Promenade: open turquoise bay waters, sun sinking on horizon, swaying palm trees and cypress grove, pedestrians along the promenade curb, full tactical HUD with speedometer showing 151 MPH and mission waypoint diamond on the radar minimap.",
     "camera": {
       "pos": [-106.5, 1.55, 71.0],
       "target": [-112.0, 1.35, 112.0],
@@ -30,7 +30,7 @@
   {
     "name": "3-police-chase.png",
     "query": "?shot=3",
-    "description": "Intense 5-star police chase down Skyway Boulevard: player muscle car pursued bumper-to-bumper by three police cruisers with blazing red and blue emergency lightbars washing the asphalt, tactical police chopper overhead, elevated expressway structure, and full HUD showing 5 wanted stars and flashing radar blips.",
+    "description": "Intense 5-star police chase down Skyway Boulevard: player car pursued bumper-to-bumper by police cruisers with blazing red and blue emergency lightbars washing the asphalt and buildings, tactical police chopper overhead, elevated expressway structure, and full HUD showing 5 wanted stars and flashing radar blips.",
     "camera": {
       "pos": [46.5, 2.6, -19.0],
       "target": [45.0, 1.7, -50.0],

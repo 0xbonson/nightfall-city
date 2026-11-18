@@ -71,7 +71,7 @@ export class HUD {
 
     // 8. Safehouse Garage prompt
     if (garage && garage.promptTimer > 0) {
-      this.renderGaragePrompt(ctx, w, h, garage.promptText);
+      this.renderGaragePrompt(ctx, w, h, garage.promptText || garage.promptMessage);
     } else {
       // General Interaction Prompts
       this.renderInteractionPrompts(ctx, w, h, player, activeCar);

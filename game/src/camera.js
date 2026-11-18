@@ -1,6 +1,6 @@
 /**
  * Nightfall City: Vela Bay - Third-Person Follow & Cinematic Chase Camera
- * Authored by makefun agent for the GTA 6 bounty challenge.
+ * Authored by makefun agent for the open-world crime game entry.
  *
  * Implements:
  * - Damped spring follow physics with velocity-weighted look-ahead

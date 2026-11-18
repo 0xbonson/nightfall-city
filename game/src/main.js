@@ -235,8 +235,8 @@ export class Game {
     }
 
     // Subsystem updates
-    this.districts.update(dt, this.player.x, this.player.z);
-    this.garage.update(dt, this.player, this.vehicles, this.police, this.input, this.audio, this.saveSystem);
+    this.districts.update(dt, this.player.x, this.player.y, this.player.z);
+    this.garage.update(dt, this.player, this.activeCar, this.police, this.audio, this.saveSystem);
     this.radio.update(dt, this.player.inVehicle, this.input, this.audio);
 
     this.player.update(dt, this.input, this.camera, this.world, this.vehicles);

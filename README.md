@@ -2,7 +2,7 @@
 
 [![make.fun · gta6-01](https://make.fun/badge/gta6-01.svg)](https://make.fun/bounty/gta6-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-01)
 [![rank](https://make.fun/badge/gta6-01/0xbonson/nightfall-city/rank.svg)](https://make.fun/bounty/gta6-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=gta6-01)
-[![reward](https://make.fun/badge/gta6-01/0xbonson/nightfall-city/reward.svg)](https://make.fun/bounty/gta6-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-01)
+[![reward](https://make.fun/badge/gta6-01/0xbonson/nightfall-city/reward.svg)](https://make.fun/bounty/gta6-01/reward.svg)
 
 **Nightfall City: Vela Bay** is an original open-world 3D crime action game built for the make.fun bounty challenge (`gta6-01`). Engineered entirely from scratch in vanilla WebGL and ES modules with zero third-party engines or runtime dependencies, it runs completely offline in modern desktop browsers.
 
@@ -10,22 +10,22 @@
 
 ## 1. Setting: The Sun-Drenched City of Vela Bay
 
-Vela Bay is a vibrant, sun-soaked coastal Mediterranean metropolis framed by terracotta roofs, turquoise waters, rolling foothills, and towering modern glass spires. 
+Vela Bay is a vibrant, sun-soaked coastal Mediterranean metropolis bathed in late-afternoon golden hour light. The art direction emphasizes warm low-sun illumination, directional building and vehicle shadows, per-face facade tinting (golden light on sun-facing facades and cool blue-teal shade on faces turned away), rich street clutter, and sparkling turquoise waters.
 
-### Municipal Districts
-- **Downtown Vela**: The financial pulse of the city, lined with towering champagne-bronze and teal glass skyscrapers, wide pedestrian plazas, rooftop elevator penthouses, water towers, and storefront neon displays.
-- **Ocean Promenade**: An expansive beachfront boulevard facing the open bay, dotted with Art Deco pastel hotels, tiered balconies, swaying palms, and a scenic cedar boardwalk.
+### Municipal Districts & Landmarks
+- **Downtown Vela**: The financial pulse of the city, lined with towering champagne-bronze and teal glass skyscrapers, wide pedestrian plazas with raised granite kerbs and zebra crossings, rooftop elevator penthouses, water tanks on wooden stilts, satellite dishes, AC units, and shopfront awnings.
+- **Ocean Promenade**: An expansive coastal boulevard facing the open bay, dotted with Art Deco pastel hotels, tiered balconies with railings and floral planters, swaying Mediterranean date palms, and a scenic cedar boardwalk.
 - **Old Market Quarter**: Historic district of warm sandstone ochre buildings, tiled terracotta rooftops, colorful striped shop awnings, and slender Italian cypress groves.
 - **Meridian Cargo Docks**: The industrial waterfront hub featuring stacked multi-chroma shipping containers, open water basins, freight ships, and a towering 36-meter yellow container gantry crane at Pier 7.
-- **Marina San Vento**: Luxury yacht basin with private docks, wooden slips, and seaside cafes.
-- **Skyway Boulevard**: Multi-lane elevated concrete expressway spanning the metropolis with approach ramps, crossing over Central Grand Plaza and the majestic Harbor Suspension Bridge.
+- **Marina San Vento**: Luxury yacht basin with private docks, wooden slips, and seaside cafes catching the golden reflections of the bay.
+- **Skyway Boulevard**: Multi-lane elevated concrete expressway spanning the metropolis with approach ramps, crossing over Central Grand Plaza and the Harbor Suspension Bridge.
 - **Downtown Safehouse Garage** (`X = 95, Z = -85`): A fully functional hideout with illuminated neon signage, roll-up shutter bay, vehicle lift, and mechanic tool chests.
 
 ---
 
 ## 2. Story: Rook's Ascendance
 
-Take control of **Rhea "Rook" Solano**, an exiled operative returning to Vela Bay to dismantle the corrupt Syndicate that seized the city's ports and municipal council. Operating out of an underground safehouse in Downtown Vela, Rook takes on high-stakes courier runs, precision car repossessions, underground street races, and dockside ambushes to bring down the Syndicate's syndicate lieutenants and corrupt harbor officials.
+Take control of **Rhea "Rook" Solano**, an exiled operative returning to Vela Bay to dismantle the corrupt Syndicate that seized the city's ports and municipal council. Clad in an open terracotta windbreaker over a dark crewneck, indigo denim jeans, and aviator sunglasses, Rook operates out of an underground safehouse in Downtown Vela. Rook takes on high-stakes courier runs, precision car repossessions, underground street races, and dockside ambushes to bring down the Syndicate's lieutenants and corrupt harbor officials.
 
 ---
 
@@ -100,27 +100,27 @@ Your game seamlessly resumes where you left off upon reloading or refreshing the
 
 The codebase is structured into single-responsibility ES modules under `game/src/`:
 
-- [`config.js`](file:///game/src/config.js): World coordinates, district dimensions, lighting parameters, vehicle physics specs, weapon attributes, 8-mission definitions, and photo mode camera presets.
-- [`math.js`](file:///game/src/math.js): Hand-optimized 3D vector, matrix (`M4`), and geometry utility routines.
-- [`world.js`](file:///game/src/world.js): Procedural metropolis generation: 6 districts, skyscrapers with rooftop clutter, Mediterranean villas, ocean coastline, suspension bridge, gantry cranes, and cypress trees.
-- [`renderer.js`](file:///game/src/renderer.js): Pure WebGL rendering engine with sunset atmospheric sky dome, solar corona, asphalt sheen, procedural window grids, dynamic police strobe lights, and depth fog.
-- [`camera.js`](file:///game/src/camera.js): Spring-interpolated third-person camera with high-speed dynamic FOV expansion, look-ahead projection, and screen shake.
-- [`player.js`](file:///game/src/player.js): Rhea "Rook" Solano character controller, walk/sprint kinetics, multi-weapon handling, and vehicle boarding.
-- [`vehicles.js`](file:///game/src/vehicles.js): 6 vehicle classes, engine RPM acoustics, Ackermann steering, suspension roll/pitch, arcade handbrake drifting, and horn.
-- [`pedestrians.js`](file:///game/src/pedestrians.js): Civilian population with articulated walking cycles, panic fleeing AI, and dropped cash pickups.
-- [`police.js`](file:///game/src/police.js): 0–5 star wanted heat manager, pursuit cruisers, roadblock deployment, tactical police helicopter with searchlight beam, and evasion bonuses.
-- [`combat.js`](file:///game/src/combat.js): Real-time ballistics with glowing tracer rounds, multi-pellet shotgun spread, Syndicate enforcer AI, and fireball explosions.
-- [`missions.js`](file:///game/src/missions.js): 8-part story arc manager, checkpoint street races, taxi fare generator, and 3D rotating diamond beacon.
-- [`hud.js`](file:///game/src/hud.js): 2D Canvas HUD with health/armor gauges, cash counter, 5 wanted stars, ammo readouts, speedometer dial, and district toasts.
-- [`minimap.js`](file:///game/src/minimap.js): Rotating GPS radar minimap displaying ocean coastline, roads, safehouse icon, traffic pips, flashing police markers, and objective waypoints.
-- [`audio.js`](file:///game/src/audio.js): 100% procedural WebAudio sound synthesizer: engine RPM revs, dual-tone sirens, drift screeches, gunshots, explosions, cash chimes, and radio audio.
-- [`radio.js`](file:///game/src/radio.js): Multi-station procedural radio system (Vela Wave 98.7, Sol Coastal FM, Metro Police Dispatch).
-- [`districts.js`](file:///game/src/districts.js): Municipal district boundary detection with animated HUD entrance banners.
-- [`garage.js`](file:///game/src/garage.js): Safehouse garage system: 3D bay mesh, vehicle stashing, free repair, armor restock, and heat clearance.
-- [`menus.js`](file:///game/src/menus.js): Start overlay, pause menu, controls cheatsheet, mission contract dossier, and victory screen.
-- [`save.js`](file:///game/src/save.js): LocalStorage serialization, career state restoration, and profile wipe.
-- [`input.js`](file:///game/src/input.js): DOM keyboard, mouse buttons, pointer lock, and movement deltas.
-- [`main.js`](file:///game/src/main.js): Game loop coordinator, subsystem orchestration, and deterministic photo mode executor.
+- [`config.js`](file:///Users/bonson/.deepai-code/scratch/2026-11-17-tes-4dccd960/repos/nightfall-city/game/src/config.js): World coordinates, district dimensions, sun lighting parameters (`SUN_DIR`, `SUN_COLOR`, `SHADE_TINT`, `GROUND_BOUNCE`), 7 vehicle specifications, weapon attributes, 8-mission definitions, and photo mode camera presets.
+- [`math.js`](file:///Users/bonson/.deepai-code/scratch/2026-11-17-tes-4dccd960/repos/nightfall-city/game/src/math.js): 3D vector, matrix (`M4`), quaternion, and geometry utility routines.
+- [`world.js`](file:///Users/bonson/.deepai-code/scratch/2026-11-17-tes-4dccd960/repos/nightfall-city/game/src/world.js): Procedural metropolis generation: 6 districts, skyscrapers with rooftop water tanks, antennas and AC units, Mediterranean villas with balconies and awnings, ocean coastline, suspension bridge, gantry cranes, street props, palms and cypresses, directional ground shadows, and parked civilian cars.
+- [`renderer.js`](file:///Users/bonson/.deepai-code/scratch/2026-11-17-tes-4dccd960/repos/nightfall-city/game/src/renderer.js): Pure WebGL rendering engine with directional sun lighting, per-face normal shading, multi-tone procedural window illumination, road puddles with sky reflections, dynamic police siren lighting with quadratic attenuation, ocean wave displacement with sun trail glint, and depth haze.
+- [`camera.js`](file:///Users/bonson/.deepai-code/scratch/2026-11-17-tes-4dccd960/repos/nightfall-city/game/src/camera.js): Spring-interpolated third-person camera with high-speed dynamic FOV expansion, look-ahead projection, and screen shake.
+- [`player.js`](file:///Users/bonson/.deepai-code/scratch/2026-11-17-tes-4dccd960/repos/nightfall-city/game/src/player.js): Rhea "Rook" Solano character controller, distinct human silhouette (boots, denim, jacket, shades), walk/sprint kinetics, multi-weapon handling, directional ground shadow, and vehicle boarding.
+- [`vehicles.js`](file:///Users/bonson/.deepai-code/scratch/2026-11-17-tes-4dccd960/repos/nightfall-city/game/src/vehicles.js): 7 vehicle chassis models (sports coupe, muscle, police cruiser, executive sedan, city taxi, hatchback, hauler box truck), directional ground shadows, headlights, ruby taillights, mirrors, alloy wheels, drift physics, and horn.
+- [`pedestrians.js`](file:///Users/bonson/.deepai-code/scratch/2026-11-17-tes-4dccd960/repos/nightfall-city/game/src/pedestrians.js): Civilian population with varied Mediterranean garments and skin tones, articulated walking cycles, panic fleeing AI, and dropped cash pickups.
+- [`police.js`](file:///Users/bonson/.deepai-code/scratch/2026-11-17-tes-4dccd960/repos/nightfall-city/game/src/police.js): 0–5 star wanted heat manager, pursuit cruisers, roadblock deployment, tactical police helicopter with searchlight beam, and evasion bonuses.
+- [`combat.js`](file:///Users/bonson/.deepai-code/scratch/2026-11-17-tes-4dccd960/repos/nightfall-city/game/src/combat.js): Real-time ballistics with glowing tracer rounds, multi-pellet shotgun spread, Syndicate enforcer AI, and fireball explosions.
+- [`missions.js`](file:///Users/bonson/.deepai-code/scratch/2026-11-17-tes-4dccd960/repos/nightfall-city/game/src/missions.js): 8-part story arc manager, checkpoint street races, taxi fare generator, and 3D rotating diamond beacon.
+- [`hud.js`](file:///Users/bonson/.deepai-code/scratch/2026-11-17-tes-4dccd960/repos/nightfall-city/game/src/hud.js): 2D Canvas HUD with health/armor gauges, cash counter, 5 wanted stars, ammo readouts, speedometer dial, and district toasts.
+- [`minimap.js`](file:///Users/bonson/.deepai-code/scratch/2026-11-17-tes-4dccd960/repos/nightfall-city/game/src/minimap.js): Rotating GPS radar minimap displaying ocean coastline, roads, safehouse icon, traffic pips, flashing police markers, and objective waypoints.
+- [`audio.js`](file:///Users/bonson/.deepai-code/scratch/2026-11-17-tes-4dccd960/repos/nightfall-city/game/src/audio.js): 100% procedural WebAudio sound synthesizer: engine RPM revs, dual-tone sirens, drift screeches, gunshots, explosions, cash chimes, and radio audio.
+- [`radio.js`](file:///Users/bonson/.deepai-code/scratch/2026-11-17-tes-4dccd960/repos/nightfall-city/game/src/radio.js): Multi-station procedural radio system (Vela Wave 98.7, Sol Coastal FM, Metro Police Dispatch).
+- [`districts.js`](file:///Users/bonson/.deepai-code/scratch/2026-11-17-tes-4dccd960/repos/nightfall-city/game/src/districts.js): Municipal district boundary detection with animated HUD entrance banners.
+- [`garage.js`](file:///Users/bonson/.deepai-code/scratch/2026-11-17-tes-4dccd960/repos/nightfall-city/game/src/garage.js): Safehouse garage system: 3D bay mesh, vehicle stashing, free repair, armor restock, and heat clearance.
+- [`menus.js`](file:///Users/bonson/.deepai-code/scratch/2026-11-17-tes-4dccd960/repos/nightfall-city/game/src/menus.js): Start overlay, pause menu, controls cheatsheet, mission contract dossier, and victory screen.
+- [`save.js`](file:///Users/bonson/.deepai-code/scratch/2026-11-17-tes-4dccd960/repos/nightfall-city/game/src/save.js): LocalStorage serialization, career state restoration, and profile wipe.
+- [`input.js`](file:///Users/bonson/.deepai-code/scratch/2026-11-17-tes-4dccd960/repos/nightfall-city/game/src/input.js): DOM keyboard, mouse buttons, pointer lock, and movement deltas.
+- [`main.js`](file:///Users/bonson/.deepai-code/scratch/2026-11-17-tes-4dccd960/repos/nightfall-city/game/src/main.js): Game loop coordinator, subsystem orchestration, and deterministic photo mode executor.
 
 ---
 
@@ -146,7 +146,7 @@ mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
 ## License
 
-This project is licensed under the MIT License — see the [LICENSE](file:///LICENSE) file for details.  
+This project is licensed under the MIT License — see the [LICENSE](file:///Users/bonson/.deepai-code/scratch/2026-11-17-tes-4dccd960/repos/nightfall-city/LICENSE) file for details.  
 `SPDX-License-Identifier: MIT`
 
 <sub>Entered on [make.fun](https://make.fun/?ref=kewdhhyh&utm_source=github&utm_medium=readme&utm_campaign=gta6-01) · AI agents build so everyone can play.</sub>

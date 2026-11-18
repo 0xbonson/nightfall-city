@@ -4,47 +4,54 @@
 
 ---
 
-## 1. Setting & World Geometry: Vela Bay
+## 1. Setting & Art Direction: Vela Bay
 
-The game world spans an expansive coordinate area (-280m to +280m in X and Z) featuring 6 named districts, an elevated skyway, a harbor suspension bridge, distant mountain foothills, and Mediterranean oceanfront:
+The game world spans an expansive coordinate area (-280m to +280m in X and Z) featuring 6 named districts, an elevated skyway, a harbor suspension bridge, distant mountain foothills, and Mediterranean oceanfront bathed in warm late-afternoon sunlight:
 
-1. **Downtown Vela** (North-East: `X: 20 to 240`, `Z: -240 to -20`):
-   - Towering modern skyscrapers reaching up to 120m with reflective champagne bronze and teal window bands, illuminated corporate plazas, rooftop HVAC clutter, water tanks, elevator penthouses, and storefront neon display signs.
-2. **Old Market Quarter** (North-West: `X: -240 to -20`, `Z: -240 to -20`):
-   - Dense Mediterranean quarter with terracotta roofs, sandstone ochre facades, narrow streets, colorful fabric awnings, slender Italian cypress trees, and pedestrian courtyards.
-3. **Meridian Cargo Docks** (South-East: `X: 20 to 240`, `Z: 20 to 240`):
-   - Heavy industrial waterfront terminal with cargo warehouses, high-chroma shipping container stacks, open harbor basin, moored cargo ships, a massive 36m gantry crane, and contraband heist loot crates at Pier 7.
-4. **Ocean Promenade & Marina San Vento** (South-West: `X: -240 to -20`, `Z: 20 to 240`):
-   - Art Deco pastel resorts, cantilevered balconies, sunlit cedar boardwalk along the coast, swaying palm tree boulevards, and marina boat slips with moored luxury yachts.
-5. **Skyway Boulevard & Central Grand Plaza**:
-   - Multi-lane elevated concrete expressway along `X = 45` spanning over cross-streets with support pillars and approach ramps; central green park with manicured lawns and fountains.
-6. **Harbor Suspension Bridge & Monte Sereno Foothills**:
-   - Majestic steel suspension bridge with twin suspension towers and tension cable rigging crossing the bay; distant Mediterranean rolling mountain ridges ringing the city horizon.
-7. **Safehouse Garage** (`X = 95`, `Z = -85`):
-   - Custom 3D architectural garage bay with illuminated neon signage, roll-up shutter frame, industrial hydraulic vehicle lift, mechanics' tool chests, and workbenches. Players can pull vehicles inside to stash cars, repair vehicle damage, restock body armor, and immediately clear police pursuit heat.
+- **Warm Sun Low in the Sky**: Direct sun positioned low to the northwest (`[-0.65, 0.45, -0.62]`), projecting long directional shadows across streets, sidewalks, building blocks, and props.
+- **Per-Face Façade Lighting**: Strong color contrast between sunward building facets (warm golden sand and peach ochre) and shadow facets (cool atmospheric blue-teal shade), making blocks immediately read as three-dimensional solids with defined architectural corners.
+- **Lived-In Façades & Rooftops**: Multi-level balconies with wrought-iron railings and flowering planter boxes, colorful fabric shopfront awnings, painted street signage, rooftop clutter (water tanks on wood/steel stilts, communications aerials, satellite dishes, air-conditioning condenser units, fire escapes), and varied illuminated multi-pane windows.
+- **Street-Level Urban Detail**: Raised granite kerbs, pedestrian crossings with tactile yellow paving pads, kerbside parked civilian cars, Mediterranean date palms and Italian pencil cypresses, ornate lamp posts, wooden benches, green litter bins, glass-backed bus shelters, traffic light gantries, cast-iron manhole covers, and procedural rain puddles reflecting the sky.
+- **Atmospheric Sky & Water**: Multi-stop atmospheric sky dome with solar corona, dusk depth fog, and shimmering ocean water with dynamic wave displacement and golden sun trail specular glints.
+- **Distinct Districts**:
+  1. **Downtown Vela**: High-rise glass skyscrapers, corporate plazas, rooftop HVAC clutter, and safehouse garage.
+  2. **Old Market Quarter**: Mediterranean terracotta roofs, sandstone ochre townhouses, arched alleys, and market stalls.
+  3. **Meridian Cargo Docks**: Heavy industrial quays, multi-tier container stacks, breakwater quays, and a 36m yellow container gantry crane.
+  4. **Ocean Promenade & Marina San Vento**: Art Deco pastel resorts, beachfront boardwalk, palm avenues, and marina boat slips.
+  5. **Skyway Boulevard Expressway**: Multi-lane elevated concrete expressway spanning over the metropolis.
+  6. **Harbor Suspension Bridge & Monte Sereno Foothills**: Twin-tower suspension bridge spanning the bay, framed by rolling northern mountain ridges.
 
 ---
 
 ## 2. Core Systems Architecture
 
 ### 2.1 Character Traversal & Physics (`player.js`, `math.js`)
-- Protagonist **Rhea "Rook" Solano** rendered with articulated 3D limbs, charcoal leather jacket, aviator sunglasses, work boots, and equipped firearms.
+- Protagonist **Rhea "Rook" Solano** rendered with distinct athletic silhouette: dark leather boots with thick rubber soles, deep indigo denim jeans, brown leather utility belt with steel buckle, rolled-sleeve terracotta jacket over dark crewneck tee, aviator sunglasses, and equipped firearms.
+- Directional ground shadow cast along the sun vector under the character's feet.
 - Traversal states: walk, sprint (`Shift`), jump, strafe, reverse, weapon aim, and car enter/exit (`F`/`E`).
-- Sliding cylinder-box collision resolution against static world architecture.
-- Step cadence synchronization with procedural footstep audio.
+- Sliding collision resolution against static city architecture.
+- Synchronized step cadence triggering procedural footstep audio.
 
 ### 2.2 Vehicle Physics & Arcade Drift Dynamics (`vehicles.js`)
-- 6 vehicle classes: *Veloce GT* (sports coupe), *Torque 440* (muscle car), *Metro Cruiser* (police interceptor with push-bar), *Executive* (luxury sedan), *Cabrio* (city taxi with roof sign), and *Titan Box* (delivery truck & contraband van).
-- Physical simulation including engine RPM torque curves, 4-gear automated transmission, front-wheel Ackermann steering, body pitch on acceleration/braking, and body roll during cornering.
+- 7 vehicle chassis classes:
+  1. *Veloce GT*: Aerodynamic sports coupe with low roofline, side intake vents, and rear wing spoiler.
+  2. *Stallion 428*: Aggressive classic muscle car with raised hood induction scoop and wide rear haunches.
+  3. *Metro Interceptor*: High-contrast black-and-white police cruiser with steel bullbar push-bumper and dual-tone flashing lightbar.
+  4. *Meridian Executive*: Premium luxury 4-door executive sedan with chrome grille and tinted privacy glass.
+  5. *Cobra City Cab*: Vibrant sunshine yellow taxi with checkerboard side rub-strip and illuminated rooftop sign box.
+  6. *Piccolo Sport*: Agile European 3-door hot hatchback with steep hatch and sporty stance.
+  7. *Meridian Hauler*: Heavy industrial box cargo truck with corrugated cargo bay.
+- Directional ground shadow cast under each vehicle along the sun vector.
+- True vehicle anatomy: bonnet, cabin, roof, boot, dark glass with pillar frames, headlights, ruby taillights, side mirrors, wheels with rubber tires and alloy rims.
 - Arcade handbrake drift mechanics (`Space`): rear slip friction drop, counter-steering slides, and burnout screech audio.
-- Autonomous civilian traffic AI: pathfinding through intersection nodes, lane discipline, and vehicle avoidance braking.
-- Horn mechanism (`H`/`E`) that alerts surrounding traffic and causes pedestrians to scatter.
+- Autonomous civilian traffic AI: pathfinding through intersection nodes, lane discipline, and vehicle collision avoidance.
+- Vehicle horn (`H`/`E`) clearing traffic and scattering pedestrians.
 
 ### 2.3 Pedestrian Population & Reactive Citizen AI (`pedestrians.js`)
-- Procedural civilian population with Mediterranean skin tones, linen shirts, trousers, sunglasses, and shopping bags.
-- Natural wandering between sidewalk waypoints.
+- Procedural civilian population with Mediterranean skin tones, varied attire (terracotta, coral, washed ochre, seafoam teal, linen cream, navy), hair styles, sunglasses, fedoras, and shopping bags.
+- Directional ground shadow cast under each pedestrian along the sun vector.
 - Dynamic panic AI: civilians scatter, yell, and sprint away from speeding cars, hit-and-run incidents, horn honks, and weapon fire.
-- Defeated pedestrians drop glowing green cash bundles ($20–$100).
+- Defeated pedestrians drop glowing green cash bundles ($25–$100).
 
 ### 2.4 Police Pursuit & 5-Star Wanted System (`police.js`)
 - Escalating heat meter scaling from 0 to 5 stars:
@@ -109,7 +116,7 @@ The game world spans an expansive coordinate area (-280m to +280m in X and Z) fe
   - Sawtooth oscillator engine with RPM-modulated lowpass filtering.
   - Dual-tone frequency-modulated police siren.
   - Bandpass noise tire screech during handbrake slides.
-  - Multi-harmonic gunshot transients, explosion rumbles, car horns, cash chimes, and footsteps.
+  - Multi-harmonic gunshot transients, reload latches, explosion rumbles, car horns, cash chimes, and footsteps.
   - Multi-station radio synth generator.
 
 ### 2.13 Persistence & Menus (`save.js`, `menus.js`, `input.js`)
@@ -132,7 +139,7 @@ game/
     ├── camera.js         # Third-person follow camera, high-speed chase zoom, screen shake, slow-mo dilation
     ├── world.js          # Procedural city generation: 6 districts, roads, skyway, bridge, docks, crane, marina, hills, props
     ├── renderer.js       # WebGL 3D rendering engine, shaders, sunset atmosphere, asphalt sheen, dynamic lights
-    ├── vehicles.js       # 6 vehicle models, driving physics, drift mechanics, traffic AI, body roll/pitch
+    ├── vehicles.js       # 7 vehicle models, driving physics, drift mechanics, traffic AI, body roll/pitch
     ├── pedestrians.js    # Pedestrian models, wandering AI, panic fleeing, dropped cash pickups
     ├── player.js         # Rook character model, articulated limbs, movement, carjacking, health/armor, multi-weapon arsenal
     ├── police.js         # 0-5 star wanted system, pursuit cruisers, tactical helicopter with spotlight

@@ -2,7 +2,7 @@
  * Nightfall City: Vela Bay - Combat Engine, Ballistics, Explosives & Tactical AI
  * Implements glowing multi-caliber tracers, muzzle flash bursts, blood/spark/dust particle dynamics,
  * shotgun pellet fan spread, collectible contraband cash drops, and hostile Syndicate enforcer AI.
- * Authored for make.fun GTA-inspired open-world entry.
+ * Authored by makefun agent for the open-world crime entry.
  */
 
 import { WEAPONS } from './config.js';
@@ -257,12 +257,12 @@ export class Enemy {
       });
 
       const faces = [
-        [4, 5, 6, 7, [0, 1, 0]],
-        [3, 2, 1, 0, [0, -1, 0]],
-        [7, 6, 2, 3, [sinRot, 0, cosRot]],
-        [5, 4, 0, 1, [-sinRot, 0, -cosRot]],
-        [6, 5, 1, 2, [cosRot, 0, -sinRot]],
-        [4, 7, 3, 0, [-cosRot, 0, sinRot]],
+        [4, 5, 6, 7, [0, 1, 0]],   // Top
+        [3, 2, 1, 0, [0, -1, 0]],  // Bottom
+        [7, 6, 2, 3, [sinRot, 0, cosRot]], // Front
+        [5, 4, 0, 1, [-sinRot, 0, -cosRot]], // Back
+        [6, 5, 1, 2, [cosRot, 0, -sinRot]],  // Right
+        [4, 7, 3, 0, [-cosRot, 0, sinRot]], // Left
       ];
 
       for (const [i1, i2, i3, i4, norm] of faces) {

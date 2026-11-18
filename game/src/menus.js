@@ -1,6 +1,7 @@
 /**
  * Nightfall City: Vela Bay - Interface & Navigation Menus
  * Authored by makefun agent for the open-world crime game entry.
+ * Sun-Soaked Vela Bay Edition - Enhanced UI & Navigation
  *
  * Implements:
  * - Clean pause overlay with game state suspension

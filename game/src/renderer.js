@@ -3,19 +3,19 @@
  * Authored by makefun agent for the open-world crime game challenge.
  *
  * Implements:
- * - Direct warm Mediterranean sunset sunlight with wrap-around diffuse shading
- * - Dual-hemisphere sky dome ambient and warm sand/stone ground bounce
- * - Roadway asphalt sun sheen, vehicle metallic specular reflections
- * - Vertical facade procedural window grid & street storefront neon illumination
- * - Real-time crevice ambient occlusion contact darkening
- * - Dynamic dual-tone police strobe light attenuation
- * - Dynamic harmonic ocean wave displacement and crest foam specular
+ * - Directional low-sun lighting with golden sunlit faces and cool blue-teal shade on back-faces
+ * - Solid 3D block reads with sharp edge normals and per-face tonal contrast
+ * - Procedural road puddles that catch sky gradient and solar specular glint
+ * - Facade window grids with varied colors (golden interior, sky reflection, ochre blinds, dark frames)
+ * - Ground-floor storefront neon & warm interior showcase glow
+ * - Dynamic dual-tone police strobe lights washing roads and buildings
+ * - Harmonic wave displacement with sun path glint and foam crests
  * - Multi-stop sunset atmospheric sky dome with solar corona and sun disc
  * - Soft golden-hour distance depth fog
  */
 
 import { M4, V3 } from './math.js';
-import { LIGHTING, WORLD } from './config.js';
+import { LIGHTING } from './config.js';
 
 export class Renderer {
   constructor(canvas) {
@@ -39,7 +39,6 @@ export class Renderer {
 
     this.programs = {};
     this.buffers = {};
-    this.models = {};
 
     this.matProj = M4.create();
     this.matView = M4.create();
@@ -120,7 +119,8 @@ export class Renderer {
       uniform vec3 u_sunDir;
       uniform vec3 u_sunCol;
       uniform vec3 u_skyCol;
-      uniform vec3 u_ambCol;
+      uniform vec3 u_shadeCol;
+      uniform vec3 u_groundCol;
       uniform vec3 u_camPos;
       uniform vec3 u_fogCol;
       uniform float u_fogDen;
@@ -138,53 +138,93 @@ export class Renderer {
         vec3 V = normalize(u_camPos - v_worldPos);
         vec3 H = normalize(L + V);
 
-        // 1. Wrap-around sun direct diffuse for warm, soft lighting
-        float softNdotL = max((dot(N, L) + 0.22) / 1.22, 0.0);
-        vec3 directSun = u_sunCol * softNdotL;
+        // 1. Direct Sun & Cool Blue-Teal Shade Per-Face Lighting
+        float NdotL = dot(N, L);
+        vec3 sunLit = u_sunCol * (pow(max(NdotL, 0.0), 0.85) * 1.35);
+        vec3 shadeLit = u_shadeCol * (0.70 + 0.30 * clamp(-NdotL, 0.0, 1.0));
 
-        // 2. Dual-hemisphere ambient (sky dome down, warm ground bounce up)
+        float sunFactor = smoothstep(-0.08, 0.16, NdotL);
+        vec3 directLighting = mix(shadeLit, sunLit, sunFactor);
+
+        // 2. Dual-Hemisphere Ambient (Sky dome above, warm sand/ochre bounce below)
         float hemi = clamp(N.y * 0.5 + 0.5, 0.0, 1.0);
-        vec3 groundBounce = vec3(0.68, 0.55, 0.45);
-        vec3 ambient = mix(groundBounce * 0.75, u_skyCol, hemi) * 1.25;
+        vec3 ambient = mix(u_groundCol * 0.85, u_skyCol, hemi) * 1.15;
 
         // 3. Ground contact ambient shadow / crevice occlusion
-        float contactAO = (N.y > 0.7) ? 1.0 : clamp(v_worldPos.y * 0.25 + 0.75, 0.75, 1.0);
+        float contactAO = (N.y > 0.7) ? 1.0 : clamp(v_worldPos.y * 0.28 + 0.72, 0.70, 1.0);
 
         // 4. Asphalt roadway & car paint specular sheen
-        float specPower = (N.y > 0.85) ? 22.0 : 36.0;
-        float specIntensity = (N.y > 0.85) ? 0.42 : 0.65;
+        float specPower = (N.y > 0.85) ? 24.0 : 38.0;
+        float specIntensity = (N.y > 0.85) ? 0.45 : 0.70;
         float spec = pow(max(dot(N, H), 0.0), specPower) * specIntensity;
         vec3 specular = u_sunCol * spec;
 
-        // 5. Procedural storefront & office window illumination
         vec4 baseCol = v_color;
-        if (abs(N.y) < 0.25 && v_worldPos.y > 0.5) {
+
+        // 5. Procedural storefront displays & diverse multi-color window illumination
+        if (abs(N.y) < 0.28 && v_worldPos.y > 0.5) {
           if (v_worldPos.y < 4.8) {
-            float shopGlow = sin((v_worldPos.x + v_worldPos.z) * 0.8) * 0.5 + 0.5;
-            baseCol.rgb += vec3(0.85, 0.62, 0.32) * (0.35 * shopGlow);
+            // Ground-floor boutique & cafe storefront illumination
+            float shopGlow = sin((v_worldPos.x + v_worldPos.z) * 0.6) * 0.5 + 0.5;
+            baseCol.rgb += vec3(0.95, 0.68, 0.35) * (0.42 * shopGlow);
           } else {
-            vec2 winUv = fract(vec2((v_worldPos.x + v_worldPos.z) * 0.38, v_worldPos.y * 0.28));
-            if (winUv.x > 0.22 && winUv.x < 0.78 && winUv.y > 0.25 && winUv.y < 0.75) {
-              baseCol.rgb += vec3(0.95, 0.82, 0.45) * 0.55;
+            // Multi-tone window grids (golden interior, sky teal, ochre curtains, dark bronze frames)
+            vec2 winGrid = vec2((v_worldPos.x + v_worldPos.z) * 0.36, v_worldPos.y * 0.28);
+            vec2 winUv = fract(winGrid);
+            vec2 winId = floor(winGrid);
+
+            // Window frame check (mullions)
+            if (winUv.x > 0.18 && winUv.x < 0.82 && winUv.y > 0.20 && winUv.y < 0.80) {
+              float cellHash = fract(sin(dot(winId, vec2(12.9898, 78.233))) * 43758.5453);
+              if (cellHash < 0.38) {
+                // Warm incandescent interior light (offices/apartments in late afternoon)
+                baseCol.rgb = mix(baseCol.rgb, vec3(1.15, 0.90, 0.48), 0.65);
+              } else if (cellHash < 0.62) {
+                // Sky dusk teal reflection with sun sheen
+                baseCol.rgb = mix(baseCol.rgb, vec3(0.35, 0.62, 0.82), 0.55);
+              } else if (cellHash < 0.82) {
+                // Warm terracotta/ochre curtains drawn
+                baseCol.rgb = mix(baseCol.rgb, vec3(0.82, 0.55, 0.38), 0.50);
+              } else {
+                // Dark tinted glass
+                baseCol.rgb = mix(baseCol.rgb, vec3(0.12, 0.16, 0.22), 0.60);
+              }
+            } else {
+              // Dark bronze window frame
+              baseCol.rgb *= 0.65;
             }
           }
         }
 
-        // 6. Emergency strobe lights
+        // 6. Street Puddles that catch the sky & low sun
+        if (N.y > 0.85 && v_worldPos.y < 0.18) {
+          vec2 puddleUv = v_worldPos.xz * 0.15;
+          float pNoise = sin(puddleUv.x * 2.2 + sin(puddleUv.y * 2.8)) *
+                         cos(puddleUv.y * 2.0 + cos(puddleUv.x * 2.4));
+          float puddleMask = smoothstep(0.42, 0.72, pNoise);
+          if (puddleMask > 0.0) {
+            float pFresnel = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 3.0);
+            float pSpec = pow(max(dot(reflect(-V, N), L), 0.0), 32.0);
+            vec3 skyReflect = mix(u_skyCol * 1.35, u_sunCol * 1.9, pSpec);
+            baseCol.rgb = mix(baseCol.rgb, skyReflect, puddleMask * clamp(pFresnel + 0.45, 0.0, 0.88));
+          }
+        }
+
+        // 7. Dynamic Police Cruiser Emergency Strobes
         vec3 dSiren1 = u_siren1Pos - v_worldPos;
         float dist1 = length(dSiren1);
-        float atten1 = max(0.0, 1.0 - dist1 / 28.0);
-        vec3 sirenLit = u_siren1Col * (atten1 * atten1 * max(dot(N, normalize(dSiren1)), 0.0) * 0.95);
+        float atten1 = max(0.0, 1.0 - dist1 / 32.0);
+        vec3 sirenLit = u_siren1Col * (atten1 * atten1 * max(dot(N, normalize(dSiren1)), 0.0) * 1.15);
 
         vec3 dSiren2 = u_siren2Pos - v_worldPos;
         float dist2 = length(dSiren2);
-        float atten2 = max(0.0, 1.0 - dist2 / 28.0);
-        sirenLit += u_siren2Col * (atten2 * atten2 * max(dot(N, normalize(dSiren2)), 0.0) * 0.95);
+        float atten2 = max(0.0, 1.0 - dist2 / 32.0);
+        sirenLit += u_siren2Col * (atten2 * atten2 * max(dot(N, normalize(dSiren2)), 0.0) * 1.15);
 
-        // Composite lit surface
-        vec3 lit = (baseCol.rgb * (ambient + directSun) * contactAO) + specular + sirenLit;
+        // Composite Final Illuminated Surface
+        vec3 lit = (baseCol.rgb * (ambient + directLighting) * contactAO) + specular + sirenLit;
 
-        // 7. Atmospheric distance fog (warm golden dusk)
+        // 8. Atmospheric Distance Fog (warm golden-hour dusk haze)
         float distCam = length(u_camPos - v_worldPos);
         float fogFactor = clamp(1.0 - exp(-distCam * u_fogDen), 0.0, 0.78);
         vec3 finalColor = mix(lit, u_fogCol, fogFactor);
@@ -196,7 +236,7 @@ export class Renderer {
     this.programs.world = this.createProgram(vsWorld, fsWorld);
     this.cacheUniforms('world', [
       'u_proj', 'u_view', 'u_model',
-      'u_sunDir', 'u_sunCol', 'u_skyCol', 'u_ambCol',
+      'u_sunDir', 'u_sunCol', 'u_skyCol', 'u_shadeCol', 'u_groundCol',
       'u_camPos', 'u_fogCol', 'u_fogDen', 'u_time',
       'u_siren1Pos', 'u_siren1Col', 'u_siren2Pos', 'u_siren2Col',
     ]);
@@ -259,18 +299,19 @@ export class Renderer {
         vec3 L = normalize(u_sunDir);
         vec3 V = normalize(u_camPos - v_worldPos);
 
-        vec3 waterBase = vec3(0.06, 0.44, 0.62);
+        // Mediterranean turquoise-teal water base
+        vec3 waterBase = vec3(0.06, 0.46, 0.64);
 
-        // Sun path reflection across waves
+        // Sun path reflection trail across waves
         vec3 H = normalize(L + V);
-        float spec = pow(max(dot(N, H), 0.0), 80.0) * 2.2;
+        float spec = pow(max(dot(N, H), 0.0), 75.0) * 2.4;
         vec3 sunGlint = u_sunCol * spec;
 
         // Foam highlights on wave crests
-        float foam = smoothstep(0.16, 0.34, v_normal.x * 0.5 + v_normal.z * 0.5);
-        vec3 waterCol = mix(waterBase, vec3(0.85, 0.94, 1.0), foam * 0.55);
+        float foam = smoothstep(0.15, 0.32, v_normal.x * 0.5 + v_normal.z * 0.5);
+        vec3 waterCol = mix(waterBase, vec3(0.88, 0.95, 1.0), foam * 0.55);
 
-        vec3 lit = waterCol * 0.92 + sunGlint;
+        vec3 lit = waterCol * 0.94 + sunGlint;
 
         float distCam = length(u_camPos - v_worldPos);
         float fogFactor = clamp(1.0 - exp(-distCam * u_fogDen), 0.0, 0.78);
@@ -312,9 +353,9 @@ export class Renderer {
         vec3 ray = normalize(worldPos.xyz / worldPos.w - u_camPos);
 
         float h = clamp(ray.y, 0.0, 1.0);
-        vec3 zenithCol = vec3(0.16, 0.38, 0.74);   // Twilight cobalt
-        vec3 midCol = vec3(0.56, 0.68, 0.88);      // Periwinkle azure
-        vec3 horizonCol = vec3(1.0, 0.76, 0.50);    // Warm golden peach
+        vec3 zenithCol = vec3(0.18, 0.36, 0.72);   // Deep cobalt twilight
+        vec3 midCol = vec3(0.48, 0.62, 0.85);      // Periwinkle azure
+        vec3 horizonCol = vec3(1.0, 0.74, 0.48);   // Golden peach dusk
 
         vec3 skyGrad = mix(horizonCol, midCol, pow(h, 0.42));
         skyGrad = mix(skyGrad, zenithCol, pow(h, 1.35));
@@ -327,9 +368,9 @@ export class Renderer {
         vec3 L = normalize(u_sunDir);
         float sunDot = max(dot(ray, L), 0.0);
 
-        vec3 corona = u_sunCol * pow(sunDot, 10.0) * 0.95;
-        float sunDisc = smoothstep(0.9968, 0.9984, sunDot);
-        vec3 sunColor = vec3(1.0, 0.98, 0.88) * sunDisc * 2.8;
+        vec3 corona = u_sunCol * pow(sunDot, 10.0) * 0.98;
+        float sunDisc = smoothstep(0.9968, 0.9985, sunDot);
+        vec3 sunColor = vec3(1.0, 0.98, 0.88) * sunDisc * 2.9;
 
         gl_FragColor = vec4(skyGrad + corona + sunColor, 1.0);
       }
@@ -431,7 +472,8 @@ export class Renderer {
     gl.uniform3fv(u.u_sunDir, sunD);
     gl.uniform3fv(u.u_sunCol, LIGHTING.SUN_COLOR);
     gl.uniform3fv(u.u_skyCol, LIGHTING.SKY_COLOR);
-    if (u.u_ambCol) gl.uniform3fv(u.u_ambCol, LIGHTING.AMBIENT_COLOR);
+    if (u.u_shadeCol) gl.uniform3fv(u.u_shadeCol, LIGHTING.SHADE_TINT);
+    if (u.u_groundCol) gl.uniform3fv(u.u_groundCol, LIGHTING.GROUND_BOUNCE);
 
     gl.uniform3fv(u.u_camPos, camera.pos);
     gl.uniform3fv(u.u_fogCol, LIGHTING.FOG_COLOR);

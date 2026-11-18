@@ -1,7 +1,7 @@
 /**
  * Nightfall City: Vela Bay - Input Manager (Keyboard & Mouse Controls)
  * Captures raw DOM keyboard, mouse buttons, pointer lock, and relative motion deltas.
- * Authored for make.fun open-world crime entry.
+ * Authored by makefun agent for the open-world crime entry.
  */
 
 export class InputManager {

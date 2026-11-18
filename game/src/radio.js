@@ -1,14 +1,15 @@
 /**
  * Nightfall City: Vela Bay - In-Vehicle Procedural Radio Station Network
- * Authored by makefun agent for the GTA 6 bounty challenge.
+ * Authored by makefun agent for the open-world crime game entry.
  *
  * Implements:
  * - 3 procedural broadcast frequencies + Radio OFF:
  *   1. Vela Wave 98.7 (driving 80s outrun synthwave chords & punchy bass)
  *   2. Sol Coastal FM (sun-soaked Mediterranean downtempo lounge & jazz chords)
- *   3. Metro Police Scanner (tactical radio squelches, priority beeps & dispatch telemetry)
- * - Quick-cycle controls in vehicle ([R] or [ ] / [ [ ])
- * - Dynamic HUD radio banner notification with station frequency & title
+ *   3. Metro Dispatch 104.2 (tactical police scanner squelches, priority beeps & dispatch telemetry)
+ *   4. Radio OFF (city ambience & engine roar)
+ * - In-vehicle station switching with [R] or [ [ ] / [ ] ]
+ * - Dynamic HUD radio banner notifications
  */
 
 export const RADIO_STATIONS = [
@@ -46,10 +47,12 @@ export const RADIO_STATIONS = [
 ];
 
 export class RadioSystem {
-  constructor() {
+  constructor(audioEngine) {
+    this.audio = audioEngine;
     this.currentStationIdx = 0; // Starts on Vela Wave 98.7
     this.bannerTimer = 0;
-    this.bannerDuration = 3.0;
+    this.bannerDuration = 3.2;
+    this.bannerText = '';
   }
 
   getCurrentStation() {
@@ -58,21 +61,27 @@ export class RadioSystem {
 
   nextStation() {
     this.currentStationIdx = (this.currentStationIdx + 1) % RADIO_STATIONS.length;
-    this.bannerTimer = this.bannerDuration;
+    this.triggerBanner();
     return this.getCurrentStation();
   }
 
   prevStation() {
     this.currentStationIdx = (this.currentStationIdx - 1 + RADIO_STATIONS.length) % RADIO_STATIONS.length;
-    this.bannerTimer = this.bannerDuration;
+    this.triggerBanner();
     return this.getCurrentStation();
   }
 
   setStation(idx) {
     if (idx >= 0 && idx < RADIO_STATIONS.length) {
       this.currentStationIdx = idx;
-      this.bannerTimer = this.bannerDuration;
+      this.triggerBanner();
     }
+  }
+
+  triggerBanner() {
+    const st = this.getCurrentStation();
+    this.bannerText = `${st.name} — ${st.genre}`;
+    this.bannerTimer = this.bannerDuration;
   }
 
   update(dt, inCar, input, audio) {
@@ -85,10 +94,10 @@ export class RadioSystem {
     // Cycle radio stations with [ / ] or Z / X
     if (input.isJustPressed('BracketRight') || input.isJustPressed('KeyX')) {
       this.nextStation();
-      if (audio) audio.playStationClick();
+      if (audio && audio.playStationClick) audio.playStationClick();
     } else if (input.isJustPressed('BracketLeft') || input.isJustPressed('KeyZ')) {
       this.prevStation();
-      if (audio) audio.playStationClick();
+      if (audio && audio.playStationClick) audio.playStationClick();
     }
   }
 }

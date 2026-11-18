@@ -1,6 +1,7 @@
 /**
  * Nightfall City: Vela Bay - High-Fidelity Tactical GPS Minimap
  * Authored by makefun agent for the open-world crime game entry.
+ * Sun-Soaked Vela Bay Edition - Rotating GPS Radar & District Boundaries
  *
  * Renders a circular navigation radar with:
  * - Dynamic ocean water & marina coastline

@@ -1,9 +1,10 @@
 /**
  * Nightfall City: Vela Bay - Protagonist Character Controller
- * Rhea "Rook" Solano: articulated 3D character with walk/sprint kinetics,
- * multi-weapon tactical handling (pistol, SMG, shotgun, carbine),
- * vehicle entry/exit transitions, safehouse garage interaction, and health/armor modeling.
- * Authored for make.fun open-world crime entry.
+ * Rhea "Rook" Solano: Sculpted 3D character silhouette with athletic proportions,
+ * rolled-sleeve jacket over contrasting tee, tactical utility belt, denim,
+ * multi-weapon geometries (carbine, shotgun, smg, pistol), articulated gait kinematics,
+ * vehicle entry/exit transitions, directional ground shadows, and health/armor systems.
+ * Authored by makefun agent for the open-world crime entry.
  */
 
 import { PLAYER, WEAPONS } from './config.js';
@@ -34,7 +35,6 @@ export class Player {
       smg: { clip: WEAPONS.smg.clipSize, reserve: 150 },
       shotgun: { clip: WEAPONS.shotgun.clipSize, reserve: 36 },
       carbine: { clip: WEAPONS.carbine.clipSize, reserve: 180 },
-      rifle: { clip: WEAPONS.rifle.clipSize, reserve: 180 },
     };
     this.lastFireTime = 0;
     this.isReloading = false;
@@ -217,12 +217,19 @@ export class Player {
 
     const swing = Math.sin(this.walkCycle) * (this.isMoving ? 0.45 : 0);
 
-    const jacketCol = [0.18, 0.20, 0.25, 1.0]; // Charcoal jacket
-    const shirtCol = [0.94, 0.35, 0.22, 1.0];  // Sunset orange inner tee
-    const pantsCol = [0.16, 0.22, 0.35, 1.0];  // Dark navy jeans
-    const skinCol = [0.88, 0.72, 0.58, 1.0];
-    const bootsCol = [0.12, 0.12, 0.14, 1.0];
-    const gunCol = [0.14, 0.14, 0.16, 1.0];
+    // Warm Mediterranean Palette: terracotta-washed jacket, dark inner shirt, indigo denim
+    const jacketCol = [0.84, 0.38, 0.22, 1.0];  // Sun-washed terracotta jacket
+    const teeCol = [0.18, 0.20, 0.24, 1.0];     // Dark charcoal crewneck tee
+    const beltCol = [0.24, 0.16, 0.10, 1.0];    // Distressed brown leather belt
+    const buckleCol = [0.88, 0.85, 0.75, 1.0];  // Brushed steel buckle
+    const pantsCol = [0.18, 0.26, 0.42, 1.0];   // Deep indigo denim jeans
+    const bootsCol = [0.12, 0.12, 0.14, 1.0];   // Dark combat boots
+    const soleCol = [0.06, 0.06, 0.07, 1.0];    // Rubber sole
+    const skinCol = [0.88, 0.72, 0.58, 1.0];    // Mediterranean warm skin tone
+    const hairCol = [0.15, 0.12, 0.10, 1.0];    // Dark espresso hair
+    const shadesCol = [0.08, 0.10, 0.12, 1.0];  // Dark aviator shades
+    const gunSteel = [0.16, 0.17, 0.20, 1.0];   // Blued weapon steel
+    const gunWood = [0.38, 0.22, 0.14, 1.0];    // Walnut rifle stock
 
     const addBoxRot = (bx, by, bz, sx, sy, sz, color) => {
       const hx = sx * 0.5, hy = sy * 0.5, hz = sz * 0.5;
@@ -262,37 +269,83 @@ export class Player {
       }
     };
 
-    // Boots
-    addBoxRot(-0.14, y, swing * 0.18, 0.18, 0.22, 0.28, bootsCol);
-    addBoxRot(0.14, y, -swing * 0.18, 0.18, 0.22, 0.28, bootsCol);
+    // 0. Directional ground shadow cast along the low NW sun vector (+X, +Z)
+    const shadowCol = [0.03, 0.05, 0.08, 0.42];
+    const shLength = 1.35;
+    const shW = 0.42;
+    const shX = x + 0.35;
+    const shZ = z + 0.48;
+    const shGroundY = y + 0.015;
 
-    // Legs / Pants
-    addBoxRot(-0.14, y + 0.22, swing * 0.18, 0.18, 0.58, 0.18, pantsCol);
-    addBoxRot(0.14, y + 0.22, -swing * 0.18, 0.18, 0.58, 0.18, pantsCol);
+    const shQuad = [
+      [shX - shW, shGroundY, shZ - shW],
+      [shX + shW + 0.2, shGroundY, shZ - shW + 0.1],
+      [shX + shW + 0.2 + shLength * 0.4, shGroundY, shZ + shW + shLength],
+      [shX - shW, shGroundY, shZ - shW],
+      [shX + shW + 0.2 + shLength * 0.4, shGroundY, shZ + shW + shLength],
+      [shX - shW + shLength * 0.3, shGroundY, shZ + shW + shLength],
+    ];
+    for (const pt of shQuad) {
+      positions.push(pt[0], pt[1], pt[2]);
+      normals.push(0, 1, 0);
+      colors.push(shadowCol[0], shadowCol[1], shadowCol[2], shadowCol[3]);
+      uvs.push(0, 0);
+    }
 
-    // Torso (Jacket + Tee)
-    addBoxRot(0, y + 0.80, 0, 0.48, 0.68, 0.26, jacketCol);
-    addBoxRot(0, y + 0.88, 0.08, 0.22, 0.45, 0.15, shirtCol);
+    // 1. Boots & Soles
+    addBoxRot(-0.14, y, swing * 0.18, 0.19, 0.06, 0.32, soleCol);
+    addBoxRot(0.14, y, -swing * 0.18, 0.19, 0.06, 0.32, soleCol);
+    addBoxRot(-0.14, y + 0.06, swing * 0.18, 0.18, 0.20, 0.29, bootsCol);
+    addBoxRot(0.14, y + 0.06, -swing * 0.18, 0.18, 0.20, 0.29, bootsCol);
 
-    // Arms
-    addBoxRot(-0.30, y + 0.85, -swing * 0.2, 0.14, 0.58, 0.14, jacketCol);
-    addBoxRot(0.30, y + 0.85, 0.18, 0.14, 0.58, 0.14, jacketCol);
+    // 2. Denim Jeans
+    addBoxRot(-0.14, y + 0.24, swing * 0.18, 0.18, 0.56, 0.19, pantsCol);
+    addBoxRot(0.14, y + 0.24, -swing * 0.18, 0.18, 0.56, 0.19, pantsCol);
 
-    // Head & Aviator shades
-    addBoxRot(0, y + 1.48, 0, 0.28, 0.28, 0.28, skinCol);
-    addBoxRot(0, y + 1.54, 0.14, 0.26, 0.08, 0.08, [0.1, 0.1, 0.1, 1.0]);
+    // 3. Waist / Belt & Buckle
+    addBoxRot(0, y + 0.78, 0, 0.48, 0.08, 0.26, beltCol);
+    addBoxRot(0, y + 0.78, 0.135, 0.10, 0.07, 0.04, buckleCol);
 
-    // Active Weapon Held in Hands
+    // 4. Torso: Dark inner shirt + Open terracotta jacket
+    addBoxRot(0, y + 0.84, 0, 0.48, 0.65, 0.26, jacketCol);
+    addBoxRot(0, y + 0.88, 0.09, 0.22, 0.52, 0.12, teeCol); // Open chest shirt showing
+
+    // 5. Arms & Hands
+    addBoxRot(-0.31, y + 0.88, -swing * 0.20, 0.15, 0.42, 0.15, jacketCol); // Upper arm
+    addBoxRot(-0.31, y + 0.68, -swing * 0.20 + 0.06, 0.13, 0.22, 0.13, skinCol); // Forearm
+    addBoxRot(-0.31, y + 0.58, -swing * 0.20 + 0.06, 0.10, 0.12, 0.10, skinCol); // Hand
+
+    addBoxRot(0.31, y + 0.88, 0.14, 0.15, 0.42, 0.15, jacketCol);
+    addBoxRot(0.31, y + 0.68, 0.24, 0.13, 0.22, 0.13, skinCol);
+    addBoxRot(0.31, y + 0.58, 0.28, 0.10, 0.12, 0.10, skinCol);
+
+    // 6. Head, Hair & Aviator Sunglasses
+    addBoxRot(0, y + 1.48, 0, 0.28, 0.28, 0.27, skinCol);
+    addBoxRot(0, y + 1.62, -0.02, 0.30, 0.15, 0.29, hairCol); // Hair crop
+    addBoxRot(0, y + 1.54, 0.14, 0.26, 0.09, 0.06, shadesCol); // Sunglasses
+
+    // 7. Weapon Models
     if (this.currentWeapon === 'carbine') {
-      addBoxRot(0.24, y + 1.15, 0.38, 0.09, 0.15, 0.74, gunCol);
+      // Tactical Carbine with receiver, curved magazine, barrel, stock
+      addBoxRot(0.24, y + 1.14, 0.30, 0.08, 0.14, 0.34, gunSteel); // Receiver
+      addBoxRot(0.24, y + 1.12, 0.54, 0.05, 0.06, 0.42, gunSteel); // Extended barrel
+      addBoxRot(0.24, y + 1.02, 0.34, 0.06, 0.18, 0.10, gunSteel); // Curved magazine
+      addBoxRot(0.24, y + 1.16, 0.08, 0.07, 0.12, 0.22, gunWood);  // Ergonomic stock
     } else if (this.currentWeapon === 'shotgun') {
-      addBoxRot(0.24, y + 1.14, 0.40, 0.10, 0.16, 0.82, [0.28, 0.16, 0.10, 1.0]); // Walnut stock & steel barrel
-      addBoxRot(0.24, y + 1.16, 0.55, 0.06, 0.06, 0.55, gunCol);
+      // Heavy Pump-Action Shotgun
+      addBoxRot(0.24, y + 1.14, 0.12, 0.08, 0.14, 0.32, gunWood);  // Walnut stock
+      addBoxRot(0.24, y + 1.15, 0.42, 0.09, 0.12, 0.42, gunSteel); // Receiver
+      addBoxRot(0.24, y + 1.16, 0.68, 0.06, 0.07, 0.48, gunSteel); // Blued barrel
+      addBoxRot(0.24, y + 1.08, 0.52, 0.08, 0.08, 0.22, gunWood);  // Pump slide
     } else if (this.currentWeapon === 'smg') {
-      addBoxRot(0.24, y + 1.15, 0.30, 0.08, 0.14, 0.42, gunCol);
-      addBoxRot(0.24, y + 1.04, 0.28, 0.05, 0.18, 0.06, [0.08, 0.08, 0.08, 1.0]); // Extended mag
+      // Compact Submachine Gun
+      addBoxRot(0.24, y + 1.15, 0.28, 0.08, 0.13, 0.36, gunSteel);
+      addBoxRot(0.24, y + 1.00, 0.28, 0.05, 0.22, 0.07, [0.08, 0.08, 0.09, 1.0]); // Long stick magazine
+      addBoxRot(0.24, y + 1.16, 0.50, 0.04, 0.05, 0.22, gunSteel); // Short barrel
     } else {
-      addBoxRot(0.24, y + 1.15, 0.26, 0.07, 0.11, 0.30, gunCol);
+      // Heavy Caliber Tactical Pistol
+      addBoxRot(0.24, y + 1.14, 0.26, 0.07, 0.11, 0.26, gunSteel); // Slide
+      addBoxRot(0.24, y + 1.04, 0.22, 0.06, 0.14, 0.08, gunSteel); // Grip
     }
   }
 }

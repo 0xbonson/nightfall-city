@@ -1,6 +1,6 @@
 /**
  * Nightfall City: Vela Bay - Safehouse Garage & Vehicle Stash System
- * Authored by makefun agent for the GTA 6 bounty challenge.
+ * Authored by makefun agent for the open-world crime game entry.
  *
  * Implements:
  * - Downtown Safehouse Garage at [95, 0, -85] with 3D structural bay
@@ -22,6 +22,7 @@ export class GarageSystem {
     this.storedVehicles = ['sports']; // Starts with personal tuned Veloce GT
     this.doorOpenProgress = 0.0;
     this.promptMessage = '';
+    this.promptText = '';
     this.promptTimer = 0;
     this.glowPhase = 0;
   }
@@ -30,8 +31,30 @@ export class GarageSystem {
     return Math.hypot(x - this.x, z - this.z) < this.radius;
   }
 
-  update(dt, player, activeCar, police, audio, saveSystem) {
+  update(dt, player, activeCarOrManager, police, audioOrInput, saveSystemOrAudio, maybeSaveSystem) {
     this.glowPhase = (this.glowPhase + dt * 2.8) % (Math.PI * 2);
+
+    let activeCar = null;
+    let audio = null;
+    let saveSystem = null;
+
+    if (activeCarOrManager && activeCarOrManager.spec) {
+      activeCar = activeCarOrManager;
+    } else if (player && player.vehicle) {
+      activeCar = player.vehicle;
+    }
+
+    if (audioOrInput && typeof audioOrInput.playCashChime === 'function') {
+      audio = audioOrInput;
+    } else if (saveSystemOrAudio && typeof saveSystemOrAudio.playCashChime === 'function') {
+      audio = saveSystemOrAudio;
+    }
+
+    if (saveSystemOrAudio && typeof saveSystemOrAudio.save === 'function') {
+      saveSystem = saveSystemOrAudio;
+    } else if (maybeSaveSystem && typeof maybeSaveSystem.save === 'function') {
+      saveSystem = maybeSaveSystem;
+    }
 
     const playerNear = Math.hypot(player.x - this.x, player.z - this.z) < this.radius + 6.0;
     if (playerNear) {
@@ -42,7 +65,10 @@ export class GarageSystem {
 
     if (this.promptTimer > 0) {
       this.promptTimer -= dt;
-      if (this.promptTimer <= 0) this.promptMessage = '';
+      if (this.promptTimer <= 0) {
+        this.promptMessage = '';
+        this.promptText = '';
+      }
     }
 
     // When driving inside garage
@@ -60,8 +86,8 @@ export class GarageSystem {
         police.isEvading = false;
         this.showMessage('SAFELIGHTS ON: HEAT EVADED & CLEANED!', 4.0);
         player.cash += 850; // Heat evasion bonus
-        if (audio) audio.playMissionPassed();
-        if (saveSystem) saveSystem.save(player, null, police);
+        if (audio && audio.playMissionPassed) audio.playMissionPassed();
+        if (saveSystem && saveSystem.save) saveSystem.save(player, null, police);
       }
     }
   }
@@ -74,11 +100,12 @@ export class GarageSystem {
     const bonus = 1200 + Math.floor(Math.random() * 800);
     player.cash += bonus;
     this.showMessage(`STOLEN ${car.spec.name.toUpperCase()} STASHED! EARNED $${bonus}`, 4.0);
-    if (saveSystem) saveSystem.save(player, null, null);
+    if (saveSystem && saveSystem.save) saveSystem.save(player, null, null);
   }
 
   showMessage(msg, duration = 3.0) {
     this.promptMessage = msg;
+    this.promptText = msg;
     this.promptTimer = duration;
   }
 

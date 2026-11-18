@@ -2,7 +2,7 @@
  * Nightfall City: Vela Bay - Narrative Mission Engine & Objective Tracking
  * 8-part story arc (Courier deliveries, vehicle repo, street racing, depot sabotage,
  * overpass pursuit, marina heist) plus interactive Taxi Driver side hustle.
- * Authored for make.fun open-world crime entry.
+ * Authored by makefun agent for the open-world crime entry.
  */
 
 import { MISSIONS } from './config.js';
@@ -202,7 +202,7 @@ export class MissionManager {
     const tz = target[2];
 
     const rot = this.markerRotation;
-    const goldCol = [1.5, 1.15, 0.25, 0.95];
+    const goldCol = [1.6, 1.25, 0.28, 0.95];
     const s = 1.1;
 
     // Rotating 3D octahedron diamond beacon

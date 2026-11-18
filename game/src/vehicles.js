@@ -1,13 +1,22 @@
 /**
  * Nightfall City: Vela Bay - Vehicle Physics & Autonomous Traffic System
- * Authored by makefun agent for the GTA 6 bounty challenge.
+ * Authored by makefun agent for the open-world crime game entry.
  *
  * Implements:
- * - 6 detailed vehicle chassis classes: Veloce GT (sports), Stallion 428 (muscle),
- *   Metro Interceptor (police), Meridian Executive (sedan), Cobra City Cab (taxi), Meridian Hauler (truck/van)
- * - Arcade drifting mechanics with handbrake slide, counter-steering yaw, and tire smoke
- * - Road-legal driving feel: tuned weight, front-wheel steer angle, engine RPM and 4-speed gear ratios
- * - Autonomous civilian traffic AI: road node navigation, traffic lane discipline, and vehicle collision avoidance
+ * - 7 distinct vehicle chassis classes:
+ *   1. Veloce GT (sleek sports coupe with rear wing & side scoops)
+ *   2. Stallion 428 (aggressive classic muscle with hood induction scoop)
+ *   3. Metro Interceptor (high-contrast black/white police cruiser with push-bar & strobe lightbar)
+ *   4. Meridian Executive (premium executive 4-door luxury sedan)
+ *   5. Cobra City Cab (yellow taxi with checkerboard livery & illuminated rooftop sign)
+ *   6. Piccolo Sport (agile European 3-door hot hatchback)
+ *   7. Meridian Hauler (industrial box truck/van with cargo bay)
+ * - Directional ground shadows cast under chassis along the low sun vector
+ * - True vehicle anatomy: bonnet, cabin, roof, boot, dark glass with pillar frames,
+ *   headlights, ruby taillights, side mirrors, wheels with rubber tires and alloy rims
+ * - Arcade drift physics with handbrake slide, counter-steering yaw, body roll, and tire screech
+ * - Engine RPM & 4-speed transmission gearbox simulation
+ * - Autonomous civilian traffic AI with node navigation and collision avoidance
  * - Dual-tone police sirens casting dynamic red/blue lighting on city geometry
  */
 
@@ -56,6 +65,11 @@ export class Vehicle {
 
   takeDamage(amount) {
     this.health = Math.max(0, this.health - amount);
+  }
+
+  honkHorn(audio, pedestrians) {
+    if (audio) audio.playHorn();
+    if (pedestrians) pedestrians.notifyHorn(this.x, this.z, 22.0);
   }
 
   update(dt, input, world, otherCars) {
@@ -127,7 +141,6 @@ export class Vehicle {
     if (handbrake && Math.abs(this.speed) > 10.0) {
       this.isDrifting = true;
       this.speed *= Math.pow(0.94, dt * 60);
-      // Extra yaw rotation when sliding
       this.rotY += this.steer * dt * 3.8 * Math.sign(this.speed);
     } else {
       this.isDrifting = false;
@@ -199,7 +212,7 @@ export class Vehicle {
     // Accelerate towards cruising speed
     this.speed = lerp(this.speed, cruiseSpeed, dt * 1.5);
 
-    // Check car ahead to prevent rear-ending
+    // Collision avoidance with other traffic
     for (let i = 0; i < otherCars.length; i++) {
       const other = otherCars[i];
       if (other === this) continue;
@@ -211,7 +224,6 @@ export class Vehicle {
         const toOtherZ = other.z - this.z;
         const dot = fwdX * toOtherX + fwdZ * toOtherZ;
         if (dot > 0) {
-          // Car is directly ahead - brake!
           this.speed = Math.max(0, this.speed - spec.brake * dt * 1.8);
           break;
         }
@@ -245,11 +257,13 @@ export class Vehicle {
 
     const bodyCol = spec.color;
     const roofCol = spec.roofColor || [0.15, 0.15, 0.18, 1.0];
-    const glassCol = [0.12, 0.20, 0.28, 1.0];
-    const tireCol = [0.15, 0.15, 0.16, 1.0];
-    const rimCol = [0.85, 0.88, 0.92, 1.0];
-    const headlightCol = [1.0, 0.98, 0.88, 1.0];
-    const taillightCol = [0.95, 0.15, 0.10, 1.0];
+    const glassCol = [0.10, 0.18, 0.26, 1.0]; // Dark tinted automotive glass
+    const tireCol = [0.12, 0.12, 0.13, 1.0];  // Deep black rubber tire
+    const rimCol = [0.85, 0.88, 0.92, 1.0];   // Polished alloy rim
+    const hubCol = [0.22, 0.24, 0.28, 1.0];   // Wheel center hub
+    const headlightCol = [1.5, 1.45, 1.15, 1.0]; // Warm Xenon headlight beam
+    const taillightCol = [1.2, 0.15, 0.10, 1.0]; // Glowing ruby taillight
+    const chromeCol = [0.85, 0.88, 0.92, 1.0];
 
     const addBoxRot = (bx, by, bz, sx, sy, sz, color) => {
       const hx = sx * 0.5, hy = sy * 0.5, hz = sz * 0.5;
@@ -269,12 +283,12 @@ export class Vehicle {
       });
 
       const faces = [
-        [4, 5, 6, 7, [0, 1, 0]],
-        [3, 2, 1, 0, [0, -1, 0]],
-        [7, 6, 2, 3, [sinRot, 0, cosRot]],
-        [5, 4, 0, 1, [-sinRot, 0, -cosRot]],
-        [6, 5, 1, 2, [cosRot, 0, -sinRot]],
-        [4, 7, 3, 0, [-cosRot, 0, sinRot]],
+        [4, 5, 6, 7, [0, 1, 0]],   // Top
+        [3, 2, 1, 0, [0, -1, 0]],  // Bottom
+        [7, 6, 2, 3, [sinRot, 0, cosRot]], // Front
+        [5, 4, 0, 1, [-sinRot, 0, -cosRot]], // Back
+        [6, 5, 1, 2, [cosRot, 0, -sinRot]],  // Right
+        [4, 7, 3, 0, [-cosRot, 0, sinRot]], // Left
       ];
 
       for (const [i1, i2, i3, i4, norm] of faces) {
@@ -293,24 +307,74 @@ export class Vehicle {
     const l = spec.length;
     const h = spec.height;
 
-    // 1. Lower Chassis & Bumpers
-    addBoxRot(0, y + 0.22, 0, w, h * 0.42, l, bodyCol);
+    // 0. Directional ground shadow cast along the sun vector (+X, +Z)
+    const shW = w * 0.58;
+    const shL = l * 0.55;
+    const shOffX = 0.65;
+    const shOffZ = 0.90;
+    const shY = y + 0.015;
 
-    // 2. Cabin & Roof Greenhouse
-    const cabinL = l * 0.52;
-    const cabinW = w * 0.88;
+    const shQuad = [
+      [-shW, 0, -shL], [shW, 0, -shL], [shW, 0, shL],
+      [-shW, 0, -shL], [shW, 0, shL], [-shW, 0, shL],
+    ];
+    const shadowTint = [0.03, 0.05, 0.08, 0.45];
+    for (const [lx, , lz] of shQuad) {
+      const wx = x + shOffX + lx * cosRot + lz * sinRot;
+      const wz = z + shOffZ - lx * sinRot + lz * cosRot;
+      positions.push(wx, shY, wz);
+      normals.push(0, 1, 0);
+      colors.push(shadowTint[0], shadowTint[1], shadowTint[2], shadowTint[3]);
+      uvs.push(0, 0);
+    }
+
+    // 1. Lower Chassis & Aerodynamic Sills
+    addBoxRot(0, y + 0.18, 0, w, h * 0.38, l, bodyCol);
+
+    // Front Bumper & Air Dam
+    addBoxRot(0, y + 0.14, l * 0.48, w * 0.96, h * 0.24, 0.28, [0.12, 0.12, 0.14, 1.0]);
+    // Rear Diffuser & Bumper
+    addBoxRot(0, y + 0.16, -l * 0.48, w * 0.96, h * 0.24, 0.28, [0.12, 0.12, 0.14, 1.0]);
+
+    // 2. Bonnet / Hood & Boot / Trunk
+    const bonnetL = l * 0.32;
+    const bonnetZ = l * 0.28;
+    addBoxRot(0, y + 0.18 + h * 0.32, bonnetZ, w * 0.92, 0.10, bonnetL, bodyCol);
+
+    const bootL = l * 0.22;
+    const bootZ = -l * 0.34;
+    addBoxRot(0, y + 0.18 + h * 0.30, bootZ, w * 0.90, 0.10, bootL, bodyCol);
+
+    // 3. Cabin & Greenhouse Architecture
+    const cabinL = l * 0.46;
+    const cabinW = w * 0.86;
     const cabinH = h * 0.48;
-    addBoxRot(0, y + 0.22 + h * 0.42, -l * 0.08, cabinW, cabinH, cabinL, roofCol);
+    const cabinZ = -l * 0.05;
 
-    // 3. Glass Windshield and Rear Screen
-    addBoxRot(0, y + 0.22 + h * 0.44, -l * 0.08 + cabinL * 0.48, cabinW * 0.94, cabinH * 0.85, 0.22, glassCol);
-    addBoxRot(0, y + 0.22 + h * 0.44, -l * 0.08 - cabinL * 0.48, cabinW * 0.94, cabinH * 0.85, 0.22, glassCol);
+    // Roof Top
+    addBoxRot(0, y + 0.18 + h * 0.36 + cabinH - 0.08, cabinZ, cabinW * 0.92, 0.08, cabinL * 0.82, roofCol);
 
-    // 4. Wheels & Alloy Rims (4 corners)
+    // Windshield (Front rake)
+    addBoxRot(0, y + 0.18 + h * 0.36 + cabinH * 0.48, cabinZ + cabinL * 0.46, cabinW * 0.90, cabinH * 0.84, 0.18, glassCol);
+    // Rear Window
+    addBoxRot(0, y + 0.18 + h * 0.36 + cabinH * 0.48, cabinZ - cabinL * 0.46, cabinW * 0.90, cabinH * 0.84, 0.18, glassCol);
+    // Side Windows (Left & Right)
+    addBoxRot(-cabinW * 0.48, y + 0.18 + h * 0.36 + cabinH * 0.48, cabinZ, 0.08, cabinH * 0.80, cabinL * 0.85, glassCol);
+    addBoxRot(cabinW * 0.48, y + 0.18 + h * 0.36 + cabinH * 0.48, cabinZ, 0.08, cabinH * 0.80, cabinL * 0.85, glassCol);
+
+    // A/B/C Pillars
+    addBoxRot(-cabinW * 0.49, y + 0.18 + h * 0.36, cabinZ, 0.09, cabinH, 0.14, bodyCol);
+    addBoxRot(cabinW * 0.49, y + 0.18 + h * 0.36, cabinZ, 0.09, cabinH, 0.14, bodyCol);
+
+    // Side-view mirrors
+    addBoxRot(-w * 0.52, y + 0.18 + h * 0.44, cabinZ + cabinL * 0.38, 0.18, 0.10, 0.12, bodyCol);
+    addBoxRot(w * 0.52, y + 0.18 + h * 0.44, cabinZ + cabinL * 0.38, 0.18, 0.10, 0.12, bodyCol);
+
+    // 4. Wheels & Multi-Spoke Alloy Rims (4 corners)
     const wheelR = 0.38;
     const wheelW = 0.30;
-    const axleZ = l * 0.32;
-    const axleX = w * 0.5 - 0.06;
+    const axleZ = l * 0.31;
+    const axleX = w * 0.5 - 0.05;
 
     const wheels = [
       [-axleX, y + wheelR, axleZ],
@@ -320,49 +384,81 @@ export class Vehicle {
     ];
 
     for (const [wx, wy, wz] of wheels) {
+      // Rubber tire
       addBoxRot(wx, wy - wheelR, wz, wheelW, wheelR * 2, wheelR * 2, tireCol);
+      // Alloy rim face
       addBoxRot(wx + (wx > 0 ? 0.08 : -0.08), wy - wheelR * 0.65, wz, 0.08, wheelR * 1.3, wheelR * 1.3, rimCol);
+      // Center hub
+      addBoxRot(wx + (wx > 0 ? 0.10 : -0.10), wy - wheelR * 0.25, wz, 0.06, wheelR * 0.5, wheelR * 0.5, hubCol);
     }
 
-    // 5. Headlights & Taillights
+    // 5. Headlights, Taillights & Grille
     const frontZ = l * 0.5 - 0.08;
     const rearZ = -l * 0.5 + 0.08;
     const lightX = w * 0.38;
-    addBoxRot(-lightX, y + 0.45, frontZ, 0.38, 0.22, 0.16, headlightCol);
-    addBoxRot(lightX, y + 0.45, frontZ, 0.38, 0.22, 0.16, headlightCol);
-    addBoxRot(-lightX, y + 0.52, rearZ, 0.42, 0.20, 0.16, taillightCol);
-    addBoxRot(lightX, y + 0.52, rearZ, 0.42, 0.20, 0.16, taillightCol);
 
-    // 6. Class-Specific Trim
+    // Dual Xenon Headlights
+    addBoxRot(-lightX, y + 0.42, frontZ, 0.38, 0.20, 0.16, headlightCol);
+    addBoxRot(lightX, y + 0.42, frontZ, 0.38, 0.20, 0.16, headlightCol);
+
+    // Front Grille
+    addBoxRot(0, y + 0.38, frontZ + 0.02, w * 0.45, 0.18, 0.12, [0.08, 0.08, 0.10, 1.0]);
+
+    // Ruby LED Taillights
+    addBoxRot(-lightX, y + 0.48, rearZ, 0.40, 0.18, 0.16, taillightCol);
+    addBoxRot(lightX, y + 0.48, rearZ, 0.40, 0.18, 0.16, taillightCol);
+
+    // Dual Chrome Exhaust Pipes
+    addBoxRot(-w * 0.28, y + 0.20, rearZ - 0.10, 0.14, 0.12, 0.22, chromeCol);
+    addBoxRot(w * 0.28, y + 0.20, rearZ - 0.10, 0.14, 0.12, 0.22, chromeCol);
+
+    // 6. Class-Specific Bodywork
     if (spec.hasSpoiler) {
-      // Sports car aerodynamic rear spoiler wing
-      addBoxRot(0, y + h * 0.75, rearZ + 0.2, w * 0.90, 0.12, 0.45, [0.1, 0.1, 0.1, 1.0]);
-      addBoxRot(-w * 0.35, y + h * 0.55, rearZ + 0.2, 0.08, 0.24, 0.25, [0.1, 0.1, 0.1, 1.0]);
-      addBoxRot(w * 0.35, y + h * 0.55, rearZ + 0.2, 0.08, 0.24, 0.25, [0.1, 0.1, 0.1, 1.0]);
+      // Sports aerodynamic GT spoiler wing
+      addBoxRot(0, y + h * 0.78, rearZ + 0.15, w * 0.88, 0.08, 0.38, [0.12, 0.12, 0.14, 1.0]);
+      addBoxRot(-w * 0.32, y + h * 0.54, rearZ + 0.15, 0.06, 0.28, 0.22, [0.12, 0.12, 0.14, 1.0]);
+      addBoxRot(w * 0.32, y + h * 0.54, rearZ + 0.15, 0.06, 0.28, 0.22, [0.12, 0.12, 0.14, 1.0]);
     }
 
     if (spec.hasHoodScoop) {
-      // Muscle car aggressive raised hood induction scoop
-      addBoxRot(0, y + h * 0.65, l * 0.22, w * 0.32, 0.16, 0.85, [0.12, 0.12, 0.14, 1.0]);
+      // Muscle power-bulge hood induction scoop
+      addBoxRot(0, y + h * 0.62, l * 0.22, w * 0.32, 0.14, 0.85, [0.12, 0.12, 0.14, 1.0]);
     }
 
     if (this.isPolice) {
-      // Police Heavy Push-Bar Grille
-      addBoxRot(0, y + 0.35, frontZ + 0.28, w * 0.65, 0.45, 0.25, [0.12, 0.12, 0.14, 1.0]);
+      // Heavy Steel Push-Bumper Bullbar
+      addBoxRot(0, y + 0.36, frontZ + 0.26, w * 0.70, 0.44, 0.22, [0.12, 0.12, 0.14, 1.0]);
+      // Dual A-pillar searchlights
+      addBoxRot(-w * 0.48, y + 0.95, cabinZ + cabinL * 0.40, 0.12, 0.18, 0.14, [0.15, 0.15, 0.18, 1.0]);
+      addBoxRot(w * 0.48, y + 0.95, cabinZ + cabinL * 0.40, 0.12, 0.18, 0.14, [0.15, 0.15, 0.18, 1.0]);
 
       // Dual-Tone LED Emergency Lightbar on roof
       const flash = Math.sin(this.sirenTimer * 2) > 0;
-      const redLight = flash ? [2.5, 0.2, 0.2, 1.0] : [0.6, 0.1, 0.1, 1.0];
-      const blueLight = !flash ? [0.2, 0.6, 2.5, 1.0] : [0.1, 0.2, 0.6, 1.0];
+      const redLight = flash ? [2.8, 0.25, 0.25, 1.0] : [0.5, 0.1, 0.1, 1.0];
+      const blueLight = !flash ? [0.25, 0.8, 2.8, 1.0] : [0.1, 0.15, 0.5, 1.0];
 
-      addBoxRot(-w * 0.22, y + 0.22 + h * 0.92, -l * 0.08, w * 0.32, 0.22, 0.32, redLight);
-      addBoxRot(w * 0.22, y + 0.22 + h * 0.92, -l * 0.08, w * 0.32, 0.22, 0.32, blueLight);
-      addBoxRot(0, y + 0.22 + h * 0.90, -l * 0.08, 0.25, 0.18, 0.32, [0.95, 0.95, 0.98, 1.0]);
+      addBoxRot(-w * 0.24, y + 0.18 + h * 0.36 + cabinH + 0.08, cabinZ, w * 0.34, 0.18, 0.32, redLight);
+      addBoxRot(w * 0.24, y + 0.18 + h * 0.36 + cabinH + 0.08, cabinZ, w * 0.34, 0.18, 0.32, blueLight);
+      addBoxRot(0, y + 0.18 + h * 0.36 + cabinH + 0.06, cabinZ, 0.22, 0.14, 0.32, [0.95, 0.95, 0.98, 1.0]);
     }
 
     if (this.isTaxi) {
-      // Illuminated Taxi Rooftop Sign
-      addBoxRot(0, y + 0.22 + h * 0.94, -l * 0.08, 0.95, 0.28, 0.45, [1.0, 0.95, 0.55, 1.0]);
+      // Illuminated Yellow Rooftop Taxi Sign Box
+      addBoxRot(0, y + 0.18 + h * 0.36 + cabinH + 0.10, cabinZ, 0.95, 0.26, 0.42, [1.0, 0.95, 0.45, 1.0]);
+      // Black checkerboard side stripe
+      addBoxRot(-w * 0.51, y + 0.52, 0, 0.04, 0.16, l * 0.82, [0.12, 0.12, 0.14, 1.0]);
+      addBoxRot(w * 0.51, y + 0.52, 0, 0.04, 0.16, l * 0.82, [0.12, 0.12, 0.14, 1.0]);
+    }
+
+    if (this.typeId === 'truck') {
+      // Industrial Cargo Hauler Box Body
+      const boxL = l * 0.62;
+      const boxW = w * 1.04;
+      const boxH = h * 0.92;
+      const boxZ = -l * 0.15;
+      addBoxRot(0, y + 0.18 + h * 0.38, boxZ, boxW, boxH, boxL, [0.88, 0.88, 0.90, 1.0]);
+      // Cargo roll-up rear door
+      addBoxRot(0, y + 0.18 + h * 0.38, boxZ - boxL * 0.5 - 0.04, boxW * 0.88, boxH * 0.88, 0.08, [0.35, 0.38, 0.42, 1.0]);
     }
   }
 }
@@ -379,7 +475,7 @@ export class VehicleManager {
       { type: 'muscle', x: 0, z: -100, rot: Math.PI },
       { type: 'sedan', x: 45, z: 80, rot: 0 },
       { type: 'taxi', x: 115, z: -40, rot: Math.PI },
-      { type: 'sedan', x: -55, z: 120, rot: Math.PI },
+      { type: 'hatchback', x: -55, z: 120, rot: Math.PI },
       { type: 'truck', x: 185, z: 60, rot: 0 },
       { type: 'police', x: 0, z: 20, rot: 0 },
     ];
@@ -426,7 +522,7 @@ export class VehicleManager {
         const flash = Math.sin(v.sirenTimer * 2) > 0;
         const sData = {
           pos: [v.x, v.y + 1.8, v.z],
-          col: flash ? [2.5, 0.2, 0.2] : [0.2, 0.6, 2.5],
+          col: flash ? [2.8, 0.25, 0.25] : [0.25, 0.8, 2.8],
         };
         if (!s1) s1 = sData;
         else if (!s2) {

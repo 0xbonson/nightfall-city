@@ -3,7 +3,7 @@
  * Implements 5-star criminal pursuit escalation, cruiser intercept tactics,
  * tactical roadblocks, police helicopter air support with searchlight,
  * line-of-sight evasion tracking, evasion cash rewards, and safehouse heat clearance.
- * Authored for make.fun open-world crime entry.
+ * Authored by makefun agent for the open-world crime entry.
  */
 
 import { POLICE_CONFIG, WORLD } from './config.js';
@@ -252,7 +252,7 @@ export class PoliceSystem {
     addBoxHeli(0, 2.0, 0, 0.35, 1.6, 0.35, [0.1, 0.1, 0.1, 1.0]);
 
     // High-Intensity Downward Searchlight Spotlight Beam
-    const spotCol = [1.5, 1.4, 1.0, 0.35];
+    const spotCol = [1.8, 1.6, 1.2, 0.38];
     const beamRadius = 7.5;
     const groundY = 0.05;
 
