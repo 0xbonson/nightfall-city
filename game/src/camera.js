@@ -9,6 +9,9 @@ const NEAR_CLIP_PLANE = 0.4;
 const FAR_CLIP_PLANE = 750.0;
 export const CAMERA_DEFAULT_FOV = 68;
 export const CAMERA_MAX_DYNAMIC_FOV = 82;
+export const CAMERA_CORNER_LEAN_MULT = 0.85;
+export const CAMERA_CHASE_LAG_SPEED = 9.5;
+export const CAMERA_FOOT_LAG_SPEED = 12.0;
 
 export class Camera {
   constructor() {
@@ -26,6 +29,10 @@ export class Camera {
     this.distance = 5.0;
     this.fov = 68; // Degrees
     this.aspect = 16 / 9;
+
+    this.wasInVehicle = false;
+    this.transitionBlend = 1.0;
+    this.footstepBob = 0;
 
     this.lookSensitivity = 0.0024;
     this.lockedYaw = false;
@@ -92,7 +99,16 @@ export class Camera {
     let targetDist = 5.0;
     let targetHeight = 1.4;
 
-    if (player.inVehicle && player.vehicle) {
+    const inVehicleNow = !!(player.inVehicle && player.vehicle);
+    if (inVehicleNow !== this.wasInVehicle) {
+      this.wasInVehicle = inVehicleNow;
+      this.transitionBlend = 0.0; // Start smooth transition blend
+    }
+    if (this.transitionBlend < 1.0) {
+      this.transitionBlend = Math.min(1.0, this.transitionBlend + dt * 3.5);
+    }
+
+    if (inVehicleNow) {
       const v = player.vehicle;
       const speedRatio = Math.min(1.0, Math.abs(v.speed) / (v.maxSpeed || 28.0));
 
@@ -101,7 +117,7 @@ export class Camera {
       targetHeight = 2.4 + speedRatio * 0.7;
 
       // Camera leans into corners dynamically with vehicle roll and lateral slide
-      this.targetRoll = -(v.roll || 0) * 0.7 - (v.steer || 0) * 0.06;
+      this.targetRoll = (-(v.roll || 0) * 0.7 - (v.steer || 0) * 0.06) * CAMERA_CORNER_LEAN_MULT;
 
       // Auto-align camera yaw behind vehicle gently (unless explicitly locked by cinematic shot)
       if (!this.lockedYaw) {
@@ -115,19 +131,25 @@ export class Camera {
       // Speed-based dynamic FOV expansion (68 deg at rest up to 82 deg at top velocity)
       this.fov = CAMERA_DEFAULT_FOV + speedRatio * (CAMERA_MAX_DYNAMIC_FOV - CAMERA_DEFAULT_FOV);
     } else {
-      // On-foot camera shows player and street around them
+      // On-foot camera shows player and street around them with subtle walking weight
+      const isSprinting = player.isSprinting && Math.hypot(player.vx, player.vz) > 4.5;
+      const isMoving = Math.hypot(player.vx, player.vz) > 0.4;
+      const bobFreq = isSprinting ? 14.0 : 8.5;
+      const bobAmp = isSprinting ? 0.06 : 0.025;
+      this.footstepBob = isMoving ? Math.sin(performance.now() * 0.001 * bobFreq) * bobAmp : 0;
+
       targetDist = 5.0;
-      targetHeight = 1.4;
+      targetHeight = 1.4 + this.footstepBob;
       this.targetRoll = 0;
       this.fov = CAMERA_DEFAULT_FOV;
     }
 
     this.roll += (this.targetRoll - this.roll) * Math.min(1.0, 6.0 * dt);
-    this.distance += (targetDist - this.distance) * Math.min(1.0, 6.5 * dt);
+    this.distance += (targetDist - this.distance) * Math.min(1.0, (inVehicleNow ? 5.5 : 7.5) * dt);
 
     // Target point is character/vehicle center
     this.targetX = player.x;
-    this.targetY = player.y + (player.inVehicle ? 1.0 : 1.3);
+    this.targetY = player.y + (inVehicleNow ? 1.0 : 1.3);
     this.targetZ = player.z;
 
     // Calculate ideal eye position
@@ -145,8 +167,8 @@ export class Camera {
       this.y = idealY;
       this.z = idealZ;
     } else {
-      // Smooth camera lag
-      const lerpSpeed = player.inVehicle ? 9.0 : 12.0;
+      // Smooth camera lag with transition blend
+      const lerpSpeed = inVehicleNow ? CAMERA_CHASE_LAG_SPEED : CAMERA_FOOT_LAG_SPEED;
       this.x += (idealX - this.x) * Math.min(1.0, lerpSpeed * dt);
       this.y += (idealY - this.y) * Math.min(1.0, lerpSpeed * dt);
       this.z += (idealZ - this.z) * Math.min(1.0, lerpSpeed * dt);

@@ -29,7 +29,9 @@ export class SaveManager {
         rifleAmmo: data.rifleAmmo ?? 120,
         wantedLevel: data.wantedLevel ?? 0,
         collectedCaches: Array.from(data.collectedCaches || []),
+        collectedMixtapes: Array.from(data.collectedMixtapes || []),
         courierRuns: data.courierRuns ?? 0,
+        taxiFares: data.taxiFares ?? 0,
       };
       localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(payload));
       return true;
@@ -68,7 +70,9 @@ export class SaveManager {
       missionIndex: data.missionIndex,
       cash: data.cash,
       collectedCaches: data.collectedCaches ? data.collectedCaches.length : 0,
+      collectedMixtapes: data.collectedMixtapes ? data.collectedMixtapes.length : 0,
       courierRuns: data.courierRuns || 0,
+      taxiFares: data.taxiFares || 0,
       savedAt: new Date(data.timestamp).toLocaleString(),
     };
   }

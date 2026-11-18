@@ -29,6 +29,37 @@ export class PedestrianManager {
 
     this.sheltersInitialized = false;
     this.parkInitialized = false;
+    this.foodCartsInitialized = false;
+  }
+
+  initFoodCartQueues() {
+    if (this.foodCartsInitialized || !world.streetFoodCarts) return;
+    this.foodCartsInitialized = true;
+    for (const cart of world.streetFoodCarts) {
+      // 2 customers queued up at each food cart
+      for (let k = 1; k <= 2; k++) {
+        const offset = k * 1.3;
+        const sa = Math.sin(cart.angle);
+        const ca = Math.cos(cart.angle);
+        const px = cart.x - sa * offset;
+        const pz = cart.z - ca * offset;
+        const outfit = this.outfits[Math.floor(Math.random() * this.outfits.length)];
+        this.pedestrians.push({
+          x: px,
+          z: pz,
+          heading: cart.angle,
+          speed: 0,
+          health: 40,
+          alive: true,
+          isFleeing: false,
+          fleeTimer: 0,
+          isWaiting: true,
+          animTime: Math.random() * 5,
+          outfit,
+          isVehicle: false,
+        });
+      }
+    }
   }
 
   initShelterWaiting() {
@@ -166,11 +197,15 @@ export class PedestrianManager {
   update(dt, player, onCrime) {
     this.initShelterWaiting();
     this.initParkStrollers();
+    this.initFoodCartQueues();
 
     // Populate around player
     if (this.pedestrians.length < this.maxPeds && Math.random() < dt * 4) {
       this.spawnPedestrian(player.x, player.z);
     }
+
+    // React to sirens or reckless player
+    const playerSpeed = player.inVehicle && player.vehicle ? Math.abs(player.vehicle.speed) : (player.isSprinting ? 5.5 : 0);
 
     // Update pedestrians
     for (let i = this.pedestrians.length - 1; i >= 0; i--) {
@@ -183,6 +218,12 @@ export class PedestrianManager {
       }
 
       if (!p.alive) continue;
+
+      // Flinch or sidestep if high-speed vehicle or sprinting player brushes past
+      if (!p.isWaiting && distToPlayer < (player.inVehicle ? 7.0 : 2.0) && playerSpeed > 4.5 && !p.isFleeing) {
+        p.heading = Math.atan2(p.x - player.x, p.z - player.z) + (Math.random() - 0.5) * 0.4;
+        p.speed = 3.6;
+      }
 
       if (p.isFleeing) {
         p.isWaiting = false;

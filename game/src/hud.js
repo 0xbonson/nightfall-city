@@ -35,6 +35,30 @@ export class HUD {
       ctx.fillRect(0, 0, width, height);
     }
 
+    // High velocity radial motion speed lines
+    if (player.inVehicle && player.vehicle) {
+      const mph = Math.abs(player.vehicle.speed * 3.6);
+      if (mph > 65) {
+        const intensity = Math.min(1.0, (mph - 65) / 50.0);
+        ctx.save();
+        ctx.strokeStyle = `rgba(255, 255, 255, ${intensity * 0.35})`;
+        ctx.lineWidth = 1.6;
+        const cx = width / 2;
+        const cy = height / 2;
+        const numLines = Math.floor(18 + intensity * 24);
+        for (let i = 0; i < numLines; i++) {
+          const angle = (i / numLines) * Math.PI * 2 + (Math.sin(Date.now() * 0.01 + i) * 0.05);
+          const rInner = width * (0.28 + (i % 3) * 0.06);
+          const rOuter = width * 0.72;
+          ctx.beginPath();
+          ctx.moveTo(cx + Math.cos(angle) * rInner, cy + Math.sin(angle) * rInner);
+          ctx.lineTo(cx + Math.cos(angle) * rOuter, cy + Math.sin(angle) * rOuter);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+    }
+
     // White explosion flash
     if (screenEffects.whiteFlash > 0.01) {
       ctx.fillStyle = `rgba(255, 255, 255, ${screenEffects.whiteFlash * 0.6})`;
@@ -217,6 +241,13 @@ export class HUD {
     ctx.font = 'bold 12px system-ui, monospace';
     ctx.fillStyle = '#f39c12';
     ctx.fillText(`CACHES: ${collectedCount} / ${totalCaches}`, right, y);
+
+    // Vela Wave Mixtapes counter
+    const collectedMixtapes = world && world.collectedMixtapes ? world.collectedMixtapes.size : 0;
+    const totalMixtapes = (world && world.mixtapes) ? world.mixtapes.length : 10;
+    y += 18;
+    ctx.fillStyle = '#e056fd';
+    ctx.fillText(`MIXTAPES: ${collectedMixtapes} / ${totalMixtapes}`, right, y);
     ctx.restore();
   }
 
@@ -314,6 +345,34 @@ export class HUD {
       ctx.fillText(`EXPRESS: Deliver to ${cr.targetName} (${d}m) [${mins}:${secs}] +$${cr.reward}`, width / 2, cBoxY + 20);
       ctx.restore();
     }
+
+    // Taxi Shift Secondary Banner
+    if (missions.taxiShift && missions.taxiShift.active) {
+      ctx.save();
+      ctx.textAlign = 'center';
+      const ts = missions.taxiShift;
+      const tBoxW = 460;
+      const tBoxH = 34;
+      const tBoxX = width / 2 - tBoxW / 2;
+      const tBoxY = (missions.courierRun && missions.courierRun.active) ? 108 : (title ? 72 : 18);
+
+      ctx.fillStyle = 'rgba(28, 22, 6, 0.92)';
+      ctx.strokeStyle = '#f1c40f';
+      ctx.lineWidth = 1.5;
+      ctx.fillRect(tBoxX, tBoxY, tBoxW, tBoxH);
+      ctx.strokeRect(tBoxX, tBoxY, tBoxW, tBoxH);
+
+      ctx.font = 'bold 12px system-ui, sans-serif';
+      ctx.fillStyle = '#f1c40f';
+      if (ts.state === 'seeking_fare' && ts.passenger) {
+        const d = Math.round(Math.hypot(player.x - ts.passenger.x, player.z - ts.passenger.z));
+        ctx.fillText(`TAXI SHIFT: Locate waiting passenger at ${ts.passenger.name} (${d}m)`, width / 2, tBoxY + 21);
+      } else if (ts.state === 'driving_fare' && ts.destination) {
+        const d = Math.round(Math.hypot(player.x - ts.destination.x, player.z - ts.destination.z));
+        ctx.fillText(`TAXI FARE: Drive to ${ts.destinationName} (${d}m) | Meter: $${ts.fare} + Tip: $${Math.floor(ts.bonus)}`, width / 2, tBoxY + 21);
+      }
+      ctx.restore();
+    }
   }
 
   renderSpeedometer(ctx, vehicle, width, height) {
@@ -406,7 +465,7 @@ export class HUD {
     ctx.textAlign = 'left';
     ctx.font = '11px system-ui, sans-serif';
     ctx.fillStyle = 'rgba(255, 255, 255, 0.70)';
-    ctx.fillText('WASD: Move / Drive | SPACE: Handbrake | F: Jack/Exit | H: Horn | T: Courier Job | CLICK: Shoot | R: Reload | M: Map', 20, 24);
+    ctx.fillText('WASD: Move / Drive | SPACE: Handbrake | F: Jack/Exit | H: Horn | T: Courier Job | K: Taxi Shift | CLICK: Shoot | R: Reload | M: Map', 20, 24);
     ctx.restore();
   }
 }

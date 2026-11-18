@@ -308,6 +308,18 @@ export class PoliceManager {
         }
       }
     }
+
+    // Update siren audio and alert pedestrians
+    if (this.wantedLevel > 0 && this.cruisers.length > 0) {
+      let minDist = 999;
+      for (const c of this.cruisers) {
+        const d = Math.hypot(c.x - player.x, c.z - player.z);
+        if (d < minDist) minDist = d;
+      }
+      audio.updateSiren(true, minDist);
+    } else {
+      audio.updateSiren(false);
+    }
   }
 }
 

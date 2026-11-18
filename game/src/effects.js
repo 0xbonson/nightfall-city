@@ -1,11 +1,20 @@
 // Particle effects and screen juice for Nightfall City
 
 export const MAX_ACTIVE_PARTICLES = 300;
+export const MAX_SKID_MARKS = 64;
 
 export class ParticleSystem {
   constructor() {
     this.particles = [];
     this.maxParticles = MAX_ACTIVE_PARTICLES;
+    this.skidMarks = [];
+  }
+
+  addSkidMark(x, z, angle, width = 0.35, alpha = 0.55) {
+    if (this.skidMarks.length >= MAX_SKID_MARKS) {
+      this.skidMarks.shift();
+    }
+    this.skidMarks.push({ x, z, angle, width, alpha, life: 1.0 });
   }
 
   emit(type, x, y, z, count = 1, options = {}) {
@@ -75,6 +84,30 @@ export class ParticleSystem {
         p.size = options.size || (0.28 + Math.random() * 0.25);
         p.color = options.color || [0.95, 0.95, 1.0, 0.45];
         p.decay = options.decay || (0.75 + Math.random() * 0.5);
+      } else if (type === 'geyser') {
+        // High-pressure fire hydrant fountain
+        p.vx = (Math.random() - 0.5) * 1.8;
+        p.vy = Math.random() * 8.0 + 9.0; // Upward jet
+        p.vz = (Math.random() - 0.5) * 1.8;
+        p.size = options.size || (0.35 + Math.random() * 0.35);
+        p.color = [0.85, 0.94, 1.0, 0.85];
+        p.decay = 0.95;
+      } else if (type === 'feather') {
+        // Scattering pigeon feathers
+        p.vx = (Math.random() - 0.5) * 2.5;
+        p.vy = Math.random() * 2.2 + 0.8;
+        p.vz = (Math.random() - 0.5) * 2.5;
+        p.size = 0.12;
+        p.color = [0.45, 0.45, 0.50, 0.9];
+        p.decay = 1.2;
+      } else if (type === 'debris') {
+        // Dumpster cardboard & trash debris
+        p.vx = (Math.random() - 0.5) * 5.0;
+        p.vy = Math.random() * 3.5 + 1.2;
+        p.vz = (Math.random() - 0.5) * 5.0;
+        p.size = options.size || (0.25 + Math.random() * 0.25);
+        p.color = options.color || [0.55, 0.42, 0.28, 0.95];
+        p.decay = 1.4;
       }
 
       this.particles.push(p);
@@ -110,6 +143,15 @@ export class ParticleSystem {
           p.vz *= 0.6;
           p.vy = -p.vy * 0.3;
         }
+      }
+    }
+
+    // Fade and age road skid marks over time
+    for (let i = this.skidMarks.length - 1; i >= 0; i--) {
+      const sm = this.skidMarks[i];
+      sm.life -= dt * 0.05;
+      if (sm.life <= 0) {
+        this.skidMarks.splice(i, 1);
       }
     }
   }

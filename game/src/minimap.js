@@ -248,6 +248,48 @@ export class Minimap {
       ctx.shadowBlur = 0;
     }
 
+    // Draw Taxi Shift Objective (Yellow/Gold Marker)
+    if (missions.taxiShift && missions.taxiShift.active) {
+      const target = missions.taxiShift.state === 'seeking_fare' ? missions.taxiShift.passenger : missions.taxiShift.destination;
+      if (target) {
+        const tx_x = (target.x - px) * this.zoom;
+        const tx_z = (target.z - pz) * this.zoom;
+        const tDist = Math.hypot(tx_x, tx_z);
+        let tdrawX = tx_x;
+        let tdrawZ = tx_z;
+        if (tDist > r - 12) {
+          const tAngle = Math.atan2(tx_z, tx_x);
+          tdrawX = Math.cos(tAngle) * (r - 12);
+          tdrawZ = Math.sin(tAngle) * (r - 12);
+        }
+        ctx.fillStyle = '#f1c40f';
+        ctx.shadowColor = '#f1c40f';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(tdrawX, tdrawZ, 5.0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+    }
+
+    // Draw Nearby Vela Wave Mixtapes (Magenta blips when within 60m)
+    if (world.mixtapes) {
+      ctx.fillStyle = '#e056fd';
+      for (const m of world.mixtapes) {
+        if (world.collectedMixtapes && world.collectedMixtapes.has(m.id)) continue;
+        const mDist = Math.hypot(m.x - px, m.z - pz);
+        if (mDist < 60) {
+          const mx = (m.x - px) * this.zoom;
+          const mz = (m.z - pz) * this.zoom;
+          if (Math.hypot(mx, mz) < r - 5) {
+            ctx.beginPath();
+            ctx.arc(mx, mz, 3.0, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+    }
+
     // Draw Nearby Smuggler Caches (Amber blips when within 50m)
     if (world.smugglerCaches) {
       ctx.fillStyle = '#f39c12';

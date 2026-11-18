@@ -113,6 +113,7 @@ class InputManager {
       case 'reload': return this.isDown('KeyR');
       case 'horn': return this.isDown('KeyH');
       case 'activity': return this.isDown('KeyT');
+      case 'taxi': return this.isDown('KeyK');
       case 'weapon1': return this.isDown('Digit1');
       case 'weapon2': return this.isDown('Digit2');
       case 'cycleWeapon': return this.isDown('KeyQ') || this.wheelDelta !== 0;

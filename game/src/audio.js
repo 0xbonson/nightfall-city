@@ -110,13 +110,15 @@ class SoundManager {
       return;
     }
     const ratio = Math.abs(speedRatio);
-    // Dynamic engine pitch tracking throttle and speed
-    const baseFreq = 34 + ratio * 155 + (isAccelerating ? 28 : 0);
-    const filterFreq = 140 + ratio * 580 + (isAccelerating ? 240 : 0);
+    // Virtual 4-gear transmission RPM cycle: revs rise and drop across power bands
+    const gearProgress = (ratio * 3.8) % 1.0;
+    const gearBase = 32 + Math.floor(ratio * 3.8) * 14;
+    const baseFreq = gearBase + gearProgress * 95 + (isAccelerating ? 26 : 0);
+    const filterFreq = 160 + ratio * 640 + (isAccelerating ? 280 : 0);
     const targetVol = 0.20 + ratio * 0.16 + (isAccelerating ? 0.08 : 0);
 
-    this.engineOsc.frequency.setTargetAtTime(baseFreq, now, 0.08);
-    this.engineSubOsc.frequency.setTargetAtTime(baseFreq * 0.5, now, 0.08);
+    this.engineOsc.frequency.setTargetAtTime(baseFreq, now, 0.06);
+    this.engineSubOsc.frequency.setTargetAtTime(baseFreq * 0.5, now, 0.06);
     this.engineFilter.frequency.setTargetAtTime(filterFreq, now, 0.08);
     this.engineGain.gain.setTargetAtTime(targetVol, now, 0.08);
   }
@@ -221,33 +223,152 @@ class SoundManager {
     }
   }
 
-  // Articulated footstep thuds on stone pavement and asphalt
-  playFootstep(isSprinting = false) {
+  // Articulated footstep audio calibrated to specific surface materials
+  playFootstep(surface = 'sidewalk', isSprinting = false) {
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
     if (now - this.lastFootstepTime < (isSprinting ? 0.22 : 0.38)) return;
     this.lastFootstepTime = now;
 
     const osc = this.ctx.createOscillator();
-    osc.type = 'sine';
-    const baseFreq = isSprinting ? 95 : 80;
-    osc.frequency.setValueAtTime(baseFreq, now);
-    osc.frequency.exponentialRampToValueAtTime(30, now + 0.06);
+    const f = this.ctx.createBiquadFilter();
+    const g = this.ctx.createGain();
+
+    if (surface === 'boardwalk') {
+      // Hollow resonant timber knock
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(isSprinting ? 140 : 110, now);
+      osc.frequency.exponentialRampToValueAtTime(45, now + 0.08);
+      f.type = 'bandpass';
+      f.frequency.setValueAtTime(420, now);
+      f.Q.setValueAtTime(1.8, now);
+      g.gain.setValueAtTime(isSprinting ? 0.22 : 0.16, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      osc.connect(f);
+      f.connect(g);
+      g.connect(this.sfxGain);
+      osc.start(now);
+      osc.stop(now + 0.08);
+    } else if (surface === 'sand') {
+      // Soft granular crunch
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(160, now);
+      osc.frequency.exponentialRampToValueAtTime(50, now + 0.09);
+      f.type = 'lowpass';
+      f.frequency.setValueAtTime(180, now);
+      g.gain.setValueAtTime(isSprinting ? 0.14 : 0.09, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+      osc.connect(f);
+      f.connect(g);
+      g.connect(this.sfxGain);
+      osc.start(now);
+      osc.stop(now + 0.09);
+    } else if (surface === 'grass') {
+      // Soft organic turf scuff
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(90, now);
+      osc.frequency.exponentialRampToValueAtTime(35, now + 0.07);
+      f.type = 'lowpass';
+      f.frequency.setValueAtTime(220, now);
+      g.gain.setValueAtTime(0.10, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+      osc.connect(f);
+      f.connect(g);
+      g.connect(this.sfxGain);
+      osc.start(now);
+      osc.stop(now + 0.07);
+    } else if (surface === 'asphalt') {
+      // Solid rubber sole impact on aggregate
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(isSprinting ? 100 : 82, now);
+      osc.frequency.exponentialRampToValueAtTime(28, now + 0.06);
+      f.type = 'lowpass';
+      f.frequency.setValueAtTime(240, now);
+      g.gain.setValueAtTime(isSprinting ? 0.20 : 0.14, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+      osc.connect(f);
+      f.connect(g);
+      g.connect(this.sfxGain);
+      osc.start(now);
+      osc.stop(now + 0.06);
+    } else {
+      // Architectural stone paver / sidewalk tap
+      osc.type = 'sine';
+      const baseFreq = isSprinting ? 115 : 95;
+      osc.frequency.setValueAtTime(baseFreq, now);
+      osc.frequency.exponentialRampToValueAtTime(32, now + 0.06);
+      f.type = 'lowpass';
+      f.frequency.setValueAtTime(320, now);
+      g.gain.setValueAtTime(isSprinting ? 0.22 : 0.15, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+      osc.connect(f);
+      f.connect(g);
+      g.connect(this.sfxGain);
+      osc.start(now);
+      osc.stop(now + 0.06);
+    }
+  }
+
+  // Weighty landing thud after jumping or stepping off curbs
+  playLanding(surface = 'sidewalk') {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(80, now);
+    osc.frequency.exponentialRampToValueAtTime(24, now + 0.12);
 
     const f = this.ctx.createBiquadFilter();
     f.type = 'lowpass';
-    f.frequency.setValueAtTime(280, now);
+    f.frequency.setValueAtTime(200, now);
 
     const g = this.ctx.createGain();
-    g.gain.setValueAtTime(isSprinting ? 0.18 : 0.12, now);
-    g.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+    g.gain.setValueAtTime(0.35, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
 
     osc.connect(f);
     f.connect(g);
     g.connect(this.sfxGain);
-
     osc.start(now);
-    osc.stop(now + 0.06);
+    osc.stop(now + 0.14);
+  }
+
+  // High-pressure fire hydrant fountain geyser sound
+  playHydrantBurst() {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(340, now);
+    osc.frequency.exponentialRampToValueAtTime(160, now + 0.35);
+
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.4, now);
+    g.gain.exponentialRampToValueAtTime(0.05, now + 0.5);
+
+    osc.connect(g);
+    g.connect(this.sfxGain);
+    osc.start(now);
+    osc.stop(now + 0.5);
+  }
+
+  // Heavy steel dumpster knockdown impact clang
+  playDumpsterCrash() {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(220, now);
+    osc.frequency.exponentialRampToValueAtTime(45, now + 0.28);
+
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.45, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+
+    osc.connect(g);
+    g.connect(this.sfxGain);
+    osc.start(now);
+    osc.stop(now + 0.32);
   }
 
   // Car door mechanical latch thud when jacking or exiting vehicles

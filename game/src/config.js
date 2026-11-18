@@ -14,6 +14,9 @@ export const CONFIG = {
     roadGrid: [-220, -140, -60, 0, 60, 140, 220],
     overpassHeight: 7.6, // Elevated highway bridge clearance
     totalSmugglerCaches: 15, // Collectible hidden packages
+    totalMixtapes: 10, // Collectible golden neon cassettes in Promenade/Marina
+    totalHydrants: 18, // Working cast-iron fire hydrants
+    totalDumpsters: 14, // Interactive knockable steel dumpsters
   },
 
   // Traffic light signal cycle timings (in seconds)
@@ -22,6 +25,14 @@ export const CONFIG = {
     nsAmberDuration: 2.5,
     ewGreenDuration: 9.0,
     ewAmberDuration: 2.5,
+  },
+
+  // Taxi shift side activity configuration
+  taxiShift: {
+    baseFare: 120,
+    ratePerMeter: 1.45,
+    speedBonusThreshold: 45, // Seconds remaining for bonus tip
+    tipMultiplier: 1.5,
   },
 
   // Atmospheric late afternoon daylight and coastal sun lighting constants

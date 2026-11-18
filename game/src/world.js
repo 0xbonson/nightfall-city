@@ -46,6 +46,13 @@ export class CityWorld {
     this.alleyEscapeRoutes = [];
     this.collectedCaches = new Set();
 
+    // Living street systems & coastal collectibles
+    this.fireHydrants = [];
+    this.dumpsters = [];
+    this.pigeonFlocks = [];
+    this.mixtapes = [];
+    this.collectedMixtapes = new Set();
+
     this.initWorld();
   }
 
@@ -72,6 +79,12 @@ export class CityWorld {
     this.generateStreetDetails();
     this.generateSmugglerCaches();
     this.generateAlleyEscapeRoutes();
+
+    // Living world micro-systems
+    this.generateFireHydrants();
+    this.generateDumpsters();
+    this.generatePigeonFlocks();
+    this.generateMixtapes();
 
     this.buildTrafficWaypoints();
   }
@@ -459,6 +472,10 @@ export class CityWorld {
       { x: 75, z: 145 },  { x: 85, z: 145 },  { x: 75, z: 155 },
       { x: 145, z: 75 },  { x: 155, z: 75 },  { x: 145, z: 85 },
       { x: 75, z: 75 },   { x: 85, z: 75 },   { x: 75, z: 85 },
+      // Pier 7 Waterfront Shipping Container Yard (in front of Gantry Crane & Bay)
+      { x: 124, z: 204 }, { x: 132, z: 204 }, { x: 140, z: 204 },
+      { x: 160, z: 204 }, { x: 168, z: 204 }, { x: 176, z: 204 },
+      { x: 124, z: 212 }, { x: 132, z: 212 }, { x: 168, z: 212 }, { x: 176, z: 212 },
     ];
 
     for (let i = 0; i < cCoords.length; i++) {
@@ -871,16 +888,22 @@ export class CityWorld {
       this.palmTrees.push({ x, z: 185.5, scale: 1.25 + (Math.abs(x) % 3) * 0.06 });
       this.palmTrees.push({ x, z: 170.5, scale: 1.15 + (Math.abs(x) % 4) * 0.05 });
     }
+    const grid = CONFIG.world.roadGrid;
+
     for (let z = 20; z <= 240; z += 18) {
-      this.palmTrees.push({ x: -80, z, scale: 1.15 });
-      this.palmTrees.push({ x: -18, z, scale: 1.05 });
-      this.palmTrees.push({ x: -145, z, scale: 1.25 });
+      const onRoadZ = grid.some(gz => Math.abs(z - gz) < 12);
+      if (!onRoadZ) {
+        this.palmTrees.push({ x: -80, z, scale: 1.15 });
+        this.palmTrees.push({ x: -18, z, scale: 1.05 });
+        this.palmTrees.push({ x: -145, z, scale: 1.25 });
+      }
     }
     for (let x = 20; x <= 220; x += 26) {
-      this.palmTrees.push({ x, z: -18, scale: 1.0 });
+      const onRoadX = grid.some(gx => Math.abs(x - gx) < 12);
+      if (!onRoadX) {
+        this.palmTrees.push({ x, z: -18, scale: 1.0 });
+      }
     }
-
-    const grid = CONFIG.world.roadGrid;
 
     // 2. Street Lamps along North-South and East-West sidewalks
     for (const rx of grid) {
@@ -1289,6 +1312,308 @@ export class CityWorld {
       }
     }
     return { hit: false };
+  }
+
+  generateFireHydrants() {
+    this.fireHydrants = [];
+    const corners = [
+      { x: -56, z: -56, dir: 0 },
+      { x: 56, z: -56, dir: 1 },
+      { x: -56, z: 56, dir: 2 },
+      { x: 56, z: 56, dir: 3 },
+      { x: -116, z: -56, dir: 0 },
+      { x: 116, z: -56, dir: 1 },
+      { x: -116, z: 56, dir: 2 },
+      { x: 116, z: 56, dir: 3 },
+      { x: -56, z: -116, dir: 0 },
+      { x: 56, z: -116, dir: 1 },
+      { x: -56, z: 116, dir: 2 },
+      { x: 56, z: 116, dir: 3 },
+      { x: -176, z: -56, dir: 0 },
+      { x: 176, z: -56, dir: 1 },
+      { x: -176, z: 56, dir: 2 },
+      { x: 176, z: 56, dir: 3 },
+      { x: 6, z: -56, dir: 0 },
+      { x: 6, z: 56, dir: 2 },
+    ];
+
+    corners.forEach((c, idx) => {
+      this.fireHydrants.push({
+        id: idx,
+        x: c.x,
+        y: 0,
+        z: c.z,
+        radius: 0.45,
+        isBursted: false,
+        burstTimer: 0,
+      });
+    });
+  }
+
+  generateDumpsters() {
+    this.dumpsters = [];
+    const spots = [
+      { x: -84, z: -32, angle: 0 },
+      { x: -84, z: 32, angle: 0 },
+      { x: 84, z: -32, angle: Math.PI },
+      { x: 84, z: 32, angle: Math.PI },
+      { x: -144, z: -32, angle: 0 },
+      { x: -144, z: 32, angle: 0 },
+      { x: 144, z: -32, angle: Math.PI },
+      { x: 144, z: 32, angle: Math.PI },
+      { x: -32, z: -84, angle: Math.PI * 0.5 },
+      { x: 32, z: -84, angle: Math.PI * 0.5 },
+      { x: -32, z: 84, angle: -Math.PI * 0.5 },
+      { x: 32, z: 84, angle: -Math.PI * 0.5 },
+      { x: -210, z: 80, angle: 0.3 },
+      { x: 210, z: 80, angle: -0.3 },
+    ];
+
+    spots.forEach((s, idx) => {
+      this.dumpsters.push({
+        id: idx,
+        x: s.x,
+        y: 0,
+        z: s.z,
+        angle: s.angle,
+        width: 2.2,
+        depth: 1.4,
+        radius: 1.2,
+        isKnocked: false,
+        tilt: 0,
+        tiltVel: 0,
+      });
+    });
+  }
+
+  generatePigeonFlocks() {
+    this.pigeonFlocks = [];
+    const roosts = [
+      { x: 0, z: -25, count: 6, label: 'plaza' },
+      { x: 120, z: -100, count: 5, label: 'park-fountain' },
+      { x: 145, z: -85, count: 5, label: 'park-lawn' },
+      { x: -120, z: 120, count: 6, label: 'boardwalk-promenade' },
+      { x: -60, z: 180, count: 7, label: 'marina-pier' },
+      { x: -90, z: -20, count: 4, label: 'alley-downtown' },
+      { x: 80, z: 20, count: 5, label: 'foodcart-court' },
+      { x: -150, z: 50, count: 5, label: 'promenade-bench' },
+    ];
+
+    roosts.forEach((r, idx) => {
+      const birds = [];
+      for (let i = 0; i < r.count; i++) {
+        birds.push({
+          ox: (Math.random() - 0.5) * 3.5,
+          oz: (Math.random() - 0.5) * 3.5,
+          x: r.x + (Math.random() - 0.5) * 3.5,
+          y: 0,
+          z: r.z + (Math.random() - 0.5) * 3.5,
+          vx: 0,
+          vy: 0,
+          vz: 0,
+          peckTimer: Math.random() * 2,
+          heading: Math.random() * Math.PI * 2,
+        });
+      }
+      this.pigeonFlocks.push({
+        id: idx,
+        x: r.x,
+        z: r.z,
+        birds,
+        isScattered: false,
+        scatterTimer: 0,
+      });
+    });
+  }
+
+  generateMixtapes() {
+    this.mixtapes = [
+      { id: 1, title: 'Neon Tide Vol. 1', district: 'Downtown Plaza', x: 0, y: 1.2, z: -35 },
+      { id: 2, title: 'Bayside Funk \'88', district: 'Marina Pier Head', x: -60, y: 1.5, z: 215 },
+      { id: 3, title: 'Midnight Overpass Echoes', district: 'Overpass Apex Verge', x: 25, y: 11.2, z: 15 },
+      { id: 4, title: 'Boardwalk Cruisin\'', district: 'Ocean Boardwalk Gazebo', x: -140, y: 1.2, z: 125 },
+      { id: 5, title: 'Palm Grove Synth', district: 'Vela Palms Park', x: 120, y: 1.0, z: -100 },
+      { id: 6, title: 'Gantry Horizon Tape', district: 'Docklands Crane Platform', x: -180, y: 12.0, z: 180 },
+      { id: 7, title: 'Arena Baseline Rush', district: 'Vela Bay Stadium Colonnade', x: 160, y: 1.2, z: 140 },
+      { id: 8, title: 'Underpass Lowrider Beat', district: 'Little Italy Alleyway', x: -85, y: 0.8, z: 15 },
+      { id: 9, title: 'Rooftop Skylight Jam', district: 'Financial District Plaza', x: 75, y: 1.2, z: -60 },
+      { id: 10, title: 'Sunset Syndicate Master Tape', district: 'The Marina Lighthouse Breakwater', x: -20, y: 2.0, z: 240 },
+    ];
+  }
+
+  getSurfaceAt(x, z) {
+    // 1. Water
+    if (z > 210) return 'water';
+    // 2. Boardwalk / Promenade
+    if (z > 105 && z <= 210 && x < 40) return 'boardwalk';
+    // 3. Sand / beach fringe
+    if (z > 180 && x >= 40) return 'sand';
+    // 4. Park grass
+    if (this.park) {
+      const p = this.park;
+      if (x >= p.x - p.w * 0.5 && x <= p.x + p.w * 0.5 &&
+          z >= p.z - p.h * 0.5 && z <= p.z + p.h * 0.5) {
+        // Paths inside park are stone
+        const isPath = Math.abs(x - p.x) < 4 || Math.abs(z - p.z) < 4;
+        return isPath ? 'stone' : 'grass';
+      }
+    }
+    // 5. Check if on road vs sidewalk/pavement
+    const coords = CONFIG.world.roadGrid;
+    for (const rx of coords) {
+      if (Math.abs(x - rx) <= 9) return 'asphalt';
+    }
+    for (const rz of coords) {
+      if (Math.abs(z - rz) <= 9) return 'asphalt';
+    }
+    // Default sidewalk / stone pavement
+    return 'stone';
+  }
+
+  checkHydrantHit(x, z, radius = 0.5) {
+    for (const h of this.fireHydrants) {
+      const dx = x - h.x;
+      const dz = z - h.z;
+      if (dx * dx + dz * dz < (radius + h.radius) * (radius + h.radius)) {
+        if (!h.isBursted) {
+          h.isBursted = true;
+          h.burstTimer = 45.0; // bursts water geyser for 45 seconds
+          return { hit: true, hydrant: h, justBursted: true };
+        }
+        return { hit: true, hydrant: h, justBursted: false };
+      }
+    }
+    return { hit: false };
+  }
+
+  checkDumpsterHit(x, z, radius = 1.0, impactSpeed = 0, hitDirX = 0, hitDirZ = 0) {
+    for (const d of this.dumpsters) {
+      const dx = x - d.x;
+      const dz = z - d.z;
+      if (dx * dx + dz * dz < (radius + d.radius) * (radius + d.radius)) {
+        if (impactSpeed > 4.0 && !d.isKnocked) {
+          d.isKnocked = true;
+          d.tiltVel = Math.min(impactSpeed * 0.4, 6.0);
+          d.angle += (Math.random() - 0.5) * 0.4;
+          return { hit: true, dumpster: d, justKnocked: true };
+        }
+        return { hit: true, dumpster: d, justKnocked: false };
+      }
+    }
+    return { hit: false };
+  }
+
+  scatterPigeonsNear(x, z, radius = 7.0) {
+    for (const f of this.pigeonFlocks) {
+      const dx = x - f.x;
+      const dz = z - f.z;
+      if (dx * dx + dz * dz < radius * radius && !f.isScattered) {
+        f.isScattered = true;
+        f.scatterTimer = 12.0; // fly away and return after 12s
+        for (const b of f.birds) {
+          const angle = Math.atan2(b.z - z, b.x - x) + (Math.random() - 0.5) * 0.8;
+          b.vx = Math.cos(angle) * (4 + Math.random() * 4);
+          b.vy = 4 + Math.random() * 3;
+          b.vz = Math.sin(angle) * (4 + Math.random() * 4);
+        }
+        return true;
+      }
+    }
+    return false;
+  }
+
+  checkMixtapePickup(x, z, radius = 1.8) {
+    for (const m of this.mixtapes) {
+      if (this.collectedMixtapes.has(m.id)) continue;
+      const dx = x - m.x;
+      const dz = z - m.z;
+      if (dx * dx + dz * dz < radius * radius) {
+        this.collectedMixtapes.add(m.id);
+        m.collected = true;
+        return m;
+      }
+    }
+    return null;
+  }
+
+  updateLivingSystems(dt, effects) {
+    // 1. Update bursted hydrants & emit geyser water particles
+    for (const h of this.fireHydrants) {
+      if (h.isBursted) {
+        h.burstTimer -= dt;
+        if (h.burstTimer <= 0) {
+          h.isBursted = false;
+        } else if (effects && effects.particles) {
+          effects.particles.emitGeyser(h.x, h.y + 0.6, h.z, 2);
+        }
+      }
+    }
+
+    // 2. Update knocked dumpsters physics tilt
+    for (const d of this.dumpsters) {
+      if (d.isKnocked) {
+        if (d.tilt < 1.35) {
+          d.tilt += d.tiltVel * dt;
+          d.tiltVel += 9.8 * dt; // gravity tip
+          if (d.tilt >= 1.35) {
+            d.tilt = 1.35;
+            d.tiltVel = 0;
+          }
+        }
+      }
+    }
+
+    // 3. Update pigeon flocks
+    for (const f of this.pigeonFlocks) {
+      if (f.isScattered) {
+        f.scatterTimer -= dt;
+        for (const b of f.birds) {
+          b.x += b.vx * dt;
+          b.y += b.vy * dt;
+          b.z += b.vz * dt;
+
+          if (f.scatterTimer < 5.0) {
+            // circle back towards roost
+            const targetX = f.x + b.ox;
+            const targetZ = f.z + b.oz;
+            const toX = targetX - b.x;
+            const toZ = targetZ - b.z;
+            b.vx += toX * dt * 0.8;
+            b.vz += toZ * dt * 0.8;
+            b.vy = Math.max(b.vy - 5.0 * dt, -2.0);
+            if (b.y <= 0) {
+              b.y = 0;
+              b.vx = 0;
+              b.vy = 0;
+              b.vz = 0;
+            }
+          } else {
+            // flap & glide in air
+            b.vy = Math.sin(f.scatterTimer * 8.0) * 0.5;
+          }
+        }
+        if (f.scatterTimer <= 0) {
+          f.isScattered = false;
+          for (const b of f.birds) {
+            b.x = f.x + b.ox;
+            b.y = 0;
+            b.z = f.z + b.oz;
+            b.vx = 0;
+            b.vy = 0;
+            b.vz = 0;
+          }
+        }
+      } else {
+        // Idle peck behavior
+        for (const b of f.birds) {
+          b.peckTimer -= dt;
+          if (b.peckTimer <= 0) {
+            b.peckTimer = 1.5 + Math.random() * 2.5;
+            b.heading += (Math.random() - 0.5) * 1.2;
+          }
+        }
+      }
+    }
   }
 }
 

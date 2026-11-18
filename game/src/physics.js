@@ -96,15 +96,21 @@ export class VehiclePhysics {
       car.isDrifting = Math.abs(car.speed) > 13 && Math.abs(car.steer) > 0.22;
     }
 
-    if (car.isDrifting) {
+    const isHardBraking = car.isBraking && Math.abs(car.speed) > 8;
+
+    if (car.isDrifting || isHardBraking) {
       car.driftFactor = Math.min(1.0, car.driftFactor + 4 * dt);
-      // Spawn tire smoke particles at rear wheels
+      // Spawn tire smoke particles and leave road skid marks
       const sin = Math.sin(car.angle);
       const cos = Math.cos(car.angle);
-      const rearX = car.x - sin * (car.length * 0.4);
-      const rearZ = car.z - cos * (car.length * 0.4);
+      const rearX = car.x - sin * (car.length * 0.42);
+      const rearZ = car.z - cos * (car.length * 0.42);
+
       if (inputs.isPlayer) {
-        particles.emit('smoke', rearX, 0.2, rearZ, 1, { size: 0.35, up: 0.5 });
+        particles.emit('smoke', rearX, 0.15, rearZ, 2, { size: 0.45, up: 0.6 });
+        if (particles.addSkidMark) {
+          particles.addSkidMark(rearX, rearZ, car.angle, car.width * 0.8, car.isDrifting ? 0.85 : 0.6);
+        }
         audio.playTireScreech();
       }
     } else {

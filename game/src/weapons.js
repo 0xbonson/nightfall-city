@@ -105,6 +105,21 @@ export class Weapon {
     } else if (worldHit.hit) {
       particles.emit('spark', hitX, 1.0, hitZ, 5);
       particles.emit('smoke', hitX, 1.0, hitZ, 2, { size: 0.3 });
+
+      // Bullets can burst fire hydrants or tip dumpsters
+      if (world && world.checkHydrantHit) {
+        const hHit = world.checkHydrantHit(hitX, hitZ, 0.75);
+        if (hHit.justBursted) {
+          audio.playHydrantBurst?.();
+        }
+      }
+      if (world && world.checkDumpsterHit) {
+        const dHit = world.checkDumpsterHit(hitX, hitZ, 1.2, 5.0);
+        if (dHit.justKnocked) {
+          audio.playDumpsterCrash?.();
+          particles.emitDebris?.(dHit.dumpster.x, 0.8, dHit.dumpster.z, 8);
+        }
+      }
     }
 
     return {

@@ -73,6 +73,7 @@ const server = createServer((request, response) => {
     'content-length': size,
     'cache-control': 'no-store',
     'access-control-allow-origin': '*',
+    'x-content-type-options': 'nosniff',
   });
   createReadStream(file).pipe(response);
 });
@@ -81,6 +82,9 @@ server.listen(port, '127.0.0.1', () => {
   console.log(`[Nightfall City: Vela Bay] Static WebGL game server running at http://127.0.0.1:${port}`);
 });
 
-process.on('SIGINT', () => {
+const shutdown = () => {
   server.close(() => process.exit(0));
-});
+};
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);

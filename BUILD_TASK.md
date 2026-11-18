@@ -63,19 +63,23 @@ The game world spans a rich coordinate area (-280m to +280m in X and Z) featurin
 - Weapons feature ammunition tracking, reload cycles (`R`), spread recoil, muzzle flashes, and blood/spark impact particles.
 - Hostile syndicate enforcers and police return fire with tactical AI.
 
-### 2.6 Narrative Campaign (7 Story Missions)
-A connected 7-mission story arc detailing Rook's struggle against the rival crews:
+### 2.6 Narrative Campaign (8 Story Missions)
+A connected 8-mission story arc detailing Rook's struggle against the rival crews:
 1. **The Marina Drop**: Collect an encrypted datapad at Marina Pier and deliver it across town to Matteo Port Meridian's penthouse before the 95s timer expires.
 2. **Repo on Vane Turf**: Infiltrate the Vane Syndicate's Old Town compound, neutralize 3 guarding thugs, steal back the custom Nero GT, and deliver it to the Docks Chop Shop.
 3. **Market Muscle**: Protect Old Market merchants by taking down 5 extortionist syndicate enforcers in the market square, then evade the responding Metro 2-star police patrol.
 4. **Vela Bay Sprint**: High-stakes underground checkpoint street race across 8 gates connecting the beach boulevard, downtown freeway, and dockyard within 110 seconds.
 5. **Armory Infiltration**: Infiltrate the fortified syndicate munitions depot, eliminate 6 compound defenders, blow the vault, secure the military cache, and escape a 3-star police net.
 6. **Nightfall at the Docks**: Assault Shipping Pier 7; take down Boss Hector Vane and corrupt Police Captain Reynolds, destroy their armored vehicle, and board the getaway speedboat.
-7. **The Skyway Lockdown**: Grand finale overpass assault; eliminate 6 rogue Metro SWAT commanders barricading the new Elevated Skyway Overpass and deliver the command vehicle to Downtown under 4-star citywide pursuit.
+7. **The Skyway Lockdown**: Overpass assault; eliminate 6 rogue Metro SWAT commanders barricading the new Elevated Skyway Overpass and deliver the command vehicle to Downtown under 4-star citywide pursuit.
+8. **The Sunset Syndicate Heist**: Grand finale takedown of the Syndicate's offshore vault in Marina Bay; infiltrate the penthouse, crack the server terminal, recover the bearer bonds, and execute an aerial/high-speed expressway escape across Vela Bay.
 
-### 2.7 Open-World Activities & Systems Polish
+### 2.7 Open-World Activities & Living City Systems
+- **Taxi Driver Shift**: Hop into any cab or passenger vehicle and hit `K` to start a taxi shift. Pick up waiting pedestrians and deliver them to destinations across Vela Bay for cash fares.
+- **10 Vela Wave Mixtapes**: Collectible retro synth cassettes scattered across district landmarks, awarding cash bonuses and unlocking audio tracks.
 - **Express Courier Deliveries**: Timed delivery activity loop startable via `T` key or the pause map for quick cash and reputation.
 - **15 Hidden Smuggler Caches**: Contraband crates scattered across rooftops, docks, and park grounds, rewarded with cash and tracked on the HUD.
+- **Living City Interactives**: Burstable fire hydrants shooting water geysers, knockable dumpsters with spilling debris, street food carts offering +25 HP meals for $15, scattering pigeon flocks on pavements, and lit building windows at dusk.
 - **Alley Escape Routes**: Narrow shaded corridors where wanted heat cools 3x faster, with HUD notification.
 - **Urban Infrastructure**: Elevated Skyway Overpass with pillars and ramps, coastal Marina with moored boats and Harbour Master building, landscaped Central Park with fountain, Grand Arena stadium, and construction site with 48m tower crane.
 

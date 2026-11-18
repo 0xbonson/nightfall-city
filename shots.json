@@ -2,21 +2,21 @@
   {
     "name": "1-on-foot-downtown.png",
     "query": "?shot=1",
-    "description": "Rhea 'Rook' Solano on foot on a busy Downtown pavement, tall glass towers rising behind into a warm golden sky, long soft shadows, pedestrians in groups, and traffic in the street"
+    "description": "Rhea 'Rook' Solano on foot on a rich Downtown stone pavement, tall architectural glass towers rising into a warm gradient sunset sky with drifting clouds, procedural asphalt and paver detail, newspaper vending boxes, pedestrians, and long cast shadows across the avenue."
   },
   {
     "name": "2-car-drive-promenade.png",
     "query": "?shot=2",
-    "description": "Sports car at speed along the Ocean Promenade with the sea, low sun specular reflection over moving waves, palm trees, the boardwalk, and the new marina in frame"
+    "description": "Custom sports car at speed along the coastal Ocean Promenade, low golden sun disc and solar corona over moving dual-harmonic ocean waves, wet asphalt reflections, palms, boardwalk railing, and the marina in frame."
   },
   {
     "name": "3-police-pursuit-stars.png",
     "query": "?shot=3",
-    "description": "High-speed police pursuit at its height, wanted stars in the HUD, flashing cruiser lights, player car flanked between two cruisers on a wide road with the new Elevated Skyway Overpass in the background"
+    "description": "Police chase at its height: four wanted stars on the HUD, red and blue emergency strobes flashing across surrounding buildings, player vehicle flanked between two push-bar cruisers on a wide boulevard with the Elevated Skyway Overpass towering behind."
   },
   {
     "name": "4-mission-dock-showdown.png",
     "query": "?shot=4",
-    "description": "Showdown at Meridian Docks with colorful shipping container stacks, 38m gantry crane, armed syndicate guards, police helicopter with volumetric searchlight, and the open bay beyond"
+    "description": "Climactic showdown at Meridian Docks: corrugated multi-colored shipping container stacks, 38-meter gantry crane, syndicate operatives, police helicopter casting a volumetric searchlight beam, and open bay water beyond."
   }
 ]

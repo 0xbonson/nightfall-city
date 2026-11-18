@@ -200,6 +200,31 @@ export class TrafficManager {
           obstacleAhead = true;
         }
 
+        // Turning at intersections
+        let steerInput = 0;
+        if (!v.isTurning && distToNextIntersection < 6 && distToNextIntersection > 1 && signalColor === 'green') {
+          if (!v.lastTurnCheck || Date.now() - v.lastTurnCheck > 8000) {
+            v.lastTurnCheck = Date.now();
+            if (Math.random() < 0.35) { // 35% chance to turn at intersection
+              v.isTurning = true;
+              const turnDir = Math.random() < 0.5 ? -1 : 1; // left or right
+              v.turnTargetAngle = v.angle + turnDir * (Math.PI * 0.5);
+              v.turnTimer = 2.5;
+            }
+          }
+        }
+
+        if (v.isTurning) {
+          v.turnTimer -= dt;
+          const diff = v.turnTargetAngle - v.angle;
+          steerInput = Math.max(-0.6, Math.min(0.6, diff * 2.0));
+          if (Math.abs(diff) < 0.1 || v.turnTimer <= 0) {
+            v.angle = v.turnTargetAngle;
+            v.isTurning = false;
+            steerInput = 0;
+          }
+        }
+
         if (obstacleAhead) {
           desiredThrottle = -0.7; // Brake smoothly at light or behind obstacle
 
@@ -213,7 +238,7 @@ export class TrafficManager {
 
         VehiclePhysics.updateVehicle(v, dt, {
           throttle: desiredThrottle,
-          steer: 0,
+          steer: steerInput,
           handbrake: false
         });
       }

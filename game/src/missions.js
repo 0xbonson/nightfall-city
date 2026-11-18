@@ -7,7 +7,7 @@ import { police } from './police.js';
 import { CONFIG } from './config.js';
 
 export const MISSION_MARKER_TRIGGER_RADIUS = 5.0; // Distance in meters to activate mission beacon
-export const TOTAL_STORY_CAMPAIGN_MISSIONS = 7;
+export const TOTAL_STORY_CAMPAIGN_MISSIONS = 8;
 export const CHECKPOINT_TRIGGER_RADIUS = 8.0; // Proximity trigger threshold for street race checkpoints
 
 export const COURIER_DESTINATIONS = [
@@ -210,6 +210,41 @@ export class MissionManager {
           }
         ],
         reward: 35000,
+      },
+      {
+        id: 8,
+        title: 'The Sunset Syndicate Heist',
+        client: 'Port Meridian Underworld',
+        startMarker: { x: -60, z: 120, radius: 6.0 },
+        steps: [
+          {
+            desc: 'Meet your informant at the Ocean Promenade Gazebo for the vault schematics.',
+            dialogue: { speaker: 'INFORMANT', text: 'Rook. The Sunset Syndicate keeps bearer bonds in the beachside safehouse. Take these codes before their offshore courier docks.' },
+            target: { x: -140, z: 125, radius: 5.0 },
+            action: 'reach'
+          },
+          {
+            desc: 'Infiltrate the Syndicate Ocean Safehouse and breach the security gate.',
+            dialogue: { speaker: 'MATTEO', text: 'You have the codes. Hit their safehouse fast, clear out the heavy hitters, and blow the vault.' },
+            target: { x: -210, z: 80, radius: 6.0 },
+            action: 'reach',
+            spawnEnemies: 5
+          },
+          {
+            desc: 'Eliminate the 5 Syndicate Safehouse Enforcers guarding the vault.',
+            dialogue: { speaker: 'SYNDICATE CAPTAIN', text: 'Solano breached the perimeter! Fire at will, protect the bearer bonds!' },
+            action: 'eliminate'
+          },
+          {
+            desc: 'Grab the bonds and lose the 3-star Metro Police dragnet to the Marina Safe Drop!',
+            dialogue: { speaker: 'MATTEO', text: 'Bonds secured! Alarms tripped the whole south precinct—lose the heat and hit the Marina drop!' },
+            triggerPolice: 3,
+            target: { x: -60, z: 200, radius: 6.0 },
+            timeLimit: 110,
+            action: 'deliver'
+          }
+        ],
+        reward: 45000,
       }
     ];
 
@@ -232,6 +267,20 @@ export class MissionManager {
       timer: 0,
       reward: 0,
       completedRuns: 0,
+    };
+
+    // Vela Bay Taxi Shift Side Activity
+    this.taxiShift = {
+      active: false,
+      state: 'idle', // 'idle' | 'seeking_fare' | 'driving_fare'
+      passenger: null,
+      destination: null,
+      destinationName: '',
+      fare: 0,
+      bonus: 120,
+      timeElapsed: 0,
+      completedFares: 0,
+      totalEarned: 0,
     };
   }
 
@@ -404,6 +453,86 @@ export class MissionManager {
     }
   }
 
+  toggleTaxiShift(player) {
+    if (this.taxiShift.active) {
+      this.taxiShift.active = false;
+      this.taxiShift.state = 'idle';
+      this.taxiShift.passenger = null;
+      this.taxiShift.destination = null;
+      this.showDialogue('DISPATCH', `Taxi Shift ended. Total earned: $${this.taxiShift.totalEarned}`, 4.0);
+      return false;
+    } else {
+      this.taxiShift.active = true;
+      this.taxiShift.state = 'seeking_fare';
+      this.pickNextPassenger(player);
+      audio.playCash();
+      this.showDialogue('DISPATCH', 'TAXI SHIFT ON: Locate waiting passenger and pull over.', 5.0);
+      return true;
+    }
+  }
+
+  pickNextPassenger(player) {
+    // Pick passenger at one of city destinations
+    const spot = COURIER_DESTINATIONS[Math.floor(Math.random() * COURIER_DESTINATIONS.length)];
+    this.taxiShift.state = 'seeking_fare';
+    this.taxiShift.passenger = {
+      x: spot.x + (Math.random() - 0.5) * 8,
+      z: spot.z + (Math.random() - 0.5) * 8,
+      name: spot.name,
+      radius: 4.5,
+    };
+    this.taxiShift.destination = null;
+    this.taxiShift.fare = 35;
+    this.taxiShift.bonus = 120;
+    this.taxiShift.timeElapsed = 0;
+  }
+
+  pickPassengerDestination(player) {
+    const candidates = COURIER_DESTINATIONS.filter(d => Math.hypot(d.x - player.x, d.z - player.z) > 80);
+    const dest = candidates[Math.floor(Math.random() * candidates.length)] || COURIER_DESTINATIONS[0];
+    const tripDist = Math.hypot(dest.x - player.x, dest.z - player.z);
+    this.taxiShift.state = 'driving_fare';
+    this.taxiShift.destination = { x: dest.x, z: dest.z, radius: 5.5 };
+    this.taxiShift.destinationName = dest.name;
+    this.taxiShift.fare = Math.floor(40 + tripDist * 0.45);
+    this.taxiShift.bonus = Math.floor(60 + tripDist * 0.25);
+    this.taxiShift.timeElapsed = 0;
+    audio.playCarDoor();
+    this.showDialogue('PASSENGER', `Take me to ${dest.name}, and step on it!`, 5.0);
+  }
+
+  updateTaxiShift(dt, player) {
+    if (!this.taxiShift.active) return;
+
+    if (this.taxiShift.state === 'seeking_fare' && this.taxiShift.passenger) {
+      const dist = Math.hypot(player.x - this.taxiShift.passenger.x, player.z - this.taxiShift.passenger.z);
+      const isStopped = player.inVehicle && player.vehicle ? Math.abs(player.vehicle.speed) < 3.5 : true;
+      if (dist < this.taxiShift.passenger.radius && isStopped) {
+        this.pickPassengerDestination(player);
+      }
+    } else if (this.taxiShift.state === 'driving_fare' && this.taxiShift.destination) {
+      this.taxiShift.timeElapsed += dt;
+      // Bonus decays slightly over time
+      this.taxiShift.bonus = Math.max(15, this.taxiShift.bonus - dt * 1.5);
+
+      const dist = Math.hypot(player.x - this.taxiShift.destination.x, player.z - this.taxiShift.destination.z);
+      const isStopped = player.inVehicle && player.vehicle ? Math.abs(player.vehicle.speed) < 3.5 : true;
+      if (dist < this.taxiShift.destination.radius && isStopped) {
+        const totalPayout = Math.floor(this.taxiShift.fare + this.taxiShift.bonus);
+        if (player) {
+          player.cash += totalPayout;
+        }
+        this.taxiShift.totalEarned += totalPayout;
+        this.taxiShift.completedFares++;
+        audio.playCarDoor();
+        audio.playCash();
+        audio.playMissionFanfare();
+        this.showDialogue('PASSENGER', `Here's your fare plus tip! +$${totalPayout}`, 5.0);
+        this.pickNextPassenger(player);
+      }
+    }
+  }
+
   failMission(reason = 'MISSION FAILED') {
     this.showDialogue('SYSTEM', reason, 6.0);
     this.activeMission = null;
@@ -420,6 +549,9 @@ export class MissionManager {
 
     // Update open-world courier activity
     this.updateCourier(dt, player);
+
+    // Update taxi shift activity
+    this.updateTaxiShift(dt, player);
 
     // If no active mission, check if player walks into next mission start marker
     if (!this.activeMission && !this.storyCompleted) {

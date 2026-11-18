@@ -173,7 +173,29 @@ export class Player {
       this.x = this.vehicle.x;
       this.z = this.vehicle.z;
       this.heading = this.vehicle.angle;
-      audio.updateEngine(true, this.vehicle.speed / this.vehicle.maxSpeed, inputs.isAction('forward'));
+      audio.updateEngine(true, Math.abs(this.vehicle.speed) / this.vehicle.maxSpeed, inputs.isAction('forward'));
+
+      // Scatter pigeons in vehicle path
+      if (world && world.scatterPigeonsNear) {
+        world.scatterPigeonsNear(this.vehicle.x, this.vehicle.z, 10.0);
+      }
+
+      // Check collision with hydrants and dumpsters
+      if (world && world.checkHydrantHit) {
+        const hit = world.checkHydrantHit(this.vehicle.x, this.vehicle.z, 1.2);
+        if (hit.justBursted) {
+          audio.playHydrantBurst?.();
+          screenEffects.addTrauma(0.15);
+        }
+      }
+      if (world && world.checkDumpsterHit) {
+        const hit = world.checkDumpsterHit(this.vehicle.x, this.vehicle.z, 1.6, Math.abs(this.vehicle.speed));
+        if (hit.justKnocked) {
+          audio.playDumpsterCrash?.();
+          screenEffects.addTrauma(0.2);
+          particles.emitDebris?.(hit.dumpster.x, 0.8, hit.dumpster.z, 10);
+        }
+      }
 
       // Horn action
       if (inputs.isAction('horn') && Date.now() - this.lastHonkTime > 600) {
@@ -206,15 +228,45 @@ export class Player {
         sprint: inputs.isAction('sprint'),
       });
 
+      // Scatter pigeons on foot
+      if (world && world.scatterPigeonsNear) {
+        world.scatterPigeonsNear(this.x, this.z, this.isSprinting ? 7.5 : 4.0);
+      }
+
       if (this.isMoving) {
         this.animTime += dt * (this.isSprinting ? 12 : 7);
         this.footstepTimer -= dt;
         if (this.footstepTimer <= 0) {
-          audio.playFootstep(this.isSprinting ? 'sprint' : 'walk');
+          const surface = world?.getSurfaceAt ? world.getSurfaceAt(this.x, this.z) : 'stone';
+          audio.playFootstep(surface, this.isSprinting);
           this.footstepTimer = this.isSprinting ? 0.28 : 0.44;
         }
       } else {
         this.footstepTimer = 0.1;
+      }
+
+      // Proximity to street food carts to grab hot food
+      if (world && world.streetFoodCarts && (inputs.isAction('enter') || inputs.isAction('fire'))) {
+        for (const cart of world.streetFoodCarts) {
+          const dist = Math.hypot(this.x - cart.x, this.z - cart.z);
+          if (dist < 2.5 && this.health < this.maxHealth && this.cash >= 15) {
+            this.cash -= 15;
+            this.health = Math.min(this.maxHealth, this.health + 25);
+            audio.playCash();
+            screenEffects.flashGreen?.(0.3);
+            break;
+          }
+        }
+      }
+    }
+
+    // Proximity check for Vela Wave Mixtapes
+    if (world && world.checkMixtapePickup) {
+      const mixtape = world.checkMixtapePickup(this.x, this.z, 2.2);
+      if (mixtape) {
+        this.addCash(500);
+        audio.playCash();
+        particles.emit('spark', mixtape.x, mixtape.y || 1.0, mixtape.z, 16);
       }
     }
 

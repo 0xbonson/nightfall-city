@@ -6,6 +6,7 @@
 // vehicle suspension pitch/roll, steerable & spinning wheels, headlights, and volumetric searchlight.
 
 import { CONFIG } from './config.js';
+import { particles } from './effects.js';
 
 export class WebGLRenderer {
   constructor(canvas) {
@@ -41,6 +42,7 @@ export class WebGLRenderer {
 
     this.initShaders();
     this.initBuffers();
+    this.initNoiseTexture();
   }
 
   initShaders() {
@@ -85,6 +87,7 @@ export class WebGLRenderer {
       uniform vec3 u_sirenLight;
       uniform float u_time;
       uniform vec2 u_resolution;
+      uniform sampler2D u_noiseTex;
 
       void main() {
         float normLen = length(v_normal);
@@ -102,12 +105,26 @@ export class WebGLRenderer {
           vec3 sunDirNorm = normalize(u_sunDir);
           float sunDot = max(dot(viewDir, sunDirNorm), 0.0);
 
-          // Warm low sun disc & atmospheric glare corona
-          float sunDisc = pow(sunDot, 550.0) * 3.6;
-          float sunGlare = pow(sunDot, 14.0) * 0.45 + pow(sunDot, 40.0) * 0.75;
-          vec3 skyOutput = v_color.rgb + u_sunColor * (sunDisc + sunGlare);
+          // Continuous atmospheric sky gradient from horizon up to zenith
+          float hFactor = clamp((viewDir.y + 0.04) / 0.85, 0.0, 1.0);
+          vec3 warmHaze = mix(u_skyHorizon, vec3(1.0, 0.86, 0.68), 0.55);
+          vec3 skyGradient = mix(warmHaze, u_skyZenith, pow(hFactor, 0.65));
 
-          gl_FragColor = vec4(skyOutput, 1.0);
+          // Low warm sun disc & solar corona flare
+          float sunDisc = pow(sunDot, 650.0) * 4.2;
+          float sunCorona = pow(sunDot, 24.0) * 0.65 + pow(sunDot, 6.0) * 0.35;
+          vec3 skyColor = skyGradient + u_sunColor * (sunDisc + sunCorona);
+
+          // Drifting cloud layer
+          if (viewDir.y > 0.04) {
+            vec2 cloudUv = vec2(viewDir.x, viewDir.z) / (viewDir.y + 0.20) * 0.14 + vec2(u_time * 0.008, u_time * 0.003);
+            vec4 cNoise = texture2D(u_noiseTex, cloudUv);
+            float cloudDensity = smoothstep(0.48, 0.78, cNoise.r);
+            vec3 cloudSunLit = mix(vec3(0.92, 0.90, 0.88), vec3(1.0, 0.88, 0.72), sunDot);
+            skyColor = mix(skyColor, cloudSunLit, cloudDensity * 0.50);
+          }
+
+          gl_FragColor = vec4(skyColor, 1.0);
           return;
         }
 
@@ -115,6 +132,10 @@ export class WebGLRenderer {
         vec3 sunD = normalize(u_sunDir);
         vec3 viewDir = normalize(u_camPos - v_worldPos);
         vec3 halfDir = normalize(sunD + viewDir);
+
+        // Procedural noise in world coordinates
+        vec4 texNoise = texture2D(u_noiseTex, v_worldPos.xz * 0.06);
+        vec4 microNoise = texture2D(u_noiseTex, v_worldPos.xz * 0.38);
 
         // Directional warm sunlight
         float diff = max(dot(norm, sunD), 0.0);
@@ -127,45 +148,81 @@ export class WebGLRenderer {
         // Surface Material Shading & Specular
         bool isOcean = (v_worldPos.y < 0.05 && norm.y > 0.75 && (v_worldPos.z > 218.0 || v_worldPos.x < -218.0));
         bool isGlass = (v_color.a > 0.55 && v_color.b > v_color.r * 1.12 && v_color.b > 0.35 && norm.y < 0.35);
-        bool isPuddle = (v_worldPos.y > 0.05 && v_worldPos.y < 0.12 && norm.y > 0.8 && v_color.b > 0.3);
-        bool isAsphalt = (norm.y > 0.8 && v_color.r > 0.20 && v_color.r < 0.36 && abs(v_color.r - v_color.g) < 0.05);
+        bool isPuddle = (v_worldPos.y > 0.04 && v_worldPos.y < 0.12 && norm.y > 0.8 && v_color.b > 0.3);
+        bool isAsphalt = (norm.y > 0.8 && v_color.r > 0.18 && v_color.r < 0.38 && abs(v_color.r - v_color.g) < 0.06);
+        bool isSidewalk = (norm.y > 0.8 && v_color.r > 0.50 && v_color.r < 0.82 && abs(v_color.r - v_color.g) < 0.06);
+        bool isSand = (norm.y > 0.8 && v_color.r > 0.75 && v_color.g > 0.65 && v_color.b < 0.60);
+        bool isGrass = (norm.y > 0.7 && v_color.g > v_color.r * 1.25 && v_color.g > v_color.b);
+        bool isVehicleMetal = (v_color.a >= 0.98 && !isAsphalt && !isSidewalk && !isGrass && !isSand && !isOcean);
 
         float specPower = 28.0;
-        float specIntensity = 0.10;
+        float specIntensity = 0.12;
+        vec3 matColor = v_color.rgb;
 
         if (isOcean) {
-          // Dynamic moving wave specular band along time
-          float wave = sin(v_worldPos.z * 0.22 + v_worldPos.x * 0.14 + u_time * 2.2) * 0.15;
-          vec3 waveNorm = normalize(norm + vec3(wave * 0.1, 0.0, wave * 0.15));
+          // Dual-harmonic moving wave specular band
+          float w1 = sin(v_worldPos.z * 0.22 + v_worldPos.x * 0.14 + u_time * 2.2);
+          float w2 = cos(v_worldPos.z * 0.42 - v_worldPos.x * 0.24 + u_time * 3.1);
+          vec3 waveNorm = normalize(norm + vec3((w1 + w2) * 0.08, 0.0, (w1 - w2) * 0.12));
           vec3 waveHalf = normalize(sunD + viewDir);
-          float oceanSpec = pow(max(dot(waveNorm, waveHalf), 0.0), 85.0) * 1.4;
-          float oceanGlow = pow(max(dot(waveNorm, waveHalf), 0.0), 16.0) * 0.45;
+          float oceanSpec = pow(max(dot(waveNorm, waveHalf), 0.0), 95.0) * 2.2;
+          float oceanGlow = pow(max(dot(waveNorm, waveHalf), 0.0), 18.0) * 0.55;
           diffuse += u_sunColor * oceanGlow;
           specIntensity = oceanSpec;
-          specPower = 85.0;
+          specPower = 95.0;
+          float fresnel = pow(1.0 - max(dot(norm, viewDir), 0.0), 3.2);
+          diffuse = mix(diffuse, u_skyZenith * 0.85, fresnel * 0.65);
         } else if (isGlass) {
-          // Glass sky reflection with Fresnel equation
           float fresnel = pow(1.0 - max(dot(norm, viewDir), 0.0), 2.8);
           vec3 skyReflect = mix(u_skyHorizon, u_skyZenith, max(norm.y * 0.5 + 0.5, 0.2));
-          diffuse = mix(diffuse, skyReflect, fresnel * 0.65);
-          // Faint warm interior glow in downtown towers at dusk
-          vec3 interiorGlow = vec3(0.98, 0.82, 0.54) * 0.22;
-          diffuse += interiorGlow;
-          specIntensity = 0.45;
-          specPower = 48.0;
+          diffuse = mix(diffuse, skyReflect, fresnel * 0.75);
+          // Lit window grids and warm interior glows in towers at dusk
+          float floorY = fract(v_worldPos.y * 0.24);
+          float windowX = fract(v_worldPos.x * 0.28 + v_worldPos.z * 0.28);
+          float isLitWindow = step(0.18, floorY) * step(0.18, windowX);
+          vec3 warmInterior = vec3(1.0, 0.82, 0.52) * (0.35 + texNoise.r * 0.25) * isLitWindow;
+          diffuse += warmInterior;
+          specIntensity = 0.55;
+          specPower = 52.0;
         } else if (isPuddle) {
-          // Puddle sky mirror reflection
-          float fresnel = pow(1.0 - max(dot(norm, viewDir), 0.0), 2.4);
-          diffuse = mix(diffuse, u_skyZenith, fresnel * 0.72);
-          specIntensity = 0.82;
-          specPower = 64.0;
+          float fresnel = pow(1.0 - max(dot(norm, viewDir), 0.0), 2.2);
+          diffuse = mix(diffuse, u_skyZenith, fresnel * 0.80);
+          specIntensity = 0.95;
+          specPower = 72.0;
         } else if (isAsphalt) {
-          specIntensity = 0.05;
-          specPower = 16.0;
+          // Aggregate grain noise
+          matColor *= (0.90 + microNoise.g * 0.20);
+          specIntensity = 0.14;
+          specPower = 22.0;
+          // Wet reflections on promenade asphalt
+          if (v_worldPos.z > 140.0) {
+            float wetFresnel = pow(1.0 - max(dot(norm, viewDir), 0.0), 3.2);
+            diffuse = mix(diffuse, u_skyHorizon * 0.9, wetFresnel * 0.40);
+          }
+        } else if (isSidewalk) {
+          // Stone paver joint grid pattern
+          vec2 pGrid = abs(fract(v_worldPos.xz * 0.65) - 0.5);
+          float paverJoint = smoothstep(0.42, 0.48, max(pGrid.x, pGrid.y));
+          matColor *= (1.0 - paverJoint * 0.16) * (0.92 + texNoise.r * 0.15);
+          specIntensity = 0.18;
+          specPower = 28.0;
+        } else if (isSand) {
+          // Quartz sparkles in sunlight
+          float sparkle = pow(microNoise.g, 8.0) * diff * 0.8;
+          matColor += vec3(sparkle);
+          specIntensity = 0.25;
+          specPower = 34.0;
+        } else if (isGrass) {
+          matColor = mix(matColor, matColor * vec3(1.15, 1.05, 0.85), texNoise.r);
+          specIntensity = 0.06;
+          specPower = 12.0;
+        } else if (isVehicleMetal) {
+          specIntensity = 0.65;
+          specPower = 64.0;
         }
 
         float spec = pow(max(dot(norm, halfDir), 0.0), specPower) * specIntensity;
-        vec3 lightedColor = v_color.rgb * (ambient + diffuse) + u_sunColor * spec;
+        vec3 lightedColor = matColor * (ambient + diffuse) + u_sunColor * spec;
 
         // Police Siren Light bounce
         float sirenDist = length(v_worldPos - u_camPos);
@@ -234,7 +291,39 @@ export class WebGLRenderer {
       sirenLight: gl.getUniformLocation(prog, 'u_sirenLight'),
       uTime: gl.getUniformLocation(prog, 'u_time'),
       uResolution: gl.getUniformLocation(prog, 'u_resolution'),
+      noiseTex: gl.getUniformLocation(prog, 'u_noiseTex'),
     };
+  }
+
+  initNoiseTexture() {
+    const gl = this.gl;
+    if (!gl) return;
+    const size = 256;
+    const data = new Uint8Array(size * size * 4);
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const idx = (y * size + x) * 4;
+        const n1 = Math.sin(x * 0.12) * Math.cos(y * 0.12);
+        const n2 = Math.sin(x * 0.35 + y * 0.28) * 0.5;
+        const n3 = Math.cos(x * 0.8 - y * 0.6) * 0.25;
+        const base = Math.floor(Math.max(0, Math.min(255, (n1 + n2 + n3 + 1.75) * 72)));
+        const grain = Math.floor(Math.random() * 255);
+        const scratches = Math.floor((Math.sin(x * 2.0) + Math.cos(y * 2.0) + 2.0) * 63);
+        const cloud = Math.floor(Math.max(0, Math.min(255, (n1 * 1.5 + n2 * 1.2 + 1.5) * 85)));
+
+        data[idx] = base;        // R: Regional macro variation & cloud density
+        data[idx + 1] = grain;   // G: High-frequency stone/aggregate/sand grain
+        data[idx + 2] = scratches; // B: Surface roughness micro-detail
+        data[idx + 3] = cloud;   // A: Atmospheric clouds
+      }
+    }
+    this.noiseTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.noiseTexture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size, size, 0, gl.RGBA, gl.UNSIGNED_BYTE, data);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   }
 
   initBuffers() {
@@ -1540,11 +1629,23 @@ export class WebGLRenderer {
         this.pushDynamicBox(pylonR[0], pylonR[1], pylonR[2], 0.08, 0.35, 0.25, [0.12, 0.12, 0.15, 1.0]);
         const wingBlade = toWorld(0, wingY, -hl * 0.88);
         this.pushDynamicBox(wingBlade[0], wingBlade[1], wingBlade[2], v.width * 0.95, 0.08, 0.45, bodyCol);
+
+        // Dual performance exhaust tips
+        const exL = toWorld(-hw * 0.50, 0.35, -hl - 0.08);
+        const exR = toWorld(hw * 0.50, 0.35, -hl - 0.08);
+        this.pushDynamicBox(exL[0], exL[1], exL[2], 0.14, 0.12, 0.16, chromeCol);
+        this.pushDynamicBox(exR[0], exR[1], exR[2], 0.14, 0.12, 0.16, chromeCol);
       }
 
       if (type === 'muscle') {
         const scoopPos = toWorld(0, 0.3 + bh + 0.12, hl * 0.45);
         this.pushDynamicBox(scoopPos[0], scoopPos[1], scoopPos[2], 0.75, 0.16, 1.1, [0.12, 0.12, 0.14, 1.0]);
+
+        // Dual black racing stripes along hood and deck
+        const str1 = toWorld(-0.16, 0.3 + bh + 0.01, hl * 0.1);
+        const str2 = toWorld(0.16, 0.3 + bh + 0.01, hl * 0.1);
+        this.pushDynamicBox(str1[0], str1[1], str1[2], 0.15, 0.02, hl * 1.6, [0.12, 0.12, 0.14, 1.0]);
+        this.pushDynamicBox(str2[0], str2[1], str2[2], 0.15, 0.02, hl * 1.6, [0.12, 0.12, 0.14, 1.0]);
       }
 
       if (type === 'taxi') {
@@ -1566,21 +1667,27 @@ export class WebGLRenderer {
 
         const bbPos = toWorld(0, 0.6, hl + 0.18);
         this.pushDynamicBox(bbPos[0], bbPos[1], bbPos[2], v.width * 0.82, 0.55, 0.16, [0.15, 0.16, 0.18, 1.0]);
+
+        // White police doors
+        const dL = toWorld(-hw - 0.01, 0.3 + bh * 0.5, 0);
+        const dR = toWorld(hw + 0.01, 0.3 + bh * 0.5, 0);
+        this.pushDynamicBox(dL[0], dL[1], dL[2], 0.02, bh * 0.75, hl * 0.85, [0.95, 0.95, 0.98, 1.0]);
+        this.pushDynamicBox(dR[0], dR[1], dR[2], 0.02, bh * 0.75, hl * 0.85, [0.95, 0.95, 0.98, 1.0]);
       }
 
       // Steerable & Spinning Wheels
       const steerAng = v.steer || 0;
       const wheelPositions = [
-        [-hw - 0.06, 0.32, hl * 0.60, true],
-        [hw + 0.06, 0.32, hl * 0.60, true],
-        [-hw - 0.06, 0.32, -hl * 0.60, false],
-        [hw + 0.06, 0.32, -hl * 0.60, false]
+        [-hw * 0.85, 0.32, hl * 0.58, true],
+        [hw * 0.85, 0.32, hl * 0.58, true],
+        [-hw * 0.85, 0.32, -hl * 0.58, false],
+        [hw * 0.85, 0.32, -hl * 0.58, false]
       ];
       for (const [wx, wy, wz, isFront] of wheelPositions) {
         const pos = toWorld(wx, wy, wz);
-        this.pushDynamicBox(pos[0], pos[1] - 0.15, pos[2], 0.34, 0.65, 0.65, wheelCol);
+        this.pushDynamicBox(pos[0], pos[1] - 0.15, pos[2], 0.30, 0.62, 0.62, wheelCol);
         // Chrome wheel hub rim
-        this.pushDynamicBox(pos[0], pos[1] - 0.15, pos[2], 0.38, 0.32, 0.32, chromeCol);
+        this.pushDynamicBox(pos[0], pos[1] - 0.15, pos[2], 0.34, 0.30, 0.30, chromeCol);
       }
     }
 
@@ -1674,7 +1781,22 @@ export class WebGLRenderer {
 
     const torsoX = x + leanX * 0.5;
     const torsoZ = z + leanZ * 0.5;
+    // Main Torso / Jacket
     this.pushDynamicBox(torsoX, y + 0.85, torsoZ, 0.58, 0.72, 0.34, shirtCol);
+
+    if (type === 'player') {
+      // Courier messenger satchel across back
+      const bagX = torsoX - Math.sin(heading) * 0.18 - Math.cos(heading) * 0.12;
+      const bagZ = torsoZ - Math.cos(heading) * 0.18 + Math.sin(heading) * 0.12;
+      this.pushDynamicBox(bagX, y + 0.92, bagZ, 0.42, 0.36, 0.22, [0.15, 0.15, 0.18, 1.0]);
+      // Bright yellow courier shoulder strap across chest
+      this.pushDynamicBox(torsoX, y + 1.18, torsoZ, 0.52, 0.09, 0.36, [0.96, 0.82, 0.15, 1.0]);
+      // Jacket black collar trim
+      this.pushDynamicBox(torsoX, y + 1.50, torsoZ, 0.42, 0.10, 0.28, [0.14, 0.14, 0.18, 1.0]);
+      // Belt with buckle
+      this.pushDynamicBox(torsoX, y + 0.82, torsoZ, 0.60, 0.08, 0.35, [0.12, 0.12, 0.14, 1.0]);
+      this.pushDynamicBox(torsoX + sinH * 0.18, y + 0.82, torsoZ + cosH * 0.18, 0.14, 0.07, 0.04, [0.85, 0.85, 0.88, 1.0]);
+    }
 
     this.pushDynamicBox(torsoX, y + 1.57, torsoZ, 0.18, 0.12, 0.18, skinCol);
     this.pushDynamicBox(torsoX, y + 1.68, torsoZ, 0.34, 0.36, 0.34, skinCol);
@@ -1794,6 +1916,156 @@ export class WebGLRenderer {
     }
   }
 
+  drawSkidMarks(skidMarks) {
+    if (!skidMarks) return;
+    for (const sm of skidMarks) {
+      if (sm.life <= 0) continue;
+      const cosA = Math.cos(sm.angle), sinA = Math.sin(sm.angle);
+      const hw = (sm.width || 0.35) * 0.5;
+      const hl = 0.55;
+      const p1 = [sm.x - hw * cosA - hl * sinA, 0.08, sm.z + hw * sinA - hl * cosA];
+      const p2 = [sm.x + hw * cosA - hl * sinA, 0.08, sm.z - hw * sinA - hl * cosA];
+      const p3 = [sm.x + hw * cosA + hl * sinA, 0.08, sm.z - hw * sinA + hl * cosA];
+      const p4 = [sm.x - hw * cosA + hl * sinA, 0.08, sm.z + hw * sinA + hl * cosA];
+      const col = [0.08, 0.08, 0.10, Math.min(0.75, sm.alpha * sm.life)];
+      this.pushDynamicQuad(p1, p2, p3, p4, [0, 1, 0], col);
+    }
+  }
+
+  drawFireHydrants(hydrants) {
+    if (!hydrants) return;
+    const redCol = [0.88, 0.16, 0.14, 1.0];
+    const brassCol = [0.85, 0.72, 0.25, 1.0];
+    const flangeCol = [0.22, 0.22, 0.25, 1.0];
+    for (const h of hydrants) {
+      const y = 0.22;
+      this.pushDynamicBox(h.x, y, h.z, 0.52, 0.08, 0.52, flangeCol);
+      this.pushDynamicBox(h.x, y + 0.08, h.z, 0.36, 0.65, 0.36, redCol);
+      this.pushDynamicBox(h.x - 0.24, y + 0.36, h.z, 0.16, 0.16, 0.16, brassCol);
+      this.pushDynamicBox(h.x + 0.24, y + 0.36, h.z, 0.16, 0.16, 0.16, brassCol);
+      this.pushDynamicBox(h.x, y + 0.36, h.z + 0.22, 0.18, 0.18, 0.14, brassCol);
+      if (!h.bursted) {
+        this.pushDynamicBox(h.x, y + 0.73, h.z, 0.38, 0.12, 0.38, redCol);
+        this.pushDynamicBox(h.x, y + 0.85, h.z, 0.14, 0.10, 0.14, brassCol);
+      } else {
+        this.pushDynamicBox(h.x + 0.45, 0.22, h.z + 0.3, 0.14, 0.10, 0.14, brassCol);
+      }
+    }
+  }
+
+  drawDumpsters(dumpsters) {
+    if (!dumpsters) return;
+    const lidCol = [0.14, 0.15, 0.16, 1.0];
+    for (const d of dumpsters) {
+      const bodyCol = d.color ? [...d.color, 1.0] : [0.18, 0.32, 0.22, 1.0];
+      const y = 0.12;
+      const tilt = d.knockAngle || 0;
+      const tiltY = Math.sin(tilt) * 0.45;
+      const tiltX = Math.cos(d.angle + Math.PI / 2) * tiltY;
+      const tiltZ = -Math.sin(d.angle + Math.PI / 2) * tiltY;
+
+      this.pushDynamicBox(d.x + tiltX, y + (d.knocked ? 0.05 : 0.0), d.z + tiltZ, 2.2, 1.3, 1.4, bodyCol);
+      this.pushDynamicBox(d.x + tiltX, y + 1.25, d.z + tiltZ, 2.3, 0.12, 1.5, [0.12, 0.14, 0.14, 1.0]);
+      this.pushDynamicBox(d.x + tiltX - 1.15, y + 0.65, d.z + tiltZ, 0.12, 0.22, 1.2, [0.12, 0.14, 0.14, 1.0]);
+      this.pushDynamicBox(d.x + tiltX + 1.15, y + 0.65, d.z + tiltZ, 0.12, 0.22, 1.2, [0.12, 0.14, 0.14, 1.0]);
+      if (!d.knocked) {
+        this.pushDynamicBox(d.x, y + 1.35, d.z - 0.35, 2.15, 0.08, 0.65, lidCol);
+        this.pushDynamicBox(d.x, y + 1.35, d.z + 0.35, 2.15, 0.08, 0.65, lidCol);
+      } else {
+        this.pushDynamicBox(d.x + 0.6, y + 0.08, d.z - 0.8, 1.1, 0.08, 0.65, lidCol);
+        this.pushDynamicBox(d.x - 0.4, y + 0.08, d.z + 0.9, 0.7, 0.15, 0.7, [0.75, 0.65, 0.45, 1.0]);
+      }
+    }
+  }
+
+  drawNewsVendors(newsVendors) {
+    if (!newsVendors) return;
+    const glassCol = [0.85, 0.92, 0.98, 0.85];
+    const paperCol = [0.94, 0.92, 0.88, 1.0];
+    for (const nv of newsVendors) {
+      const y = 0.22;
+      const col = [...nv.color, 1.0];
+      this.pushDynamicBox(nv.x, y, nv.z, 0.25, 0.45, 0.25, [0.15, 0.16, 0.18, 1.0]);
+      this.pushDynamicBox(nv.x, y + 0.45, nv.z, 0.65, 0.75, 0.55, col);
+      this.pushDynamicBox(nv.x, y + 0.55, nv.z + 0.28, 0.48, 0.45, 0.04, glassCol);
+      this.pushDynamicBox(nv.x, y + 0.58, nv.z + 0.22, 0.42, 0.38, 0.05, paperCol);
+      this.pushDynamicBox(nv.x + 0.22, y + 0.88, nv.z + 0.28, 0.10, 0.12, 0.06, [0.85, 0.85, 0.88, 1.0]);
+    }
+  }
+
+  drawMixtapes(mixtapes) {
+    if (!mixtapes) return;
+    const curTime = performance.now() * 0.001;
+    const neonMagenta = [0.98, 0.15, 0.65, 1.0];
+    const tapeCol = [0.15, 0.14, 0.18, 1.0];
+    const labelCol = [0.98, 0.92, 0.25, 1.0];
+
+    for (const m of mixtapes) {
+      if (m.collected) continue;
+      const hoverY = 1.15 + Math.sin(curTime * 2.8 + m.id) * 0.18;
+      const yaw = curTime * 1.6 + m.id;
+      const cosY = Math.cos(yaw), sinY = Math.sin(yaw);
+
+      const hw = 0.31, hh = 0.19, hd = 0.04;
+      const transform = (lx, ly, lz) => [
+        m.x + lx * cosY + lz * sinY,
+        hoverY + ly,
+        m.z - lx * sinY + lz * cosY
+      ];
+
+      const p1 = transform(-hw, -hh, -hd), p2 = transform(hw, -hh, -hd);
+      const p3 = transform(hw, hh, -hd), p4 = transform(-hw, hh, -hd);
+      const p5 = transform(-hw, -hh, hd), p6 = transform(hw, -hh, hd);
+      const p7 = transform(hw, hh, hd), p8 = transform(-hw, hh, hd);
+
+      this.pushDynamicQuad(p4, p3, p7, p8, [0, 1, 0], neonMagenta);
+      this.pushDynamicQuad(p5, p6, p7, p8, [sinY, 0, cosY], neonMagenta);
+      this.pushDynamicQuad(p2, p1, p4, p3, [-sinY, 0, -cosY], neonMagenta);
+      this.pushDynamicQuad(p1, p5, p8, p4, [-cosY, 0, sinY], neonMagenta);
+      this.pushDynamicQuad(p6, p2, p3, p7, [cosY, 0, -sinY], neonMagenta);
+
+      const lpFront = transform(0, 0, hd + 0.01);
+      this.pushDynamicBox(lpFront[0], lpFront[1] - 0.08, lpFront[2], 0.44, 0.18, 0.02, labelCol);
+
+      const winFront = transform(0, -0.02, hd + 0.015);
+      this.pushDynamicBox(winFront[0], winFront[1] - 0.04, winFront[2], 0.22, 0.08, 0.02, tapeCol);
+
+      const ringPulse = 0.45 + Math.sin(curTime * 4.0 + m.id) * 0.15;
+      this.drawGroundShadow(m.x, m.z, ringPulse, ringPulse, 0.8);
+    }
+  }
+
+  drawPigeonFlocks(flocks) {
+    if (!flocks) return;
+    const time = performance.now() * 0.001;
+    const pigeonGrey = [0.46, 0.48, 0.54, 1.0];
+    const neckGreen = [0.28, 0.58, 0.45, 1.0];
+    const beakCol = [0.95, 0.75, 0.20, 1.0];
+    const wingCol = [0.35, 0.36, 0.42, 1.0];
+
+    for (const f of flocks) {
+      for (const b of f.birds) {
+        const bx = f.x + (b.ox || 0);
+        const by = 0.22 + (b.oy || 0);
+        const bz = f.z + (b.oz || 0);
+
+        if (b.state === 'pecking') {
+          const peckY = Math.abs(Math.sin(time * 3.5 + (b.seed || 0))) * 0.04;
+          this.pushDynamicBox(bx, by, bz, 0.18, 0.14, 0.26, pigeonGrey);
+          this.pushDynamicBox(bx, by + 0.08, bz + 0.10, 0.12, 0.12, 0.12, neckGreen);
+          this.pushDynamicBox(bx, by + 0.12 - peckY, bz + 0.16, 0.09, 0.09, 0.09, pigeonGrey);
+          this.pushDynamicBox(bx, by + 0.10 - peckY, bz + 0.22, 0.04, 0.04, 0.06, beakCol);
+        } else {
+          const flap = Math.sin(time * 16.0 + (b.seed || 0)) * 0.12;
+          this.pushDynamicBox(bx, by, bz, 0.16, 0.12, 0.28, pigeonGrey);
+          this.pushDynamicBox(bx - 0.20, by + 0.06 + flap, bz, 0.28, 0.03, 0.18, wingCol);
+          this.pushDynamicBox(bx + 0.20, by + 0.06 + flap, bz, 0.28, 0.03, 0.18, wingCol);
+          this.pushDynamicBox(bx, by + 0.08, bz + 0.14, 0.09, 0.09, 0.09, neckGreen);
+        }
+      }
+    }
+  }
+
   renderScene(camera, world, player, traffic, pedestrians, police, missions, particleList) {
     const gl = this.gl;
     if (!gl) return;
@@ -1843,6 +2115,13 @@ export class WebGLRenderer {
     }
     gl.uniform3f(this.uniforms.sirenLight, sirenR, sirenG, sirenB);
 
+    // Bind procedural noise texture
+    if (this.noiseTexture) {
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this.noiseTexture);
+      gl.uniform1i(this.uniforms.noiseTex, 0);
+    }
+
     // 1. Static world
     gl.bindBuffer(gl.ARRAY_BUFFER, this.staticVbo);
     this.setupVertexAttribPointers();
@@ -1850,6 +2129,16 @@ export class WebGLRenderer {
 
     // 2. Dynamic entities
     this.beginDynamic();
+
+    // Road skid marks from hard braking & drifting
+    this.drawSkidMarks(particles.skidMarks);
+
+    // Living world interactives: fire hydrants, dumpsters, newspaper honor boxes, mixtapes, pigeons
+    this.drawFireHydrants(world.fireHydrants);
+    this.drawDumpsters(world.dumpsters);
+    this.drawNewsVendors(world.newsVendors);
+    this.drawMixtapes(world.mixtapes);
+    this.drawPigeonFlocks(world.pigeonFlocks);
 
     // Dynamic Traffic Light Signal Lenses
     for (const p of world.props) {

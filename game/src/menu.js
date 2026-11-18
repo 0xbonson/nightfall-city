@@ -112,6 +112,7 @@ export class MenuManager {
       ['F or E', 'Jack Nearby Vehicle / Exit Vehicle'],
       ['H', 'Honk Vehicle Horn (Alerts Pedestrians & Traffic)'],
       ['T', 'Express Courier Run (Timed Delivery Loop for Cash)'],
+      ['K', 'Taxi Shift (Pick Up Passengers & Earn Fares)'],
       ['Mouse Look', 'Look Around / Aim (Pointer Lock enabled)'],
       ['Left Mouse Click', 'Fire Weapon (Pistol / Assault Rifle)'],
       ['R', 'Reload Weapon / Change Radio Station'],
@@ -347,7 +348,7 @@ export class MenuManager {
     py += 22;
     ctx.font = 'bold 12px system-ui, sans-serif';
     ctx.fillStyle = '#38bdf8';
-    ctx.fillText('STORY CAMPAIGN (7 MISSIONS):', panelX, py);
+    ctx.fillText('STORY CAMPAIGN (8 MISSIONS):', panelX, py);
     py += 16;
 
     const missionTitles = [
@@ -357,7 +358,8 @@ export class MenuManager {
       '4. Vela Bay Sprint',
       '5. Armory Infiltration',
       '6. Nightfall at the Docks',
-      '7. The Skyway Lockdown'
+      '7. The Skyway Lockdown',
+      '8. The Sunset Syndicate Heist'
     ];
 
     ctx.font = '11px system-ui, monospace';
@@ -393,10 +395,18 @@ export class MenuManager {
       const collectedCount = world && world.collectedCaches ? world.collectedCaches.size : 0;
       ctx.fillStyle = '#f59e0b';
       ctx.fillText(`SMUGGLER CACHES: ${collectedCount} / 15`, panelX, py);
-      py += 16;
+      py += 15;
+      const collectedMixtapes = world && world.collectedMixtapes ? world.collectedMixtapes.size : 0;
+      ctx.fillStyle = '#e056fd';
+      ctx.fillText(`VELA MIXTAPES: ${collectedMixtapes} / 10`, panelX, py);
+      py += 15;
       const courierCount = missions && missions.courierRun ? missions.courierRun.completedRuns : 0;
       ctx.fillStyle = '#a855f7';
       ctx.fillText(`EXPRESS DELIVERIES: ${courierCount}`, panelX, py);
+      py += 15;
+      const taxiCount = missions && missions.taxiShift ? missions.taxiShift.completedFares : 0;
+      ctx.fillStyle = '#f1c40f';
+      ctx.fillText(`TAXI FARES: ${taxiCount}`, panelX, py);
     }
 
     // Action Buttons
