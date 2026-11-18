@@ -104,10 +104,10 @@ A connected 8-mission story arc detailing Rook's struggle against the rival crew
 
 ### 2.10 Gameplay Photography & Screenshot Gallery
 - Deterministic query-driven capture parameters (`?shot=1..4`) capturing living open-world gameplay:
-  - `1-on-foot-downtown.png`: Rook in mid-stride on stone pavement, rising towers into sunset sky, raking shadows, cruising traffic, pedestrians.
-  - `2-car-drive-promenade.png`: Sports car drifting along Ocean Promenade at 151 MPH, solar corona over ocean waves, palms, boardwalk and marina.
-  - `3-police-pursuit-stars.png`: 5-star police pursuit, emissive red/blue strobes flashing with road reflections, muscle car between two cruisers at 137 MPH, overpass behind.
-  - `4-mission-dock-showdown.png`: Meridian Docks mission showdown, shipping containers, 38m gantry crane, hovering police helicopter with volumetric spotlight, and bay beyond.
+  - `1-city-street.png`: Downtown on foot from behind the player: soaring towers into sunset sky, raking shadows, cruising traffic, pedestrians, clear HUD.
+  - `2-car-promenade.png`: Sports car on waterfront road at 151 MPH, low sun over ocean waves, palms, boardwalk and marina in frame.
+  - `3-police-chase.png`: 5-star police chase at height, flashing red/blue strobes, player car between two cruisers at 128 MPH, elevated overpass behind.
+  - `4-dock-heist.png`: Meridian Docks at golden hour, shipping containers, 36m gantry crane, hovering tactical helicopter with spotlight, and bay beyond.
 - Automated Pillow quantization pipeline ensuring all PNGs stay strictly under the 262,144 bytes limit while preserving crisp UI and rich color reproduction.
 
 ---
@@ -140,10 +140,10 @@ nightfall-city/
 │       ├── menu.js          # Title screen, pause menu, controls guide, victory screen
 │       └── save.js          # localStorage game state persistence
 ├── screenshots/
-│   ├── 1-on-foot-downtown.png        # Downtown on-foot exploration, articulated player, towers, pedestrians & HUD
-│   ├── 2-car-drive-promenade.png     # Sports car driving along sunset ocean promenade, palm trees & water
-│   ├── 3-police-pursuit-stars.png    # 4-star police pursuit flanked between cruisers with flashing lightbars
-│   └── 4-mission-dock-showdown.png   # Mission 6 dock showdown with gantry crane & hovering tactical helicopter
+│   ├── 1-city-street.png             # Downtown on-foot exploration, towers, traffic, pedestrians & HUD
+│   ├── 2-car-promenade.png           # Sports car driving along sunset ocean promenade, palm trees & marina
+│   ├── 3-police-chase.png            # 5-star police chase flanked between cruisers with flashing lightbars
+│   └── 4-dock-heist.png              # Docks heist with containers, gantry crane & hovering tactical helicopter
 ├── vendor/
 │   └── makefun-game.ts      # make.fun dossier generator (standard library only)
 ├── main.ts                  # Entry packaging script for make.fun evaluation

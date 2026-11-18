@@ -1,112 +1,445 @@
-// Nightfall City — Master Game Configuration & World Constants
-// Centralizes engine parameters, district definitions, daylight lighting, and gameplay balance.
+/**
+ * Nightfall City: Vela Bay - Game Configuration & Constants
+ * Authored by makefun agent for the GTA 6 bounty challenge.
+ */
 
-export const CONFIG = {
-  // World geometry and boundary limits (in world units / meters)
-  world: {
-    minX: -280,
-    maxX: 280,
-    minZ: -280,
-    maxZ: 280,
-    seaLevel: -0.2,
-    curbHeight: 0.16,
-    sidewalkWidth: 4.5,
-    roadGrid: [-220, -140, -60, 0, 60, 140, 220],
-    overpassHeight: 7.6, // Elevated highway bridge clearance
-    totalSmugglerCaches: 15, // Collectible hidden packages
-    totalMixtapes: 10, // Collectible golden neon cassettes in Promenade/Marina
-    totalHydrants: 18, // Working cast-iron fire hydrants
-    totalDumpsters: 14, // Interactive knockable steel dumpsters
+export const WORLD = {
+  SIZE: 520, // World spans -260 to +260 in X and Z
+  HALF_SIZE: 260,
+  GRID_CELLS: 8,
+  BLOCK_SIZE: 52,
+  ROAD_WIDTH: 15,
+  SIDEWALK_WIDTH: 3.5,
+  CURB_HEIGHT: 0.22,
+  SEA_LEVEL: -0.5,
+  COAST_X: -130, // Ocean covers X < -130
+  OVERPASS_Y: 13.5,
+  OVERPASS_Z_START: -180,
+  OVERPASS_Z_END: 180,
+  OVERPASS_X: 45,
+  OVERPASS_WIDTH: 14,
+};
+
+export const DISTRICTS = {
+  DOWNTOWN: {
+    id: 'downtown',
+    name: 'Downtown Vela',
+    bounds: { minX: 10, maxX: 240, minZ: -240, maxZ: -10 },
+    buildingHeightMin: 45,
+    buildingHeightMax: 110,
+    accentColor: [0.2, 0.6, 0.9],
   },
-
-  // Traffic light signal cycle timings (in seconds)
-  trafficLights: {
-    nsGreenDuration: 9.0,
-    nsAmberDuration: 2.5,
-    ewGreenDuration: 9.0,
-    ewAmberDuration: 2.5,
+  OLD_TOWN: {
+    id: 'old_town',
+    name: 'Old Market Quarter',
+    bounds: { minX: -120, maxX: -10, minZ: -240, maxZ: -10 },
+    buildingHeightMin: 14,
+    buildingHeightMax: 32,
+    accentColor: [0.85, 0.45, 0.25],
   },
-
-  // Taxi shift side activity configuration
-  taxiShift: {
-    baseFare: 120,
-    ratePerMeter: 1.45,
-    speedBonusThreshold: 45, // Seconds remaining for bonus tip
-    tipMultiplier: 1.5,
+  DOCKS: {
+    id: 'docks',
+    name: 'Meridian Cargo Docks',
+    bounds: { minX: 10, maxX: 240, minZ: 10, maxZ: 240 },
+    buildingHeightMin: 12,
+    buildingHeightMax: 26,
+    accentColor: [0.9, 0.5, 0.1],
   },
-
-  // Screenshot query preset identifiers
-  screenshotPresets: ['1', '2', '3', '4'],
-
-  // Atmospheric late afternoon daylight and coastal sun lighting constants
-  lighting: {
-    // Sun sits low over the South-West bay, casting long dramatic afternoon shadows
-    sunDir: [-0.64, 0.35, 0.68],
-    sunColor: [1.08, 0.94, 0.74], // Warm golden late-afternoon sunlight
-    skyZenithColor: [0.08, 0.32, 0.74], // Deep coastal cobalt blue zenith
-    skyHorizonColor: [1.02, 0.88, 0.70], // Pale hot sun-soaked golden horizon
-    ambientSky: [0.34, 0.44, 0.62], // Cool atmospheric sky hemisphere fill
-    ambientGround: [0.36, 0.30, 0.22], // Warm asphalt and sand ground bounce
-    fogColor: [0.98, 0.88, 0.74], // Atmospheric haze matching horizon color
-    fogStart: 70.0,
-    fogEnd: 460.0,
-    shadowDir: [0.64, 0.0, -0.68], // Vector along which shadows stretch across pavements
-    shadowLength: 2.65, // Long dramatic afternoon shadow projection multiplier
+  PROMENADE: {
+    id: 'promenade',
+    name: 'Ocean Promenade',
+    bounds: { minX: -125, maxX: -10, minZ: 10, maxZ: 240 },
+    buildingHeightMin: 18,
+    buildingHeightMax: 48,
+    accentColor: [0.1, 0.8, 0.7],
   },
+};
 
-  // Material surface colors (warm grey asphalt, light stone kerbs, coastal sand)
-  surfaces: {
-    asphalt: [0.24, 0.24, 0.26, 1.0], // Dark smooth asphalt roadway
-    asphaltPatch: [0.18, 0.18, 0.20, 1.0], // Dark fresh asphalt repair patch
-    sidewalk: [0.68, 0.66, 0.62, 1.0], // Paved architectural stone pavement
-    kerb: [0.76, 0.74, 0.70, 1.0], // Raised granite kerbstone
-    centerline: [0.96, 0.82, 0.16, 1.0], // Golden yellow highway line
-    laneWhite: [0.95, 0.95, 0.96, 1.0], // Crisp road marking white
-    ocean: [0.10, 0.42, 0.72, 1.0], // Turquoise coastal ocean water
-    sand: [0.94, 0.86, 0.68, 1.0], // Sun-drenched coastal beach sand
-    boardwalk: [0.72, 0.58, 0.42, 1.0], // Weathered cedar timber boardwalk
-    grass: [0.24, 0.50, 0.20, 1.0], // Lush landscaped park lawn
-    puddle: [0.20, 0.32, 0.46, 0.85], // Reflective street puddle
+export const LIGHTING = {
+  // Golden hour late-afternoon sun
+  SUN_DIR: [-0.68, 0.44, -0.58], // Normalized in renderer
+  SUN_COLOR: [1.0, 0.88, 0.66],
+  SKY_COLOR: [0.38, 0.56, 0.86],
+  HORIZON_COLOR: [0.95, 0.72, 0.52],
+  AMBIENT_COLOR: [0.28, 0.32, 0.40],
+  FOG_COLOR: [0.88, 0.72, 0.58],
+  FOG_DENSITY: 0.0035,
+};
+
+export const CAR_TYPES = {
+  sports: {
+    id: 'sports',
+    name: 'Veloce GT',
+    width: 2.1,
+    length: 4.6,
+    height: 1.25,
+    maxSpeed: 44.0,
+    accel: 29.0,
+    brake: 38.0,
+    reverseSpeed: 14.0,
+    steerAngle: 0.62,
+    steerSpeed: 3.8,
+    driftGrip: 0.88,
+    mass: 1250,
+    color: [0.08, 0.78, 0.86, 1.0], // Vibrant turquoise
+    roofColor: [0.06, 0.55, 0.65, 1.0],
+    hasSpoiler: true,
   },
+  muscle: {
+    id: 'muscle',
+    name: 'Stallion 428',
+    width: 2.2,
+    length: 4.9,
+    height: 1.35,
+    maxSpeed: 40.0,
+    accel: 32.0,
+    brake: 32.0,
+    reverseSpeed: 12.0,
+    steerAngle: 0.58,
+    steerSpeed: 3.2,
+    driftGrip: 0.82,
+    mass: 1650,
+    color: [0.92, 0.24, 0.15, 1.0], // Crimson red
+    roofColor: [0.15, 0.15, 0.15, 1.0],
+    hoodScoop: true,
+  },
+  sedan: {
+    id: 'sedan',
+    name: 'Cortez Royale',
+    width: 2.0,
+    length: 4.7,
+    height: 1.42,
+    maxSpeed: 33.0,
+    accel: 19.0,
+    brake: 28.0,
+    reverseSpeed: 10.0,
+    steerAngle: 0.60,
+    steerSpeed: 3.0,
+    driftGrip: 0.92,
+    mass: 1480,
+    color: [0.78, 0.80, 0.85, 1.0], // Silver metallic
+    roofColor: [0.70, 0.72, 0.76, 1.0],
+  },
+  police: {
+    id: 'police',
+    name: 'Metro Cruiser',
+    width: 2.1,
+    length: 4.8,
+    height: 1.45,
+    maxSpeed: 41.0,
+    accel: 27.0,
+    brake: 36.0,
+    reverseSpeed: 13.0,
+    steerAngle: 0.64,
+    steerSpeed: 3.6,
+    driftGrip: 0.90,
+    mass: 1600,
+    color: [0.12, 0.13, 0.16, 1.0], // Dark police navy
+    roofColor: [0.95, 0.95, 0.95, 1.0], // White roof
+    isPolice: true,
+    hasLightbar: true,
+  },
+  taxi: {
+    id: 'taxi',
+    name: 'Metro Cab',
+    width: 2.0,
+    length: 4.7,
+    height: 1.46,
+    maxSpeed: 31.0,
+    accel: 18.0,
+    brake: 27.0,
+    reverseSpeed: 10.0,
+    steerAngle: 0.58,
+    steerSpeed: 2.8,
+    driftGrip: 0.92,
+    mass: 1520,
+    color: [0.98, 0.76, 0.08, 1.0], // Taxi yellow
+    roofColor: [0.98, 0.76, 0.08, 1.0],
+    hasTaxiSign: true,
+  },
+  truck: {
+    id: 'truck',
+    name: 'Bison Freight',
+    width: 2.4,
+    length: 6.2,
+    height: 2.4,
+    maxSpeed: 25.0,
+    accel: 13.0,
+    brake: 22.0,
+    reverseSpeed: 8.0,
+    steerAngle: 0.48,
+    steerSpeed: 2.2,
+    driftGrip: 0.95,
+    mass: 2800,
+    color: [0.25, 0.45, 0.75, 1.0],
+    roofColor: [0.85, 0.85, 0.85, 1.0],
+  },
+};
 
-  // District metadata and distinctive architectural palettes
-  districts: {
-    downtown: {
-      name: 'Downtown Vela',
-      description: 'Cool glass skyscrapers with setback tiers, rooftop crowns, and landscaped plazas',
-      ambientColor: [0.20, 0.30, 0.44], // Cool, dense, corporate skyline palette
+export const PLAYER = {
+  HEIGHT: 1.82,
+  RADIUS: 0.42,
+  WALK_SPEED: 4.8,
+  SPRINT_SPEED: 9.2,
+  ACCEL: 24.0,
+  DECEL: 20.0,
+  TURN_SPEED: 9.0,
+  MAX_HEALTH: 100,
+  MAX_ARMOR: 100,
+  ENTER_CAR_DIST: 3.6,
+};
+
+export const WEAPONS = {
+  pistol: {
+    id: 'pistol',
+    name: '.45 Vanguard',
+    damage: 28,
+    fireInterval: 0.28,
+    clipSize: 12,
+    maxReserve: 120,
+    reloadTime: 1.25,
+    spread: 0.025,
+    range: 65,
+    tracerSpeed: 180,
+  },
+  rifle: {
+    id: 'rifle',
+    name: 'Vane Carbine',
+    damage: 34,
+    fireInterval: 0.11,
+    clipSize: 30,
+    maxReserve: 240,
+    reloadTime: 1.75,
+    spread: 0.045,
+    range: 95,
+    tracerSpeed: 220,
+  },
+};
+
+export const POLICE_CONFIG = {
+  HEAT_DECAY_RATE: 0.06, // Stars decay when unseen
+  SIGHT_RADIUS: 55,
+  LOSE_SIGHT_TIME: 14.0,
+  SPAWN_INTERVAL: 8.0,
+  MAX_ACTIVE_CRUISERS: 5,
+  MAX_STARS: 5,
+  CHASE_SPEED_BOOST: 1.15,
+};
+
+export const MISSIONS = [
+  {
+    id: 'm1_welcome',
+    title: '1. Arrival in Vela Bay',
+    client: 'Matteo Vance',
+    desc: 'Grab a sports car from the Ocean Promenade and deliver it to the Downtown Safehouse.',
+    startPos: [-110, 0, 80],
+    targetPos: [95, 0, -85],
+    targetType: 'vehicle_drop',
+    rewardCash: 1500,
+    dialogue: 'Rook, welcome to Vela Bay. I need that turquoise Veloce GT brought downtown before Metro PD clocks it.',
+    completionText: 'Delivery confirmed. The keys are safe. Welcome to the crew, Rook.',
+  },
+  {
+    id: 'm2_alley_cache',
+    title: '2. Old Town Dead-Drop',
+    client: 'Sora Tanaka',
+    desc: 'Retrieve the encrypted briefcase hidden in the Old Market alleyways and lose the patrol heat.',
+    startPos: [95, 0, -85],
+    targetPos: [-65, 0, -115],
+    targetType: 'pickup',
+    wantedLevelOnPickup: 1,
+    rewardCash: 2400,
+    dialogue: 'The Syndicate left a drive in the courtyard behind the market clocktower. Grab it and stay out of sight.',
+    completionText: 'Data decrypted. Syndicate accounts are exposed. Clean job.',
+  },
+  {
+    id: 'm3_harbor_repo',
+    title: '3. Repossession at the Piers',
+    client: 'Matteo Vance',
+    desc: 'Infiltrate the North Marina depot, eliminate 3 guarding thugs, and steal the Stallion muscle car.',
+    startPos: [-65, 0, -115],
+    targetPos: [-90, 0, -165],
+    targetType: 'combat_repo',
+    enemiesCount: 3,
+    rewardCash: 3500,
+    dialogue: 'A rival crew boosted my favorite muscle car. They parked it at Pier 3 under armed guard. Bring it back.',
+    completionText: 'Stallion secured. That engine roar never gets old.',
+  },
+  {
+    id: 'm4_coastal_sprint',
+    title: '4. Coastal Grand Prix',
+    client: 'Elena Rostova',
+    desc: 'Race through 6 illuminated street checkpoints along the coastal boulevard under 80 seconds.',
+    startPos: [-105, 0, 160],
+    targetPos: [-105, 0, -140],
+    targetType: 'race',
+    timeLimit: 80,
+    checkpoints: [
+      [-105, 0, 160],
+      [-105, 0, 80],
+      [-105, 0, 0],
+      [-105, 0, -80],
+      [-40, 0, -140],
+      [45, 8.5, -40],
+    ],
+    rewardCash: 5000,
+    dialogue: 'Let us see what your hands are made of. Run the coastal ribbon against the clock. Do not touch the kerbs.',
+    completionText: 'First place across the line. Vela underground now knows your name.',
+  },
+  {
+    id: 'm5_docks_raid',
+    title: '5. Raid on Container Bay',
+    client: 'Matteo Vance',
+    desc: 'Assault Meridian Docks Container Yard, take down 5 Syndicate enforcers, and seize the arms cache.',
+    startPos: [45, 0, 40],
+    targetPos: [140, 0, 140],
+    targetType: 'combat_elimination',
+    enemiesCount: 5,
+    rewardCash: 6500,
+    dialogue: 'The Syndicate is unloading military hardware between the container stacks at Pier 7. Clean them out.',
+    completionText: 'Container Yard cleared. Military rifles added to your trunk.',
+  },
+  {
+    id: 'm6_expressway_pursuit',
+    title: '6. The Skyway Intercept',
+    client: 'Sora Tanaka',
+    desc: 'Pursue an escaping Syndicate courier car on the Elevated Skyway Overpass and ram them off the road.',
+    startPos: [45, 8.5, -120],
+    targetPos: [45, 8.5, 90],
+    targetType: 'chase_intercept',
+    rewardCash: 8000,
+    dialogue: 'A courier has our ledger on the Elevated Skyway heading south! Catch up and force them to pull over.',
+    completionText: 'Courier neutralized. Ledger retrieved. Syndicate leadership is panicking.',
+  },
+  {
+    id: 'm7_depot_sabotage',
+    title: '7. Meridian Depot Sabotage',
+    client: 'Elena Rostova',
+    desc: 'Plant explosive timers at 3 fuel reservoirs in the rail depot and evade the 3-star police dragnet.',
+    startPos: [110, 0, 80],
+    targetPos: [175, 0, 185],
+    targetType: 'sabotage_escape',
+    wantedLevelOnTrigger: 3,
+    rewardCash: 10000,
+    dialogue: 'Time to sever their supply line. Plant the charges at the fuel tanks, then lose the citywide response.',
+    completionText: 'Reservoirs detonated. Smoke is visible across all of Vela Bay. You vanished cleanly.',
+  },
+  {
+    id: 'm8_grand_heist',
+    title: '8. The Sunset Syndicate Heist',
+    client: 'Matteo Vance',
+    desc: 'The Big Score: Infiltrate the Marina Bay Bank compound, crack the offshore vault, and escape to the boat.',
+    startPos: [-70, 0, 40],
+    targetPos: [-115, 0, -60],
+    targetType: 'heist_finale',
+    enemiesCount: 6,
+    wantedLevelOnTrigger: 4,
+    rewardCash: 50000,
+    dialogue: 'Tonight we take everything they stole from us. Break the vault, grab fifty grand in bearer bonds, and reach the getaway launch at the marina.',
+    completionText: 'HEIST COMPLETE! Bearer bonds secured. Nightfall City is yours, Rook.',
+  },
+];
+
+export const SHOT_PRESETS = {
+  1: {
+    // Downtown on foot behind player: towers, traffic, pedestrians, long warm shadows, HUD visible
+    name: '1-city-street.png',
+    camera: {
+      pos: [119.5, 1.9, -89.0],
+      target: [123.5, 1.7, -125.0],
+      fov: 62,
     },
-    financial: {
-      name: 'Financial Quarter',
-      description: 'Wide corporate slabs of bronze glass, dark granite, and mechanical penthouses',
-      ambientColor: [0.28, 0.30, 0.36],
+    player: {
+      pos: [119.5, 0.22, -95.0],
+      rot: Math.PI,
+      inVehicle: false,
+      weapon: 'rifle',
     },
-    market: {
-      name: 'Old Market Quarter',
-      description: 'Low narrow blocks, terracotta tile roofs, brick facades, and merchant awnings',
-      ambientColor: [0.65, 0.42, 0.32], // Warm terracotta brick and clay
-    },
-    docks: {
-      name: 'Meridian Shipping Docks & Marina',
-      description: 'Industrial warehouses, shipping container stacks, moored yachts, and gantry cranes',
-      ambientColor: [0.34, 0.36, 0.40],
-    },
-    promenade: {
-      name: 'Ocean Promenade & Beach',
-      description: 'Sun-drenched art-deco resorts, wooden boardwalk, marina, and palm-lined boulevards',
-      ambientColor: [0.92, 0.88, 0.80], // Bright, warm, sun-soaked seaside
-    },
+    district: 'Downtown Core',
+    wantedStars: 0,
+    cash: 14850,
+    objective: 'DELIVER THE VELOCE GT TO DOWNTOWN SAFEHOUSE (140M)',
+    traffic: [
+      { type: 'taxi', pos: [125.5, 0, -104.0], rot: Math.PI, speedMph: 28 },
+      { type: 'muscle', pos: [136.5, 0, -114.0], rot: Math.PI, speedMph: 42 },
+      { type: 'sports', pos: [125.5, 0, -135.0], rot: Math.PI, speedMph: 48 },
+    ],
+    pedestrians: [
+      { pos: [119.5, 0.22, -108.0], rot: Math.PI },
+      { pos: [119.2, 0.22, -122.0], rot: 0 },
+      { pos: [143.5, 0.22, -102.0], rot: Math.PI },
+    ],
   },
-
-  // Gameplay balance and simulation caps
-  gameplay: {
-    playerWalkSpeed: 5.2,
-    playerSprintSpeed: 9.6,
-    maxWantedLevel: 5,
-    wantedCooldownDuration: 18.0, // Seconds in evasion before heat clears
-    pedestrianMaxCount: 48,
-    trafficMaxCount: 36,
-    policeMaxCruisers: 6,
-    audioMasterVolume: 0.85,
+  2: {
+    // Sports car at speed on waterfront road: sea and low sun, palms, boardwalk, marina in frame, speed on HUD
+    name: '2-car-promenade.png',
+    camera: {
+      pos: [-106.8, 1.45, 71.5],
+      target: [-112.5, 1.3, 112.0],
+      fov: 64,
+    },
+    player: {
+      pos: [-107.5, 0, 78.0],
+      rot: 0,
+      inVehicle: true,
+      vehicleType: 'sports',
+      speedMph: 151,
+    },
+    district: 'Ocean Promenade',
+    wantedStars: 0,
+    cash: 26400,
+    objective: 'COASTAL TIME TRIAL: PASS CHECKPOINT 4/6 (0:34)',
+    traffic: [
+      { type: 'sedan', pos: [-102.0, 0, 120.0], rot: 0, speedMph: 45 },
+    ],
+  },
+  3: {
+    // The chase at its height: wanted stars in HUD, red & blue flashing lights, player car between two cruisers, overpass behind
+    name: '3-police-chase.png',
+    camera: {
+      pos: [45.0, 2.2, -20.0],
+      target: [45.0, 1.8, -62.0],
+      fov: 66,
+    },
+    player: {
+      pos: [45.0, 0, -32.0],
+      rot: Math.PI,
+      inVehicle: true,
+      vehicleType: 'muscle',
+      speedMph: 128,
+    },
+    district: 'Skyway Boulevard',
+    wantedStars: 5,
+    cash: 38200,
+    objective: 'EVADE 5-STAR METRO POLICE PURSUIT',
+    cruisers: [
+      { pos: [40.8, 0, -30.5], rot: Math.PI, sirenPhase: 0 },
+      { pos: [49.2, 0, -30.5], rot: Math.PI, sirenPhase: Math.PI },
+    ],
+  },
+  4: {
+    // Docks at golden hour: shipping containers, gantry crane, helicopter, water beyond
+    name: '4-dock-heist.png',
+    camera: {
+      pos: [127.0, 5.8, 97.0],
+      target: [172.0, 4.2, 148.0],
+      fov: 62,
+    },
+    player: {
+      pos: [134.0, 0, 106.0],
+      rot: Math.PI * 0.28,
+      inVehicle: false,
+      weapon: 'rifle',
+    },
+    district: 'Meridian Cargo Docks',
+    wantedStars: 3,
+    cash: 75000,
+    objective: 'SEIZE THE CONTRABAND CRATES AT PIER 7',
+    hasHeli: true,
+    heliPos: [158.0, 24.0, 138.0],
+    enemies: [
+      { pos: [145.0, 0, 118.0], rot: Math.PI * 0.85 },
+      { pos: [155.0, 0, 128.0], rot: Math.PI * 0.75 },
+    ],
   },
 };

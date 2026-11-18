@@ -1,339 +1,253 @@
-// Vela Bay Metro Police Department System for Nightfall City
-// Manages 0-5 Star wanted level, police cruiser pursuit, foot officers, roadblocks, and tactical air support.
+/**
+ * Nightfall City: Vela Bay - Wanted Level & Police Pursuit System
+ * Authored by makefun agent for the GTA 6 bounty challenge.
+ */
 
-import { VehiclePhysics } from './physics.js';
-import { world } from './world.js';
-import { audio } from './audio.js';
-import { particles } from './effects.js';
-import { CONFIG } from './config.js';
+import { POLICE_CONFIG, WORLD } from './config.js';
+import { clamp, lerp } from './math.js';
 
-const POLICE_EVASION_DURATION = 12.0; // Seconds required outside detection cone to cool heat
-const POLICE_SIGHT_RANGE = 72.0;     // Optical detection distance in meters
-
-export class PoliceManager {
+export class PoliceSystem {
   constructor() {
-    this.wantedLevel = 0; // 0 to CONFIG.gameplay.maxWantedLevel
-    this.maxCruisers = CONFIG.gameplay.policeMaxCruisers;
-    this.heat = 0; // Raw points
-    this.isEvading = false;
+    this.wantedStars = 0;
+    this.heat = 0; // Float representation of heat
     this.evasionTimer = 0;
-    this.evasionMax = POLICE_EVASION_DURATION;
+    this.isEvading = false;
+    this.spawnTimer = 0;
 
-    this.cruisers = [];
-    this.officers = [];
-    this.roadblocks = [];
-    this.helicopter = null;
-
-    this.copSightRadius = POLICE_SIGHT_RANGE;
-  }
-
-  reportCrime(crimeType) {
-    const crimes = {
-      shot_fired: 15,
-      carjacking: 25,
-      hit_pedestrian: 35,
-      rammed_police: 50,
-      killed_police: 85,
-      heist_alarm: 100,
+    // Helicopter unit
+    this.helicopter = {
+      active: false,
+      x: 0,
+      y: 35,
+      z: 0,
+      targetX: 0,
+      targetZ: 0,
+      rotorAngle: 0,
+      spotlightAngle: 0,
     };
-    const points = crimes[crimeType] || 20;
-    this.heat += points;
+  }
+
+  addCrime(type) {
+    if (type === 'minor_collision') this.heat += 0.35;
+    else if (type === 'vehicle_theft') this.heat += 0.8;
+    else if (type === 'pedestrian_hit') this.heat += 1.2;
+    else if (type === 'gunfire') this.heat += 0.6;
+    else if (type === 'assault_officer') this.heat += 2.0;
+    else if (type === 'heist_trigger') this.heat = Math.max(this.heat, 4.0);
+
+    this.heat = clamp(this.heat, 0, POLICE_CONFIG.MAX_STARS);
+    this.wantedStars = Math.floor(this.heat);
     this.isEvading = false;
-    this.evasionTimer = this.evasionMax;
-    this.updateWantedStars();
+    this.evasionTimer = POLICE_CONFIG.LOSE_SIGHT_TIME;
   }
 
-  updateWantedStars() {
-    let oldLevel = this.wantedLevel;
-    if (this.heat >= 180) this.wantedLevel = 5;
-    else if (this.heat >= 120) this.wantedLevel = 4;
-    else if (this.heat >= 70) this.wantedLevel = 3;
-    else if (this.heat >= 35) this.wantedLevel = 2;
-    else if (this.heat >= 15) this.wantedLevel = 1;
-    else this.wantedLevel = 0;
-
-    // Helicopter activates at 3+ stars (searchlights tracking player at 3 and 4 stars)
-    if (this.wantedLevel >= 3 && !this.helicopter) {
-      this.helicopter = {
-        x: 0, y: 35, z: 0,
-        rotorAngle: 0,
-        spotlightX: 0, spotlightZ: 0,
-        shootCooldown: 0,
-      };
-    } else if (this.wantedLevel < 3 && this.helicopter) {
-      this.helicopter = null;
-    }
-  }
-
-  setWantedLevel(level) {
-    this.wantedLevel = Math.max(0, Math.min(5, level));
-    const heatMap = [0, 20, 45, 80, 130, 200];
-    this.heat = heatMap[this.wantedLevel];
+  setWantedStars(stars) {
+    this.wantedStars = clamp(stars, 0, POLICE_CONFIG.MAX_STARS);
+    this.heat = this.wantedStars;
     this.isEvading = false;
-    this.evasionTimer = this.evasionMax;
-    this.updateWantedStars();
+    this.evasionTimer = POLICE_CONFIG.LOSE_SIGHT_TIME;
   }
 
-  spawnCruiser(playerX, playerZ, ahead = false) {
-    const spawnAngle = Math.random() * Math.PI * 2;
-    const dist = 75 + Math.random() * 40;
-    const cx = playerX + Math.cos(spawnAngle) * dist;
-    const cz = playerZ + Math.sin(spawnAngle) * dist;
+  update(dt, player, vehicles, world) {
+    this.wantedStars = Math.floor(this.heat);
 
-    const v = VehiclePhysics.createVehicle(cx, cz, Math.random() * Math.PI * 2, 'police');
-    v.color = [0.12, 0.12, 0.14]; // Metro black
-    v.roofColor = [0.95, 0.95, 0.95]; // White roof & doors
-    v.isPolice = true;
-    v.isVehicle = true;
-    v.sirenPhase = Math.random() * 10;
-    this.cruisers.push(v);
-  }
-
-  spawnFootOfficer(nearX, nearZ) {
-    const angle = Math.random() * Math.PI * 2;
-    const dist = 30 + Math.random() * 20;
-    const ox = nearX + Math.cos(angle) * dist;
-    const oz = nearZ + Math.sin(angle) * dist;
-
-    this.officers.push({
-      x: ox,
-      z: oz,
-      heading: 0,
-      health: 60,
-      alive: true,
-      shootCooldown: 1.0 + Math.random() * 1.5,
-      isPolice: true,
-      isVehicle: false,
-    });
-  }
-
-  spawnRoadblock(playerX, playerZ, heading) {
-    // Spawn two cruisers perpendicular across the road ahead
-    const aheadDist = 70;
-    const rbx = playerX + Math.sin(heading) * aheadDist;
-    const rbz = playerZ + Math.cos(heading) * aheadDist;
-
-    for (let offset = -4; offset <= 4; offset += 8) {
-      const cosH = Math.cos(heading);
-      const sinH = Math.sin(heading);
-      const cx = rbx + cosH * offset;
-      const cz = rbz - sinH * offset;
-
-      const v = VehiclePhysics.createVehicle(cx, cz, heading + Math.PI / 2, 'police');
-      v.color = [0.12, 0.12, 0.14];
-      v.roofColor = [0.95, 0.95, 0.95];
-      v.isPolice = true;
-      v.isVehicle = true;
-      v.isRoadblock = true;
-      this.cruisers.push(v);
-    }
-  }
-
-  update(dt, player, peds) {
-    if (this.wantedLevel === 0) {
-      // Clean up police units when heat is 0
-      this.cruisers = this.cruisers.filter(c => Math.hypot(c.x - player.x, c.z - player.z) < 180 && !c.isPolice);
-      this.officers = [];
-      this.helicopter = null;
-      audio.updateSiren(0);
+    if (this.wantedStars <= 0) {
+      this.helicopter.active = false;
+      this.isEvading = false;
       return;
     }
 
-    // Determine target unit counts based on wanted level
-    const maxCruisers = this.wantedLevel * 2;
-    const maxOfficers = this.wantedLevel >= 2 ? 3 : 1;
+    // Check distance to nearest police vehicle
+    let nearestDist = 999;
+    let policeCount = 0;
 
-    // Spawn cruisers if needed
-    if (this.cruisers.length < maxCruisers && Math.random() < dt * 1.5) {
-      this.spawnCruiser(player.x, player.z);
-    }
-    // Spawn foot officers
-    if (this.officers.length < maxOfficers && Math.random() < dt * 1.0) {
-      this.spawnFootOfficer(player.x, player.z);
-    }
-    // High stars roadblock spawn
-    if (this.wantedLevel >= 3 && Math.random() < dt * 0.08 && this.cruisers.length < maxCruisers + 2) {
-      this.spawnRoadblock(player.x, player.z, player.inVehicle && player.vehicle ? player.vehicle.angle : player.heading);
-    }
+    for (let i = 0; i < vehicles.vehicles.length; i++) {
+      const v = vehicles.vehicles[i];
+      if (v.isPolice) {
+        policeCount++;
+        const d = Math.hypot(v.x - player.x, v.z - player.z);
+        if (d < nearestDist) nearestDist = d;
 
-    // Check line of sight from all police units to player
-    let playerSpotted = false;
-    let closestCopDist = 999;
-
-    for (const c of this.cruisers) {
-      const dist = Math.hypot(c.x - player.x, c.z - player.z);
-      closestCopDist = Math.min(closestCopDist, dist);
-      if (dist < this.copSightRadius) {
-        const los = world.raycast(c.x, c.z, player.x, player.z);
-        if (!los.hit) playerSpotted = true;
+        // Direct police cruiser to intercept player
+        this.directPursuit(v, player, dt);
       }
     }
 
-    for (const o of this.officers) {
-      if (!o.alive) continue;
-      const dist = Math.hypot(o.x - player.x, o.z - player.z);
-      closestCopDist = Math.min(closestCopDist, dist);
-      if (dist < this.copSightRadius) {
-        const los = world.raycast(o.x, o.z, player.x, player.z);
-        if (!los.hit) playerSpotted = true;
-      }
-    }
-
-    // Helicopter always spots player unless player is in dense covered tunnel
-    if (this.helicopter) {
-      playerSpotted = true;
-      closestCopDist = Math.min(closestCopDist, 35);
-    }
-
-    audio.updateSiren(this.wantedLevel, closestCopDist);
-
-    // Evasion handling
-    if (!playerSpotted) {
+    // Evasion logic
+    if (nearestDist > POLICE_CONFIG.SIGHT_RADIUS) {
       this.isEvading = true;
-      // Ditching car doubles evasion decay rate!
-      const decayMultiplier = (!player.inVehicle) ? 2.2 : 1.0;
-      this.evasionTimer -= dt * decayMultiplier;
-
+      this.evasionTimer -= dt;
       if (this.evasionTimer <= 0) {
-        // Drop one star!
-        this.wantedLevel--;
-        const heatThresholds = [0, 20, 45, 80, 130];
-        this.heat = heatThresholds[this.wantedLevel] || 0;
-        this.evasionTimer = this.evasionMax;
-        if (this.wantedLevel === 0) {
-          this.heat = 0;
+        // Escaped!
+        this.heat = Math.max(0, this.heat - 1.0);
+        this.wantedStars = Math.floor(this.heat);
+        this.evasionTimer = POLICE_CONFIG.LOSE_SIGHT_TIME;
+        if (this.wantedStars === 0) {
           this.isEvading = false;
         }
       }
     } else {
       this.isEvading = false;
-      this.evasionTimer = this.evasionMax;
+      this.evasionTimer = POLICE_CONFIG.LOSE_SIGHT_TIME;
     }
 
-    // Update Cruisers AI Pursuit
-    for (let i = this.cruisers.length - 1; i >= 0; i--) {
-      const c = this.cruisers[i];
-      c.sirenPhase = (c.sirenPhase || 0) + dt * 14;
-
-      if (c.wrecked) continue;
-
-      const dx = player.x - c.x;
-      const dz = player.z - c.z;
-      const dist = Math.hypot(dx, dz);
-
-      if (dist > 250) {
-        this.cruisers.splice(i, 1);
-        continue;
-      }
-
-      if (c.isCinematic) {
-        // Locked pursuit formation alongside player vehicle
-        if (player.vehicle) {
-          c.speed = player.vehicle.speed;
-          c.angle = player.vehicle.angle;
-          c.x = player.x + (c.cinematicOffsetX || 0);
-          c.z = player.z + (c.cinematicOffsetZ || 0);
-        }
-      } else if (!c.isRoadblock) {
-        const desiredAngle = Math.atan2(dx, dz);
-        let angleDiff = desiredAngle - c.angle;
-        while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-        while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-
-        const steer = Math.max(-1, Math.min(1, angleDiff * 2.2));
-        const throttle = dist > 6 ? 1.0 : (dist < 3 ? -0.4 : 0.2);
-
-        VehiclePhysics.updateVehicle(c, dt, {
-          throttle,
-          steer,
-          handbrake: Math.abs(angleDiff) > 1.2 && c.speed > 12
-        });
-      }
+    // Spawn tactical police backup if below cap
+    this.spawnTimer += dt;
+    if (this.spawnTimer > POLICE_CONFIG.SPAWN_INTERVAL && policeCount < Math.min(this.wantedStars + 1, POLICE_CONFIG.MAX_ACTIVE_CRUISERS)) {
+      this.spawnTimer = 0;
+      this.spawnPursuitCruiser(player, vehicles);
     }
 
-    // Update Foot Officers AI
-    for (let i = this.officers.length - 1; i >= 0; i--) {
-      const o = this.officers[i];
-      if (!o.alive) continue;
-
-      const dx = player.x - o.x;
-      const dz = player.z - o.z;
-      const dist = Math.hypot(dx, dz);
-
-      o.heading = Math.atan2(dx, dz);
-
-      if (dist > 18) {
-        // Move towards player
-        o.x += Math.sin(o.heading) * 3.4 * dt;
-        o.z += Math.cos(o.heading) * 3.4 * dt;
-      }
-
-      // Shoot at player if in range & line of sight
-      o.shootCooldown -= dt;
-      if (o.shootCooldown <= 0 && dist < 50 && player.alive) {
-        const los = world.raycast(o.x, o.z, player.x, player.z);
-        if (!los.hit) {
-          o.shootCooldown = 1.2 + Math.random() * 0.8;
-          audio.playGunshot(false);
-          // Accuracy check based on distance
-          if (Math.random() < Math.max(0.2, 1 - dist / 60)) {
-            player.takeDamage(12 + Math.floor(Math.random() * 8), { x: o.x, z: o.z });
-          }
-        }
-      }
-    }
-
-    // Update Helicopter
-    if (this.helicopter) {
-      this.helicopter.rotorAngle += dt * 38;
-      if (this.helicopter.hoverX !== undefined) {
-        this.helicopter.x = this.helicopter.hoverX;
-        this.helicopter.y = this.helicopter.hoverY || 15;
-        this.helicopter.z = this.helicopter.hoverZ;
-      } else {
-        // Fly towards player smoothly
-        this.helicopter.x += (player.x - this.helicopter.x) * Math.min(1.0, 1.2 * dt);
-        this.helicopter.z += (player.z - this.helicopter.z) * Math.min(1.0, 1.2 * dt);
-      }
-      this.helicopter.spotlightX = this.helicopter.spotlightTargetX !== undefined ? this.helicopter.spotlightTargetX : player.x;
-      this.helicopter.spotlightZ = this.helicopter.spotlightTargetZ !== undefined ? this.helicopter.spotlightTargetZ : player.z;
-
-      // Helicopter sniper fire at 5 stars
-      if (this.wantedLevel >= 5 && player.alive) {
-        this.helicopter.shootCooldown -= dt;
-        if (this.helicopter.shootCooldown <= 0) {
-          this.helicopter.shootCooldown = 2.2;
-          audio.playGunshot(true);
-          player.takeDamage(18, { x: this.helicopter.x, z: this.helicopter.z });
-        }
-      }
-    }
-
-    // Update siren audio and alert pedestrians
-    if (this.wantedLevel > 0 && this.cruisers.length > 0) {
-      let minDist = 999;
-      for (const c of this.cruisers) {
-        const d = Math.hypot(c.x - player.x, c.z - player.z);
-        if (d < minDist) minDist = d;
-      }
-      audio.updateSiren(true, minDist);
+    // Police helicopter at 4+ stars or if forced active in photo preset
+    if (this.wantedStars >= 4 || this.helicopter.forcedActive) {
+      this.helicopter.active = true;
+      this.updateHelicopter(dt, player);
     } else {
-      audio.updateSiren(false);
+      this.helicopter.active = false;
     }
   }
 
-  // Fully clears all active wanted heat and returns law enforcement to idle patrol
-  clearWantedLevel() {
-    this.wantedLevel = 0;
-    this.heat = 0;
-    this.isEvading = false;
-    this.evasionTimer = 0;
-    this.cruisers = [];
-    this.officers = [];
-    this.roadblocks = [];
-    this.helicopter = null;
-    audio.updateSiren(false);
+  directPursuit(cruiser, player, dt) {
+    // Steer towards player
+    const dx = player.x - cruiser.x;
+    const dz = player.z - cruiser.z;
+    const targetAngle = Math.atan2(dx, dz);
+
+    let dAngle = targetAngle - cruiser.rotY;
+    while (dAngle > Math.PI) dAngle -= Math.PI * 2;
+    while (dAngle < -Math.PI) dAngle += Math.PI * 2;
+
+    cruiser.steer = clamp(dAngle * 1.8, -cruiser.spec.steerAngle, cruiser.spec.steerAngle);
+    cruiser.speed = Math.min(cruiser.spec.maxSpeed * 0.95, cruiser.speed + cruiser.spec.accel * dt);
+    cruiser.sirenActive = true;
+  }
+
+  spawnPursuitCruiser(player, vehicles) {
+    // Spawn cruiser ahead or behind on a nearby road
+    const spawnAngle = Math.random() * Math.PI * 2;
+    const spawnDist = 65 + Math.random() * 25;
+    const sx = clamp(player.x + Math.sin(spawnAngle) * spawnDist, WORLD.COAST_X + 5, WORLD.HALF_SIZE - 20);
+    const sz = clamp(player.z + Math.cos(spawnAngle) * spawnDist, -WORLD.HALF_SIZE + 20, WORLD.HALF_SIZE - 20);
+
+    const c = vehicles.spawn('police', sx, 0, sz, Math.atan2(player.x - sx, player.z - sz));
+    c.sirenActive = true;
+  }
+
+  updateHelicopter(dt, player) {
+    const heli = this.helicopter;
+    heli.rotorAngle += dt * 32.0;
+
+    if (heli.lockedPosition) {
+      return;
+    }
+
+    // Circle smoothly overhead
+    heli.spotlightAngle += dt * 0.6;
+    const circleRadius = 18;
+    const targetHeliX = player.x + Math.sin(heli.spotlightAngle) * circleRadius;
+    const targetHeliZ = player.z + Math.cos(heli.spotlightAngle) * circleRadius;
+
+    heli.x = lerp(heli.x, targetHeliX, dt * 1.5);
+    heli.z = lerp(heli.z, targetHeliZ, dt * 1.5);
+    heli.y = lerp(heli.y, 32.0, dt * 2.0);
+  }
+
+  buildMesh(positions, normals, colors, uvs) {
+    if (!this.helicopter.active) return;
+
+    const heli = this.helicopter;
+    const px = heli.x;
+    const py = heli.y;
+    const pz = heli.z;
+
+    const darkNavy = [0.10, 0.12, 0.16, 1.0];
+    const whiteStripe = [0.92, 0.92, 0.95, 1.0];
+    const bladeBlack = [0.05, 0.05, 0.05, 1.0];
+    const glassCyan = [0.2, 0.45, 0.65, 0.85];
+
+    const addBoxHeli = (lx, ly, lz, sx, sy, sz, color) => {
+      const hx = sx * 0.5, hy = sy * 0.5, hz = sz * 0.5;
+      const x = px + lx, y = py + ly, z = pz + lz;
+
+      // Quad helpers
+      const addFace = (p1, p2, p3, p4, norm) => {
+        const pts = [p1, p2, p3, p1, p3, p4];
+        for (let i = 0; i < 6; i++) {
+          positions.push(pts[i][0], pts[i][1], pts[i][2]);
+          normals.push(norm[0], norm[1], norm[2]);
+          colors.push(color[0], color[1], color[2], color[3] || 1.0);
+          uvs.push(0, 0);
+        }
+      };
+
+      addFace([x - hx, y + hy, z - hz], [x + hx, y + hy, z - hz], [x + hx, y + hy, z + hz], [x - hx, y + hy, z + hz], [0, 1, 0]);
+      addFace([x - hx, y - hy, z + hz], [x + hx, y - hy, z + hz], [x + hx, y - hy, z - hz], [x - hx, y - hy, z - hz], [0, -1, 0]);
+      addFace([x - hx, y - hy, z + hz], [x + hx, y - hy, z + hz], [x + hx, y + hy, z + hz], [x - hx, y + hy, z + hz], [0, 0, 1]);
+      addFace([x + hx, y - hy, z - hz], [x - hx, y - hy, z - hz], [x - hx, y + hy, z - hz], [x + hx, y + hy, z - hz], [0, 0, -1]);
+      addFace([x + hx, y - hy, z + hz], [x + hx, y - hy, z - hz], [x + hx, y + hy, z - hz], [x + hx, y + hy, z + hz], [1, 0, 0]);
+      addFace([x - hx, y - hy, z - hz], [x - hx, y - hy, z + hz], [x - hx, y + hy, z + hz], [x - hx, y + hy, z - hz], [-1, 0, 0]);
+    };
+
+    // 1. Helicopter main fuselage
+    addBoxHeli(0, 0, 0, 2.4, 2.2, 5.8, darkNavy);
+    addBoxHeli(0, -0.1, 0, 2.44, 0.35, 5.8, whiteStripe); // Metro PD stripe
+
+    // 2. Cockpit glass bubble
+    addBoxHeli(0, 0.25, 2.2, 2.1, 1.6, 1.8, glassCyan);
+
+    // 3. Tail boom & vertical stabilizer
+    addBoxHeli(0, 0.4, -4.5, 0.55, 0.65, 4.8, darkNavy);
+    addBoxHeli(0, 1.2, -6.6, 0.25, 1.8, 1.2, whiteStripe);
+
+    // 4. Landing skids
+    addBoxHeli(-1.2, -1.3, 0, 0.15, 0.15, 5.2, bladeBlack);
+    addBoxHeli(1.2, -1.3, 0, 0.15, 0.15, 5.2, bladeBlack);
+
+    // 5. Spinning main rotor blades
+    const rCos = Math.cos(heli.rotorAngle);
+    const rSin = Math.sin(heli.rotorAngle);
+    const bladeLen = 12.0;
+
+    // Two cross blades
+    const b1x = rCos * (bladeLen * 0.5);
+    const b1z = rSin * (bladeLen * 0.5);
+    const ptsB1 = [
+      [px - b1x, py + 1.45, pz - b1z],
+      [px + b1x, py + 1.45, pz + b1z],
+      [px + b1x + 0.3, py + 1.45, pz + b1z + 0.3],
+      [px - b1x, py + 1.45, pz - b1z],
+      [px + b1x + 0.3, py + 1.45, pz + b1z + 0.3],
+      [px - b1x + 0.3, py + 1.45, pz - b1z + 0.3],
+    ];
+    for (let i = 0; i < 6; i++) {
+      positions.push(ptsB1[i][0], ptsB1[i][1], ptsB1[i][2]);
+      normals.push(0, 1, 0);
+      colors.push(bladeBlack[0], bladeBlack[1], bladeBlack[2], 1.0);
+      uvs.push(0, 0);
+    }
+
+    // 6. Volumetric searchlight beam cone pointing towards player
+    const beamColor = [1.0, 0.98, 0.85, 0.35];
+    const groundRadius = 9.0;
+    const targetX = px;
+    const targetZ = pz + 4.0;
+
+    const beamAngles = 8;
+    for (let i = 0; i < beamAngles; i++) {
+      const a0 = (i / beamAngles) * Math.PI * 2;
+      const a1 = ((i + 1) / beamAngles) * Math.PI * 2;
+
+      const p0 = [targetX + Math.cos(a0) * groundRadius, 0.05, targetZ + Math.sin(a0) * groundRadius];
+      const p1 = [targetX + Math.cos(a1) * groundRadius, 0.05, targetZ + Math.sin(a1) * groundRadius];
+      const pApex = [px, py - 0.8, pz + 1.0];
+
+      const tri = [pApex, p0, p1];
+      for (let p = 0; p < 3; p++) {
+        positions.push(tri[p][0], tri[p][1], tri[p][2]);
+        normals.push(0, 1, 0);
+        colors.push(beamColor[0], beamColor[1], beamColor[2], beamColor[3]);
+        uvs.push(0, 0);
+      }
+    }
   }
 }
-
-export const police = new PoliceManager();

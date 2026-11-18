@@ -50,6 +50,8 @@ const server = createServer((request, response) => {
   }
 
   if (pathname.endsWith('/')) pathname += 'index.html';
+  if (pathname.startsWith('/game/')) pathname = pathname.slice(5);
+  else if (pathname === '/game') pathname = '/index.html';
   const file = resolve(join(root, normalize(pathname)));
 
   // Guard against path traversal outside the game/ folder

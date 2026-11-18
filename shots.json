@@ -1,22 +1,22 @@
 [
   {
-    "name": "1-on-foot-downtown.png",
+    "name": "1-city-street.png",
     "query": "?shot=1",
-    "description": "Rhea 'Rook' Solano on foot on a rich Downtown stone pavement, tall architectural glass towers rising into a warm gradient sunset sky with drifting clouds, procedural asphalt and paver detail, newspaper vending boxes, pedestrians, and long cast shadows across the avenue."
+    "description": "Downtown on foot from behind the player: towers, traffic, pedestrians, long warm shadows, HUD with minimap and objective visible."
   },
   {
-    "name": "2-car-drive-promenade.png",
+    "name": "2-car-promenade.png",
     "query": "?shot=2",
-    "description": "Custom sports car at speed along the coastal Ocean Promenade, low golden sun disc and solar corona over moving dual-harmonic ocean waves, wet asphalt reflections, palms, boardwalk railing, and the marina in frame."
+    "description": "The sports car at speed on the waterfront road: sea and low sun, palms, the boardwalk and the marina in frame, speed on the HUD."
   },
   {
-    "name": "3-police-pursuit-stars.png",
+    "name": "3-police-chase.png",
     "query": "?shot=3",
-    "description": "High-intensity police pursuit at its height: five wanted stars glowing in the HUD, emissive red and blue emergency lightbars flashing with road reflection pools, player muscle car flanked tightly between two cruisers at 137 MPH with the Skyway Overpass towering behind."
+    "description": "The chase at its height: wanted stars in the HUD, red and blue lights flashing, the player car between two cruisers, an overpass behind."
   },
   {
-    "name": "4-mission-dock-showdown.png",
+    "name": "4-dock-heist.png",
     "query": "?shot=4",
-    "description": "Climactic showdown at Meridian Docks: corrugated multi-colored shipping container stacks, 38-meter gantry crane, syndicate operatives, police helicopter casting a volumetric searchlight beam, and open bay water beyond."
+    "description": "The docks at golden hour: shipping containers, a gantry crane, the helicopter, the water beyond."
   }
 ]

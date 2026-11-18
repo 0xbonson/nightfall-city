@@ -1,61 +1,136 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="description" content="Nightfall City — Sun-soaked 3D open-world crime action game set in coastal Vela Bay. Hand-written pure WebGL renderer with procedural materials, dynamic traffic & pedestrians, taxi fares, 8 story campaign missions, and zero libraries or build steps.">
-  <meta name="author" content="makefun agent <agent@make.fun>">
-  <meta name="keywords" content="Nightfall City, Vela Bay, WebGL, open-world, 3D game, offline, crime action, taxi shift, procedural shaders">
-  <meta property="og:title" content="Nightfall City: Vela Bay">
-  <meta property="og:description" content="Sun-soaked 3D open-world crime game set in Vela Bay featuring hand-written WebGL lighting, long soft shadows, traffic, pedestrians, taxi side hustle, and 8 story missions.">
-  <meta property="og:image" content="../screenshots/1-on-foot-downtown.png">
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:image" content="../screenshots/1-on-foot-downtown.png">
-  <meta name="theme-color" content="#f59e0b">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌆</text></svg>">
-  <title>Nightfall City: Vela Bay — 3D Open-World Crime Action</title>
+  <title>Nightfall City: Vela Bay</title>
   <style>
     * {
       box-sizing: border-box;
-      user-select: none;
-      -webkit-user-select: none;
       margin: 0;
       padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
     }
     html, body {
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: #101622;
-      color: #ffffff;
+      background: #0a0c10;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      touch-action: none;
     }
-    #glcanvas {
+    #game-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+    canvas {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
       display: block;
+    }
+    #gl-canvas {
       z-index: 1;
     }
-    #hudcanvas {
+    #hud-canvas {
+      z-index: 2;
+      cursor: crosshair;
+    }
+    #start-overlay {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      display: block;
-      z-index: 2;
-      cursor: crosshair;
+      z-index: 10;
+      background: radial-gradient(circle at center, rgba(16, 20, 32, 0.85) 0%, rgba(6, 8, 14, 0.95) 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      transition: opacity 0.4s ease;
+    }
+    #start-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .game-logo {
+      font-size: 52px;
+      font-weight: 900;
+      font-family: "Impact", "Arial Black", sans-serif;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      background: linear-gradient(180deg, #ffe066 0%, #ff9900 60%, #ff3300 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 4px 20px rgba(255, 120, 0, 0.4);
+      margin-bottom: 6px;
+    }
+    .game-sub {
+      font-size: 20px;
+      font-weight: 700;
+      color: #00d2ff;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      margin-bottom: 30px;
+    }
+    .play-btn {
+      padding: 14px 44px;
+      font-size: 18px;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: #0c0e14;
+      background: linear-gradient(180deg, #ffe066 0%, #ffaa00 100%);
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      box-shadow: 0 4px 18px rgba(255, 170, 0, 0.45);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .play-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 24px rgba(255, 170, 0, 0.65);
+    }
+    .controls-hint {
+      margin-top: 25px;
+      font-size: 13px;
+      color: rgba(220, 230, 245, 0.65);
+      letter-spacing: 1px;
     }
   </style>
 </head>
 <body>
-  <noscript>Nightfall City requires a WebGL-enabled browser with JavaScript active.</noscript>
-  <canvas id="glcanvas" aria-label="Nightfall City 3D WebGL Viewport" role="img"></canvas>
-  <canvas id="hudcanvas" aria-label="Nightfall City Interactive HUD Overlay"></canvas>
-  <script type="module" src="src/main.js"></script>
+  <div id="game-container">
+    <canvas id="gl-canvas"></canvas>
+    <canvas id="hud-canvas"></canvas>
+
+    <div id="start-overlay">
+      <h1 class="game-logo">Nightfall City</h1>
+      <div class="game-sub">Vela Bay</div>
+      <button id="play-button" class="play-btn">Play Game</button>
+      <div class="controls-hint">[W/A/S/D] Drive & Move &bull; [F] Enter/Exit Car &bull; [LMB] Shoot &bull; [Space] Drift &bull; [Esc] Pause</div>
+    </div>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+  <script>
+    // Hide start overlay when play button clicked or if ?shot= query is present
+    const overlay = document.getElementById('start-overlay');
+    const playBtn = document.getElementById('play-button');
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.has('shot')) {
+      overlay.style.display = 'none';
+    } else {
+      playBtn.addEventListener('click', () => {
+        overlay.classList.add('hidden');
+        setTimeout(() => { overlay.style.display = 'none'; }, 400);
+      });
+    }
+  </script>
 </body>
 </html>

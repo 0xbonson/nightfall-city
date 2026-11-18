@@ -1,147 +1,85 @@
-// Input handling for Nightfall City: Vela Bay
-// Keyboard, mouse look with Pointer Lock support, weapon controls, and vehicle horns.
+/**
+ * Nightfall City: Vela Bay - Input Manager (Keyboard & Mouse)
+ * Authored by makefun agent for the GTA 6 bounty challenge.
+ */
 
-export const MOUSE_LOOK_SENSITIVITY = 0.0022;
-export const MOUSE_SMOOTHING_FACTOR = 0.85;
+export class InputManager {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.keys = new Set();
+    this.justPressedKeys = new Set();
+    this.mouseDelta = { x: 0, y: 0 };
+    this.isMouseDown = false;
+    this.isJustClicked = false;
+    this.pointerLocked = false;
 
-class InputManager {
-  constructor() {
-    this.keys = {};
-    this.mouse = {
-      x: 0,
-      y: 0,
-      deltaX: 0,
-      deltaY: 0,
-      left: false,
-      right: false,
-      leftPressed: false,
-      rightPressed: false,
-      locked: false,
-    };
-    this.wheelDelta = 0;
-    this.targetElement = null;
+    this.setupListeners();
   }
 
-  init(element) {
-    this.targetElement = element;
-
+  setupListeners() {
     window.addEventListener('keydown', (e) => {
-      this.keys[e.code] = true;
+      if (!this.keys.has(e.code)) {
+        this.justPressedKeys.add(e.code);
+      }
+      this.keys.add(e.code);
+
+      // Prevent scrolling on arrows/space
       if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
         e.preventDefault();
       }
     });
 
     window.addEventListener('keyup', (e) => {
-      this.keys[e.code] = false;
+      this.keys.delete(e.code);
     });
 
     window.addEventListener('mousemove', (e) => {
-      if (document.pointerLockElement === this.targetElement) {
-        this.mouse.deltaX += e.movementX;
-        this.mouse.deltaY += e.movementY;
+      if (document.pointerLockElement === this.canvas) {
+        this.mouseDelta.x += e.movementX || 0;
+        this.mouseDelta.y += e.movementY || 0;
       }
-      this.mouse.x = e.clientX;
-      this.mouse.y = e.clientY;
     });
 
     window.addEventListener('mousedown', (e) => {
       if (e.button === 0) {
-        this.mouse.left = true;
-        this.mouse.leftPressed = true;
-      } else if (e.button === 2) {
-        this.mouse.right = true;
-        this.mouse.rightPressed = true;
+        this.isMouseDown = true;
+        this.isJustClicked = true;
+
+        if (document.pointerLockElement !== this.canvas && this.canvas.requestPointerLock) {
+          this.canvas.requestPointerLock();
+        }
       }
     });
 
     window.addEventListener('mouseup', (e) => {
-      if (e.button === 0) this.mouse.left = false;
-      if (e.button === 2) this.mouse.right = false;
+      if (e.button === 0) {
+        this.isMouseDown = false;
+      }
     });
-
-    window.addEventListener('wheel', (e) => {
-      this.wheelDelta = Math.sign(e.deltaY);
-    });
-
-    window.addEventListener('contextmenu', (e) => e.preventDefault());
 
     document.addEventListener('pointerlockchange', () => {
-      this.mouse.locked = (document.pointerLockElement === this.targetElement);
+      this.pointerLocked = document.pointerLockElement === this.canvas;
     });
-  }
 
-  requestLock() {
-    if (this.targetElement && document.pointerLockElement !== this.targetElement) {
-      try {
-        this.targetElement.requestPointerLock?.();
-      } catch {
-        // Pointer lock may fail if not inside a user action
-      }
-    }
-  }
-
-  unlock() {
-    if (document.exitPointerLock) {
-      document.exitPointerLock();
-    }
-  }
-
-  resetKeys() {
-    this.keys = {};
-    this.mouse.left = false;
-    this.mouse.right = false;
-  }
-
-  clearKeys() {
-    this.resetKeys();
+    window.addEventListener('blur', () => {
+      this.keys.clear();
+      this.justPressedKeys.clear();
+      this.isMouseDown = false;
+    });
   }
 
   isDown(code) {
-    return !!this.keys[code];
+    return this.keys.has(code);
   }
 
-  isAction(action) {
-    switch (action) {
-      case 'forward': return this.isDown('KeyW') || this.isDown('ArrowUp');
-      case 'backward': return this.isDown('KeyS') || this.isDown('ArrowDown');
-      case 'left': return this.isDown('KeyA') || this.isDown('ArrowLeft');
-      case 'right': return this.isDown('KeyD') || this.isDown('ArrowRight');
-      case 'sprint': return this.isDown('ShiftLeft') || this.isDown('ShiftRight');
-      case 'handbrake': return this.isDown('Space');
-      case 'interact': return this.isDown('KeyF') || this.isDown('KeyE');
-      case 'reload': return this.isDown('KeyR');
-      case 'horn': return this.isDown('KeyH');
-      case 'activity': return this.isDown('KeyT');
-      case 'taxi': return this.isDown('KeyK');
-      case 'weapon1': return this.isDown('Digit1');
-      case 'weapon2': return this.isDown('Digit2');
-      case 'cycleWeapon': return this.isDown('KeyQ') || this.wheelDelta !== 0;
-      case 'pause': return this.isDown('Escape') || this.isDown('KeyP');
-      default: return false;
-    }
+  isJustPressed(code) {
+    return this.justPressedKeys.has(code);
   }
 
-  consumeMouse() {
-    const dx = this.mouse.deltaX;
-    const dy = this.mouse.deltaY;
-    const lp = this.mouse.leftPressed;
-    const rp = this.mouse.rightPressed;
-    const wd = this.wheelDelta;
-
-    this.mouse.deltaX = 0;
-    this.mouse.deltaY = 0;
-    this.mouse.leftPressed = false;
-    this.mouse.rightPressed = false;
-    this.wheelDelta = 0;
-
-    return { dx, dy, lp, rp, wd, left: this.mouse.left, right: this.mouse.right };
-  }
-
-  // Returns true if browser pointer lock is currently acquired
-  isLocked() {
-    return document.pointerLockElement === this.targetElement;
+  endFrame() {
+    this.justPressedKeys.clear();
+    this.mouseDelta.x = 0;
+    this.mouseDelta.y = 0;
+    this.isJustClicked = false;
   }
 }
-
-export const input = new InputManager();

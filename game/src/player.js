@@ -1,304 +1,305 @@
-// Player character Rhea "Rook" Solano for Nightfall City: Vela Bay
-// Controls on-foot movement, vehicle boarding, weapons handling, and respawn mechanics.
+/**
+ * Nightfall City: Vela Bay - Protagonist Player Character
+ * Authored by makefun agent for the GTA 6 bounty challenge.
+ */
 
-import { CharacterPhysics, VehiclePhysics } from './physics.js';
-import { WeaponManager } from './weapons.js';
-import { audio } from './audio.js';
-import { screenEffects, particles } from './effects.js';
-import { CONFIG } from './config.js';
-import { world } from './world.js';
-import { police } from './police.js';
-
-export const PLAYER_INITIAL_HEALTH = 100;
-export const PLAYER_INITIAL_ARMOR = 50;
+import { PLAYER, WEAPONS, WORLD } from './config.js';
+import { clamp, normalizeAngle } from './math.js';
 
 export class Player {
-  constructor() {
-    this.name = 'Rhea "Rook" Solano';
-    this.x = 0;
-    this.y = 0;
-    this.z = 25; // Spawn on Grand Parkway near Marina
+  constructor(x = 68, y = 0, z = -68) {
+    this.x = x;
+    this.y = y;
+    this.z = z;
     this.vx = 0;
     this.vz = 0;
-    this.heading = 0; // Radians
-    this.pitch = 0.15; // Camera look pitch
+    this.rotY = 0;
 
-    this.maxHealth = 100;
-    this.health = 100;
-    this.maxArmor = 100;
+    this.health = PLAYER.MAX_HEALTH;
     this.armor = 50;
-    this.cash = 1000;
+    this.cash = 1500;
     this.alive = true;
 
     this.inVehicle = false;
     this.vehicle = null;
-    this.isJacked = false;
 
-    this.weapons = WeaponManager.createArsenal();
-    this.activeWeaponIndex = 0;
+    // Weapons
+    this.currentWeapon = 'rifle';
+    this.ammo = {
+      pistol: { clip: WEAPONS.pistol.clipSize, reserve: 60 },
+      rifle: { clip: WEAPONS.rifle.clipSize, reserve: 150 },
+    };
+    this.lastFireTime = 0;
+    this.isReloading = false;
+    this.reloadTimer = 0;
 
+    // Animation
+    this.walkCycle = 0;
     this.isMoving = false;
     this.isSprinting = false;
-    this.animTime = 0;
-    this.footstepTimer = 0;
-    this.staggerTimer = 0;
-    this.landTimer = 0;
-    this.lastHonkTime = 0;
-    this.wastedTimer = 0;
-    this.isWasted = false;
+
+    // Audio step trigger flag
+    this.stepTrigger = false;
   }
 
-  get activeWeapon() {
-    return this.weapons[this.activeWeaponIndex];
-  }
-
-  get hasWeapon() {
-    return this.activeWeaponIndex > 0;
-  }
-
-  set hasWeapon(val) {
-    if (val && this.activeWeaponIndex === 0) {
-      this.activeWeaponIndex = 1;
-    } else if (!val) {
-      this.activeWeaponIndex = 0;
-    }
-  }
-
-  switchWeapon(index) {
-    if (index >= 0 && index < this.weapons.length && index !== this.activeWeaponIndex) {
-      this.activeWeaponIndex = index;
-      audio.playReload();
-    }
-  }
-
-  cycleWeapon() {
-    this.activeWeaponIndex = (this.activeWeaponIndex + 1) % this.weapons.length;
-    audio.playReload();
-  }
-
-  enterVehicle(car) {
-    if (!car || car.wrecked) return false;
-    this.inVehicle = true;
-    this.vehicle = car;
-    this.x = car.x;
-    this.z = car.z;
-    audio.playCarDoor();
-    audio.resume();
-    return true;
-  }
-
-  exitVehicle() {
-    if (!this.inVehicle || !this.vehicle) return;
-    const sinA = Math.sin(this.vehicle.angle);
-    const cosA = Math.cos(this.vehicle.angle);
-    // Exit to left of car
-    this.x = this.vehicle.x - cosA * 2.2;
-    this.z = this.vehicle.z + sinA * 2.2;
-    this.heading = this.vehicle.angle;
-    this.inVehicle = false;
-    this.vehicle = null;
-    audio.playCarDoor();
-  }
-
-  takeDamage(amount, source = null) {
+  takeDamage(amount) {
     if (!this.alive) return;
-    screenEffects.flashRed(0.7);
-    screenEffects.addTrauma(amount * 0.02);
-
-    let damageRemaining = amount;
     if (this.armor > 0) {
-      const absorbed = Math.min(this.armor, amount * 0.75);
-      this.armor = Math.max(0, this.armor - absorbed);
-      damageRemaining -= absorbed;
+      const absorbed = Math.min(this.armor, amount * 0.7);
+      this.armor -= absorbed;
+      amount -= absorbed;
     }
-
-    this.health = Math.max(0, this.health - damageRemaining);
-    particles.emit('blood', this.x, 1.2, this.z, 6);
-
+    this.health = Math.max(0, this.health - amount);
     if (this.health <= 0) {
-      this.die();
+      this.alive = false;
     }
   }
 
-  die() {
-    this.alive = false;
-    this.isWasted = true;
-    this.wastedTimer = 3.5;
-    if (this.inVehicle && this.vehicle) {
-      this.exitVehicle();
-    }
-    screenEffects.flashRed(1.0);
-    screenEffects.addTrauma(0.8);
-  }
+  update(dt, input, camera, world, vehicles) {
+    this.stepTrigger = false;
 
-  respawn() {
-    this.alive = true;
-    this.isWasted = false;
-    this.health = 100;
-    this.armor = 25;
-    this.cash = Math.max(0, this.cash - 250);
-    // Hospital spawn in Downtown Vela
-    this.x = 80;
-    this.z = -60;
-    this.vx = 0;
-    this.vz = 0;
-    this.heading = 0;
-  }
+    if (this.inVehicle) {
+      if (this.vehicle) {
+        this.x = this.vehicle.x;
+        this.y = this.vehicle.y;
+        this.z = this.vehicle.z;
+        this.rotY = this.vehicle.rotY;
 
-  addCash(amount) {
-    this.cash += amount;
-    audio.playCash();
-  }
-
-  update(dt, inputs) {
-    if (!this.alive) {
-      this.wastedTimer -= dt;
-      if (this.wastedTimer <= 0) {
-        this.respawn();
+        // Exit vehicle with F or E
+        if (input.isJustPressed('KeyF') || input.isJustPressed('KeyE')) {
+          this.exitVehicle(world);
+        }
       }
       return;
     }
 
-    this.activeWeapon?.update(dt);
-
-    if (this.inVehicle && this.vehicle) {
-      // In Car driving
-      VehiclePhysics.updateVehicle(this.vehicle, dt, {
-        throttle: inputs.isAction('forward') ? 1 : inputs.isAction('backward') ? -1 : 0,
-        steer: inputs.isAction('left') ? 1 : inputs.isAction('right') ? -1 : 0,
-        handbrake: inputs.isAction('handbrake'),
-        isPlayer: true,
-      });
-
-      this.x = this.vehicle.x;
-      this.z = this.vehicle.z;
-      this.heading = this.vehicle.angle;
-      audio.updateEngine(true, Math.abs(this.vehicle.speed) / this.vehicle.maxSpeed, inputs.isAction('forward'));
-
-      // Scatter pigeons in vehicle path
-      if (world && world.scatterPigeonsNear) {
-        world.scatterPigeonsNear(this.vehicle.x, this.vehicle.z, 10.0);
+    // Vehicle hijacking / entry
+    if (input.isJustPressed('KeyF') || input.isJustPressed('KeyE')) {
+      const nearCar = vehicles.findNearest(this.x, this.z, PLAYER.ENTER_CAR_DIST);
+      if (nearCar) {
+        this.enterVehicle(nearCar);
+        return;
       }
+    }
 
-      // Check collision with hydrants and dumpsters
-      if (world && world.checkHydrantHit) {
-        const hit = world.checkHydrantHit(this.vehicle.x, this.vehicle.z, 1.2);
-        if (hit.justBursted) {
-          audio.playHydrantBurst?.();
-          screenEffects.addTrauma(0.15);
-        }
-      }
-      if (world && world.checkDumpsterHit) {
-        const hit = world.checkDumpsterHit(this.vehicle.x, this.vehicle.z, 1.6, Math.abs(this.vehicle.speed));
-        if (hit.justKnocked) {
-          audio.playDumpsterCrash?.();
-          screenEffects.addTrauma(0.2);
-          particles.emitDebris?.(hit.dumpster.x, 0.8, hit.dumpster.z, 10);
-        }
-      }
+    // Weapon Switching: 1, 2, Q
+    if (input.isJustPressed('Digit1')) this.currentWeapon = 'pistol';
+    if (input.isJustPressed('Digit2')) this.currentWeapon = 'rifle';
+    if (input.isJustPressed('KeyQ')) {
+      this.currentWeapon = this.currentWeapon === 'pistol' ? 'rifle' : 'pistol';
+    }
 
-      // Horn action
-      if (inputs.isAction('horn') && Date.now() - this.lastHonkTime > 600) {
-        this.lastHonkTime = Date.now();
-        audio.playHorn();
+    // Reloading
+    const wep = WEAPONS[this.currentWeapon];
+    const ammoState = this.ammo[this.currentWeapon];
+
+    if (input.isJustPressed('KeyR') && ammoState.clip < wep.clipSize && ammoState.reserve > 0) {
+      this.isReloading = true;
+      this.reloadTimer = wep.reloadTime;
+    }
+
+    if (this.isReloading) {
+      this.reloadTimer -= dt;
+      if (this.reloadTimer <= 0) {
+        this.isReloading = false;
+        const needed = wep.clipSize - ammoState.clip;
+        const add = Math.min(needed, ammoState.reserve);
+        ammoState.clip += add;
+        ammoState.reserve -= add;
+      }
+    }
+
+    // On-Foot Movement
+    let moveForward = 0;
+    let moveStrafe = 0;
+
+    if (input.isDown('KeyW') || input.isDown('ArrowUp')) moveForward += 1;
+    if (input.isDown('KeyS') || input.isDown('ArrowDown')) moveForward -= 1;
+    if (input.isDown('KeyA') || input.isDown('ArrowLeft')) moveStrafe -= 1;
+    if (input.isDown('KeyD') || input.isDown('ArrowRight')) moveStrafe += 1;
+
+    this.isSprinting = input.isDown('ShiftLeft') || input.isDown('ShiftRight');
+    const targetSpeed = this.isSprinting ? PLAYER.SPRINT_SPEED : PLAYER.WALK_SPEED;
+
+    const moveMag = Math.hypot(moveForward, moveStrafe);
+    this.isMoving = moveMag > 0.1;
+
+    if (this.isMoving) {
+      // Calculate movement relative to camera look yaw
+      const camYaw = camera.yaw;
+      const moveAngle = Math.atan2(moveStrafe, moveForward) + camYaw;
+
+      const targetVx = Math.sin(moveAngle) * targetSpeed;
+      const targetVz = Math.cos(moveAngle) * targetSpeed;
+
+      this.vx = this.vx + (targetVx - this.vx) * clamp(dt * PLAYER.ACCEL, 0, 1);
+      this.vz = this.vz + (targetVz - this.vz) * clamp(dt * PLAYER.ACCEL, 0, 1);
+
+      // Face direction of movement smoothly
+      const targetRotY = moveAngle;
+      let dRot = normalizeAngle(targetRotY - this.rotY);
+      this.rotY += dRot * clamp(dt * PLAYER.TURN_SPEED, 0, 1);
+
+      // Animate walk cycle
+      const prevCycle = this.walkCycle;
+      this.walkCycle += Math.hypot(this.vx, this.vz) * dt * (this.isSprinting ? 6.2 : 4.4);
+      if (Math.floor(this.walkCycle / Math.PI) !== Math.floor(prevCycle / Math.PI)) {
+        this.stepTrigger = true;
       }
     } else {
-      // On Foot
-      audio.updateEngine(false, 0, false);
-
-      // Camera-relative movement
-      let camYaw = inputs.cameraYaw || this.heading;
-      let forward = 0;
-      let strafe = 0;
-
-      if (inputs.isAction('forward')) forward += 1;
-      if (inputs.isAction('backward')) forward -= 1;
-      if (inputs.isAction('left')) strafe += 1;
-      if (inputs.isAction('right')) strafe -= 1;
-
-      // Translate forward/strafe to world X/Z using camera angle
-      const sinC = Math.sin(camYaw);
-      const cosC = Math.cos(camYaw);
-      const moveX = forward * sinC - strafe * cosC;
-      const moveZ = forward * cosC + strafe * sinC;
-
-      CharacterPhysics.updatePlayer(this, dt, {
-        moveX,
-        moveZ,
-        sprint: inputs.isAction('sprint'),
-      });
-
-      // Scatter pigeons on foot
-      if (world && world.scatterPigeonsNear) {
-        world.scatterPigeonsNear(this.x, this.z, this.isSprinting ? 7.5 : 4.0);
-      }
-
-      if (this.isMoving) {
-        this.animTime += dt * (this.isSprinting ? 12 : 7);
-        this.footstepTimer -= dt;
-        if (this.footstepTimer <= 0) {
-          const surface = world?.getSurfaceAt ? world.getSurfaceAt(this.x, this.z) : 'stone';
-          audio.playFootstep(surface, this.isSprinting);
-          this.footstepTimer = this.isSprinting ? 0.28 : 0.44;
-        }
-      } else {
-        this.footstepTimer = 0.1;
-      }
-
-      // Proximity to street food carts to grab hot food
-      if (world && world.streetFoodCarts && (inputs.isAction('enter') || inputs.isAction('fire'))) {
-        for (const cart of world.streetFoodCarts) {
-          const dist = Math.hypot(this.x - cart.x, this.z - cart.z);
-          if (dist < 2.5 && this.health < this.maxHealth && this.cash >= 15) {
-            this.cash -= 15;
-            this.health = Math.min(this.maxHealth, this.health + 25);
-            audio.playCash();
-            screenEffects.flashGreen?.(0.3);
-            break;
-          }
-        }
-      }
+      // Decelerate to stop
+      this.vx += (0 - this.vx) * clamp(dt * PLAYER.DECEL, 0, 1);
+      this.vz += (0 - this.vz) * clamp(dt * PLAYER.DECEL, 0, 1);
+      this.walkCycle = 0;
     }
 
-    // Proximity check for Vela Wave Mixtapes
-    if (world && world.checkMixtapePickup) {
-      const mixtape = world.checkMixtapePickup(this.x, this.z, 2.2);
-      if (mixtape) {
-        this.addCash(500);
-        audio.playCash();
-        particles.emit('spark', mixtape.x, mixtape.y || 1.0, mixtape.z, 16);
-      }
+    // Move & Collision sliding
+    const newX = this.x + this.vx * dt;
+    const newZ = this.z + this.vz * dt;
+
+    // Test X collision
+    const colX = world.checkCollision(newX, this.z, PLAYER.RADIUS);
+    if (colX.collided) {
+      this.x = newX + colX.pushX;
+      this.vx = 0;
+    } else {
+      this.x = newX;
     }
 
-    // Proximity check for hidden Smuggler Caches
-    if (world && world.smugglerCaches) {
-      for (const cache of world.smugglerCaches) {
-        if (world.collectedCaches && world.collectedCaches.has(cache.id)) continue;
-        const dist = Math.hypot(this.x - cache.x, this.z - cache.z);
-        if (dist < 3.2) {
-          const collected = world.collectCache(cache.id);
-          if (collected) {
-            this.addCash(cache.reward);
-            audio.playCash();
-            particles.emit('spark', cache.x, 0.8, cache.z, 14);
-          }
-        }
-      }
+    // Test Z collision
+    const colZ = world.checkCollision(this.x, newZ, PLAYER.RADIUS);
+    if (colZ.collided) {
+      this.z = newZ + colZ.pushZ;
+      this.vz = 0;
+    } else {
+      this.z = newZ;
     }
 
-    // Alleyway escape route detection when wanted by police
-    if (world && world.isInAlleyEscapeRoute && world.isInAlleyEscapeRoute(this.x, this.z)) {
-      if (police && police.wantedLevel > 0) {
-        // Accelerate police evasion timer in alleyways
-        police.evasionTimer = Math.max(0, police.evasionTimer - dt * 2.8);
-      }
-    }
+    // Keep player within world bounds
+    const limit = WORLD.HALF_SIZE - 2;
+    this.x = clamp(this.x, WORLD.COAST_X - 18, limit);
+    this.z = clamp(this.z, -limit, limit);
   }
 
-  // Returns true if player health is at maximum capacity
-  isFullHealth() {
-    return this.health >= this.maxHealth;
+  enterVehicle(vehicle) {
+    this.inVehicle = true;
+    this.vehicle = vehicle;
+    vehicle.driver = this;
+    vehicle.isPlayerControlled = true;
+  }
+
+  exitVehicle(world) {
+    if (!this.vehicle) return;
+    // Place player to the left of the driver door
+    const exitAngle = this.vehicle.rotY - Math.PI * 0.5;
+    const exitX = this.vehicle.x + Math.sin(exitAngle) * 2.2;
+    const exitZ = this.vehicle.z + Math.cos(exitAngle) * 2.2;
+
+    this.x = exitX;
+    this.y = this.vehicle.y;
+    this.z = exitZ;
+    this.vx = 0;
+    this.vz = 0;
+
+    this.vehicle.isPlayerControlled = false;
+    this.vehicle.driver = null;
+    this.vehicle = null;
+    this.inVehicle = false;
+  }
+
+  // --- Procedural 3D Character Mesh ---
+  buildMesh(positions, normals, colors, uvs) {
+    if (this.inVehicle) return; // Player is inside car
+
+    const px = this.x;
+    const py = this.y;
+    const pz = this.z;
+    const rot = this.rotY;
+
+    const cosR = Math.cos(rot);
+    const sinR = Math.sin(rot);
+
+    // Helper to rotate local character coordinate to world
+    const toWorld = (lx, ly, lz) => {
+      const wx = px + (lx * cosR + lz * sinR);
+      const wy = py + ly;
+      const wz = pz + (-lx * sinR + lz * cosR);
+      return [wx, wy, wz];
+    };
+
+    const addBoxLocal = (lx, ly, lz, sx, sy, sz, color) => {
+      const hx = sx * 0.5, hy = sy * 0.5, hz = sz * 0.5;
+      const corners = [
+        toWorld(lx - hx, ly - hy, lz - hz),
+        toWorld(lx + hx, ly - hy, lz - hz),
+        toWorld(lx + hx, ly + hy, lz - hz),
+        toWorld(lx - hx, ly + hy, lz - hz),
+        toWorld(lx - hx, ly - hy, lz + hz),
+        toWorld(lx + hx, ly - hy, lz + hz),
+        toWorld(lx + hx, ly + hy, lz + hz),
+        toWorld(lx - hx, ly + hy, lz + hz),
+      ];
+
+      const faces = [
+        [3, 2, 6, 7, [0, 1, 0]],   // Top
+        [4, 5, 1, 0, [0, -1, 0]],  // Bottom
+        [7, 6, 5, 4, [sinR, 0, cosR]], // Front
+        [1, 2, 3, 0, [-sinR, 0, -cosR]], // Back
+        [6, 2, 1, 5, [cosR, 0, -sinR]],  // Right
+        [0, 3, 7, 4, [-cosR, 0, sinR]],  // Left
+      ];
+
+      for (const face of faces) {
+        const [i0, i1, i2, i3, norm] = face;
+        const quadPts = [corners[i0], corners[i1], corners[i2], corners[i0], corners[i2], corners[i3]];
+        for (let p = 0; p < 6; p++) {
+          positions.push(quadPts[p][0], quadPts[p][1], quadPts[p][2]);
+          normals.push(norm[0], norm[1], norm[2]);
+          colors.push(color[0], color[1], color[2], color[3] || 1.0);
+          uvs.push(0, 0);
+        }
+      }
+    };
+
+    // Palette: Vice City style bomber jacket, dark tactical pants, sunglasses
+    const jacketCol = [0.18, 0.22, 0.28, 1.0]; // Slate charcoal jacket
+    const shirtCol = [0.92, 0.25, 0.45, 1.0];  // Neon magenta undershirt
+    const pantsCol = [0.15, 0.16, 0.18, 1.0];  // Dark jeans
+    const skinCol = [0.85, 0.65, 0.52, 1.0];   // Warm tan
+    const shoeCol = [0.95, 0.95, 0.95, 1.0];   // White sneakers
+
+    // Limb animation swings
+    const legSwing = Math.sin(this.walkCycle) * 0.45;
+    const armSwing = Math.sin(this.walkCycle) * 0.45;
+
+    // Torso / Jacket
+    addBoxLocal(0, 1.25, 0, 0.55, 0.65, 0.32, jacketCol);
+    // Undershirt chest triangle
+    addBoxLocal(0, 1.35, 0.15, 0.22, 0.35, 0.05, shirtCol);
+
+    // Head & Sunglasses
+    addBoxLocal(0, 1.72, 0, 0.28, 0.32, 0.28, skinCol);
+    addBoxLocal(0, 1.76, 0.14, 0.26, 0.08, 0.06, [0.05, 0.05, 0.05, 1.0]); // Shades
+
+    // Legs with alternating stride
+    addBoxLocal(-0.16, 0.5 + legSwing * 0.15, legSwing * 0.35, 0.20, 0.85, 0.22, pantsCol);
+    addBoxLocal(0.16, 0.5 - legSwing * 0.15, -legSwing * 0.35, 0.20, 0.85, 0.22, pantsCol);
+
+    // Sneakers
+    addBoxLocal(-0.16, 0.1, legSwing * 0.35 + 0.05, 0.22, 0.18, 0.35, shoeCol);
+    addBoxLocal(0.16, 0.1, -legSwing * 0.35 + 0.05, 0.22, 0.18, 0.35, shoeCol);
+
+    // Arms
+    addBoxLocal(-0.35, 1.25 - armSwing * 0.1, -armSwing * 0.25, 0.16, 0.65, 0.16, jacketCol);
+    addBoxLocal(0.35, 1.25 + armSwing * 0.1, armSwing * 0.25, 0.16, 0.65, 0.16, jacketCol);
+
+    // Weapon in hands
+    if (this.currentWeapon === 'rifle') {
+      // Vane Carbine in forward ready stance
+      addBoxLocal(0.25, 1.15, 0.35, 0.12, 0.18, 0.75, [0.1, 0.1, 0.12, 1.0]);
+    } else {
+      // Pistol in hand
+      addBoxLocal(0.28, 1.1, 0.25, 0.08, 0.14, 0.28, [0.18, 0.18, 0.2, 1.0]);
+    }
   }
 }
-
-export const player = new Player();

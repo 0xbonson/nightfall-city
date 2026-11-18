@@ -59,10 +59,10 @@ Explore four expansive, handcrafted districts: the soaring glass skyscrapers of 
 ## Curated Gameplay Moments
 
 The four screenshots in `screenshots/` capture real in-game moments from the living world of Vela Bay:
-1. `1-on-foot-downtown.png` — Downtown street seen from behind Rhea "Rook" Solano on the wide stone pavement: soaring skyscrapers rising into a warm sunset sky, cruising traffic, strolling pedestrians, raking shadows, and clear HUD with minimap and mission marker.
-2. `2-car-drive-promenade.png` — Turquoise sports car at speed (151 MPH) drifting along Ocean Promenade: open bay water, low golden sun disc over the sea, palms, boardwalk railing, and marina pier in frame.
-3. `3-police-pursuit-stars.png` — High-intensity police pursuit at its height: five wanted stars glowing in the HUD, red and blue emissive lightbars flashing across the road, player car flanked between two cruisers on a wide boulevard with the Skyway Overpass towering behind.
-4. `4-mission-dock-showdown.png` — Meridian Docks mission showdown: stacked multi-color shipping containers, 38m gantry crane, hovering police helicopter with downward searchlight, syndicate guards, and water beyond.
+1. `1-city-street.png` — Downtown on foot from behind the player: soaring skyscrapers rising into a warm sunset sky, cruising traffic, strolling pedestrians, raking shadows, and clear HUD with minimap and mission objective visible.
+2. `2-car-promenade.png` — The sports car at speed (151 MPH) drifting along the waterfront road: open bay water, low golden sun over the sea, palms, boardwalk railing, and marina pier in frame, with speedometer on the HUD.
+3. `3-police-chase.png` — High-intensity police chase at its height: five wanted stars glowing in the HUD, red and blue lights flashing, player car flanked between two cruisers on Skyway Boulevard with the elevated overpass towering behind.
+4. `4-dock-heist.png` — Meridian Docks at golden hour: stacked multi-color shipping containers, 36m gantry crane, hovering police helicopter with downward searchlight beam, player in tactical stance, and water beyond.
 
 ## Run it
 
