@@ -271,6 +271,16 @@ export class TrafficManager {
       }
     }
   }
+
+  // Returns active vehicles within a given radius of a query position
+  getNearbyVehicles(x, z, radius = 25.0) {
+    const radSq = radius * radius;
+    return this.vehicles.filter((v) => {
+      const dx = v.x - x;
+      const dz = v.z - z;
+      return (dx * dx + dz * dz) <= radSq;
+    });
+  }
 }
 
 export const traffic = new TrafficManager();

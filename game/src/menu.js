@@ -555,6 +555,11 @@ export class MenuManager {
     }
     return null;
   }
+
+  // Returns true if game is currently in a paused state
+  isPaused() {
+    return this.state === 'paused';
+  }
 }
 
 export const menu = new MenuManager();

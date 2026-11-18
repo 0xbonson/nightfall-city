@@ -321,6 +321,19 @@ export class PoliceManager {
       audio.updateSiren(false);
     }
   }
+
+  // Fully clears all active wanted heat and returns law enforcement to idle patrol
+  clearWantedLevel() {
+    this.wantedLevel = 0;
+    this.heat = 0;
+    this.isEvading = false;
+    this.evasionTimer = 0;
+    this.cruisers = [];
+    this.officers = [];
+    this.roadblocks = [];
+    this.helicopter = null;
+    audio.updateSiren(false);
+  }
 }
 
 export const police = new PoliceManager();

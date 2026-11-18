@@ -294,6 +294,11 @@ export class Player {
       }
     }
   }
+
+  // Returns true if player health is at maximum capacity
+  isFullHealth() {
+    return this.health >= this.maxHealth;
+  }
 }
 
 export const player = new Player();

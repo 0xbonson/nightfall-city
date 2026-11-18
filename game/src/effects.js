@@ -155,6 +155,12 @@ export class ParticleSystem {
       }
     }
   }
+
+  // Clears all active particles and road skid mark decals
+  clear() {
+    this.particles = [];
+    this.skidMarks = [];
+  }
 }
 
 export class ScreenEffects {

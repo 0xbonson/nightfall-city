@@ -30,6 +30,7 @@ export class PedestrianManager {
     this.sheltersInitialized = false;
     this.parkInitialized = false;
     this.foodCartsInitialized = false;
+    this.locked = false; // When true, ambient spawning is paused for composed screenshot capture
   }
 
   initFoodCartQueues() {
@@ -122,7 +123,7 @@ export class PedestrianManager {
   }
 
   spawnPedestrian(nearX, nearZ) {
-    if (this.pedestrians.length >= this.maxPeds) return;
+    if (this.locked || this.pedestrians.length >= this.maxPeds) return;
 
     // Pick a sidewalk coordinate near the player (radius 25m to 65m)
     const baseAngle = Math.random() * Math.PI * 2;
@@ -282,6 +283,11 @@ export class PedestrianManager {
         this.cashPickups.splice(i, 1);
       }
     }
+  }
+
+  // Returns count of active alive pedestrians currently roaming the city
+  getActiveCount() {
+    return this.pedestrians.filter((p) => p.alive).length;
   }
 }
 

@@ -694,7 +694,14 @@ class SoundManager {
 
   toggleRadio() {
     this.radioStation = (this.radioStation + 1) % 3;
-    return this.radioStation === 1 ? 'VELA WAVE 80.4' : this.radioStation === 2 ? 'NIGHTFALL BEATS' : 'RADIO OFF';
+    return this.getStationName();
+  }
+
+  // Returns human-readable callsign for currently tuned radio station
+  getStationName() {
+    if (this.radioStation === RADIO_STATION_VELA_WAVE) return 'VELA WAVE 80.4';
+    if (this.radioStation === RADIO_STATION_NIGHTFALL) return 'NIGHTFALL BEATS';
+    return 'RADIO OFF';
   }
 }
 

@@ -35,20 +35,23 @@ export const CONFIG = {
     tipMultiplier: 1.5,
   },
 
+  // Screenshot query preset identifiers
+  screenshotPresets: ['1', '2', '3', '4'],
+
   // Atmospheric late afternoon daylight and coastal sun lighting constants
   lighting: {
     // Sun sits low over the South-West bay, casting long dramatic afternoon shadows
     sunDir: [-0.64, 0.35, 0.68],
-    sunColor: [1.0, 0.92, 0.74], // Warm golden late-afternoon sunlight
+    sunColor: [1.08, 0.94, 0.74], // Warm golden late-afternoon sunlight
     skyZenithColor: [0.08, 0.32, 0.74], // Deep coastal cobalt blue zenith
-    skyHorizonColor: [0.96, 0.88, 0.74], // Pale hot sun-soaked golden horizon
-    ambientSky: [0.32, 0.44, 0.62], // Cool atmospheric sky hemisphere fill
-    ambientGround: [0.34, 0.28, 0.20], // Warm asphalt and sand ground bounce
-    fogColor: [0.94, 0.86, 0.74], // Atmospheric haze matching horizon color
+    skyHorizonColor: [1.02, 0.88, 0.70], // Pale hot sun-soaked golden horizon
+    ambientSky: [0.34, 0.44, 0.62], // Cool atmospheric sky hemisphere fill
+    ambientGround: [0.36, 0.30, 0.22], // Warm asphalt and sand ground bounce
+    fogColor: [0.98, 0.88, 0.74], // Atmospheric haze matching horizon color
     fogStart: 70.0,
     fogEnd: 460.0,
     shadowDir: [0.64, 0.0, -0.68], // Vector along which shadows stretch across pavements
-    shadowLength: 1.95, // Long afternoon shadow projection multiplier
+    shadowLength: 2.65, // Long dramatic afternoon shadow projection multiplier
   },
 
   // Material surface colors (warm grey asphalt, light stone kerbs, coastal sand)

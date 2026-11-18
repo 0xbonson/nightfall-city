@@ -138,6 +138,14 @@ export class Weapon {
     audio.playReload();
   }
 
+  // Refills magazine and reserve ammo to maximum capacity
+  refillAmmo() {
+    this.ammoInMag = this.magSize;
+    this.reserveAmmo = this.maxReserve;
+    this.isReloading = false;
+    this.reloadTimer = 0;
+  }
+
   finishReload() {
     const needed = this.magSize - this.ammoInMag;
     const load = Math.min(needed, this.reserveAmmo);

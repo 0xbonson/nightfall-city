@@ -77,109 +77,125 @@ class GameApp {
         // Shot 1: Rook on foot on a rich Downtown stone pavement, tall towers rising into warm sky, pedestrians and traffic
         player.inVehicle = false;
         player.vehicle = null;
-        player.x = 52.5;
-        player.z = -38;
+        player.x = 68.2;
+        player.z = -80;
         player.heading = 3.14; // Facing down the avenue towards Downtown towers
+        player.speed = 2.5; // Walking stride
+        player.animTime = 0.95;
         player.cash = 6500;
         player.health = 100;
         player.armor = 80;
         player.activeWeaponIndex = 0;
         camera.lockedYaw = true;
-        camera.yaw = 3.14; // Looking North directly into the Downtown skyline
-        camera.pitch = -0.05; // Looking slightly up to capture the soaring tower crowns
-        camera.distance = 4.4;
+        camera.lockedPitch = -0.15;
+        camera.lockedDistance = 3.8;
+        camera.yaw = 3.12; // Looking North along avenue into Downtown skyline with towers on both sides
+        camera.pitch = -0.15; // Looking up to capture soaring skyscraper crowns
+        camera.distance = 3.8;
         camera.snap(player);
         missions.startMission(0);
+        missions.dialogue = null;
+        missions.dialogueTimer = 0;
 
-        // Spawn pedestrians strolling along the Downtown avenue sidewalk in small groups
+        // Pedestrians strolling along the Downtown avenue sidewalk ahead of player
         pedestrians.pedestrians = [];
-        const p1 = { x: 52.8, z: -45, heading: 3.14, speed: 1.6, alive: true, health: 40, animTime: 1.2, outfit: pedestrians.outfits[0] };
-        const p2 = { x: 51.6, z: -46, heading: 3.14, speed: 1.6, alive: true, health: 40, animTime: 1.4, outfit: pedestrians.outfits[1] };
-        const p3 = { x: 53.2, z: -53, heading: 0.1, speed: 1.5, alive: true, health: 40, animTime: 3.2, outfit: pedestrians.outfits[2] };
-        const p4 = { x: 52.0, z: -61, heading: 3.14, speed: 1.7, alive: true, health: 40, animTime: 2.1, outfit: pedestrians.outfits[4] };
-        const p5 = { x: 51.4, z: -49.5, heading: 1.57, speed: 0, alive: true, isWaiting: true, health: 40, animTime: 0.5, outfit: pedestrians.outfits[3] }; // At bus shelter
-        pedestrians.pedestrians.push(p1, p2, p3, p4, p5);
+        pedestrians.locked = true;
+        pedestrians.foodCartsInitialized = true;
+        const p1 = { x: 71.4, z: -90, heading: 3.14, speed: 1.6, alive: true, health: 40, animTime: 1.2, outfit: pedestrians.outfits[0] };
+        const p2 = { x: 72.8, z: -93, heading: 3.14, speed: 1.5, alive: true, health: 40, animTime: 1.4, outfit: pedestrians.outfits[1] };
+        const p3 = { x: 71.0, z: -106, heading: 0.1, speed: 1.4, alive: true, health: 40, animTime: 3.2, outfit: pedestrians.outfits[2] };
+        const p4 = { x: 68.5, z: -118, heading: 3.14, speed: 1.7, alive: true, health: 40, animTime: 2.1, outfit: pedestrians.outfits[4] };
+        pedestrians.pedestrians.push(p1, p2, p3, p4);
 
-        // Populate Downtown avenue with traffic (Taxi, sports car, bus)
+        // Populate Downtown avenue with traffic (Sports car, taxi, bus)
         traffic.vehicles = [];
-        const taxi = VehiclePhysics.createVehicle(63.5, -48, 3.14, 'taxi');
+        const sports = VehiclePhysics.createVehicle(56.5, -90, 3.14, 'sports');
+        sports.color = [0.88, 0.16, 0.16];
+        sports.isTraffic = true;
+        sports.speed = 18;
+        traffic.vehicles.push(sports);
+
+        const taxi = VehiclePhysics.createVehicle(63.5, -100, 3.14, 'taxi');
         taxi.color = [0.96, 0.82, 0.12];
         taxi.isTraffic = true;
         taxi.speed = 15;
         traffic.vehicles.push(taxi);
 
-        const sports = VehiclePhysics.createVehicle(56.5, -64, 3.14, 'sports');
-        sports.color = [0.85, 0.15, 0.15];
-        sports.isTraffic = true;
-        sports.speed = 18;
-        traffic.vehicles.push(sports);
-
-        const bus = VehiclePhysics.createVehicle(63.5, -82, 3.14, 'bus');
+        const bus = VehiclePhysics.createVehicle(63.5, -128, 3.14, 'bus');
         bus.color = [0.18, 0.52, 0.78];
         bus.isTraffic = true;
         bus.speed = 10;
         traffic.vehicles.push(bus);
       } else if (shot === '2' || shot === 'play' || shot === 'car') {
         // Shot 2: Sports car at speed along the Ocean Promenade with the sea, low sun over the water, palm trees, boardwalk & marina
-        const car = VehiclePhysics.createVehicle(-110, 175, -1.57, 'sports');
-        car.color = [0.10, 0.82, 0.65]; // Tropical seafoam turquoise sports car
+        const car = VehiclePhysics.createVehicle(-96, 178, -1.88, 'sports');
+        car.color = [0.10, 0.85, 0.70]; // Tropical seafoam turquoise sports car
         car.roofColor = [0.10, 0.12, 0.14];
-        car.speed = 36;
-        car.pitch = 0.035; // Acceleration squat
-        car.roll = -0.04;
+        car.speed = 42;
+        car.pitch = 0.045; // Hard acceleration squat
+        car.roll = -0.08; // High speed dynamic drift roll
         car.isDrifting = true;
-        car.driftFactor = 0.8;
+        car.driftFactor = 1.0;
         traffic.vehicles = [car];
         player.enterVehicle(car);
         player.cash = 8400;
 
         camera.lockedYaw = true;
-        camera.yaw = -1.48; // Looking West with slight southward tilt into boardwalk, beach, palm trees, ocean, and low sun
-        camera.pitch = 0.04;
-        camera.distance = 6.8;
+        camera.lockedPitch = 0.08;
+        camera.lockedDistance = 5.6;
+        camera.yaw = -2.32; // Angled South-West directly across sports car towards the boardwalk, marina, sea, and low sun
+        camera.pitch = 0.08;
+        camera.distance = 5.6;
         camera.snap(player);
 
-        missions.startMission(1);
+        missions.startMission(0);
+        missions.dialogue = null;
+        missions.dialogueTimer = 0;
       } else if (shot === '3' || shot === 'police' || shot === 'pursuit') {
-        // Shot 3: High speed 4-Star Police Pursuit with player car between two cruisers on wide road, lights flashing, wanted stars in HUD
-        const car = VehiclePhysics.createVehicle(0, 34, 0, 'muscle');
+        // Shot 3: High speed 5-Star Police Pursuit with player car between two cruisers on wide road, lights flashing, wanted stars in HUD
+        const car = VehiclePhysics.createVehicle(0, 48, 0, 'muscle');
         car.color = [0.90, 0.15, 0.15]; // Red muscle car
         car.roofColor = [0.12, 0.12, 0.14];
-        car.speed = 35;
-        car.pitch = 0.025;
+        car.speed = 38;
+        car.pitch = 0.02;
         player.enterVehicle(car);
-        player.cash = 14500;
-        police.setWantedLevel(4);
+        player.cash = 18500;
+        police.setWantedLevel(5);
 
-        // Two police cruisers flanking player car on the wide central avenue
+        // Two police cruisers flanking player car tightly on the wide central avenue approaching the overpass
         police.cruisers = [];
-        const c1 = VehiclePhysics.createVehicle(-4.2, 36.2, 0.10, 'police');
+        const c1 = VehiclePhysics.createVehicle(-3.4, 50.2, 0.06, 'police');
         c1.color = [0.12, 0.12, 0.14];
         c1.roofColor = [0.95, 0.95, 0.95];
         c1.isPolice = true;
         c1.isCinematic = true;
-        c1.cinematicOffsetX = -4.2;
+        c1.cinematicOffsetX = -3.4;
         c1.cinematicOffsetZ = 2.2;
         c1.sirenPhase = 0;
-        c1.speed = 35;
+        c1.speed = 38;
         police.cruisers.push(c1);
 
-        const c2 = VehiclePhysics.createVehicle(4.2, 36.2, -0.10, 'police');
+        const c2 = VehiclePhysics.createVehicle(3.4, 49.8, -0.06, 'police');
         c2.color = [0.12, 0.12, 0.14];
         c2.roofColor = [0.95, 0.95, 0.95];
         c2.isPolice = true;
         c2.isCinematic = true;
-        c2.cinematicOffsetX = 4.2;
-        c2.cinematicOffsetZ = 2.2;
+        c2.cinematicOffsetX = 3.4;
+        c2.cinematicOffsetZ = 1.8;
         c2.sirenPhase = 3.14;
-        c2.speed = 35;
+        c2.speed = 38;
         police.cruisers.push(c2);
 
         camera.lockedYaw = true;
-        camera.yaw = 0.0; // Looking forward from behind player car between both flanking cruisers
-        camera.pitch = 0.05;
-        camera.distance = 7.4;
+        camera.lockedPitch = 0.06;
+        camera.lockedDistance = 6.2;
+        camera.yaw = 0.0; // Looking forward from behind player car between both flanking cruisers towards overpass
+        camera.pitch = 0.06;
+        camera.distance = 6.2;
         camera.snap(player);
+
+        missions.dialogue = null;
+        missions.dialogueTimer = 0;
       } else if (shot === 'title' || shot === 'menu') {
         // Shot 5: Title screen over the skyline orbit camera (start screen)
         menu.state = 'title';
@@ -202,9 +218,11 @@ class GameApp {
         // Shot 4: Mission 6 "Showdown at Meridian Docks" with shipping containers, gantry crane, helicopter and water beyond
         player.inVehicle = false;
         player.vehicle = null;
-        player.x = 138;
-        player.z = 186;
-        player.heading = 0.68; // Facing towards container stacks, crane, helicopter, and open bay
+        player.x = 142;
+        player.z = 191;
+        player.heading = 0.58; // Facing towards container stacks, crane, helicopter, and open bay
+        player.speed = 2.4;
+        player.animTime = 1.0;
         player.cash = 45000;
         player.activeWeaponIndex = 1;
         player.hasWeapon = true;
@@ -213,33 +231,40 @@ class GameApp {
         police.setWantedLevel(4);
         police.officers = [];
         missions.startMission(5);
+        missions.dialogue = null;
+        missions.dialogueTimer = 0;
 
         // Syndicate enforcers guarding the container rows
         missions.enemies = [
-          { x: 156, y: 0, z: 204, heading: -2.1, alive: true, health: 100, animTime: 0.8 },
-          { x: 148, y: 0, z: 208, heading: -2.4, alive: true, health: 100, animTime: 1.5 }
+          { x: 154, y: 0, z: 205, heading: -2.1, alive: true, health: 100, animTime: 0.8 },
+          { x: 146, y: 0, z: 209, heading: -2.4, alive: true, health: 100, animTime: 1.5 }
         ];
 
         // Police helicopter hovering above the dockside with searchlight illuminating the yard
         police.helicopter = {
-          x: 154,
-          y: 7.2,
-          z: 208,
-          hoverX: 154,
-          hoverY: 7.2,
-          hoverZ: 208,
+          x: 153,
+          y: 9.2,
+          z: 212,
+          hoverX: 153,
+          hoverY: 9.2,
+          hoverZ: 212,
           rotorAngle: 1.5,
-          spotlightX: 150,
-          spotlightZ: 202,
-          spotlightTargetX: 150,
-          spotlightTargetZ: 202,
+          spotlightX: 147,
+          spotlightZ: 205,
+          spotlightTargetX: 147,
+          spotlightTargetZ: 205,
           shootCooldown: 999
         };
 
         camera.lockedYaw = true;
-        camera.yaw = 0.68;
-        camera.pitch = -0.04;
-        camera.distance = 4.8;
+        camera.lockedPitch = -0.07;
+        camera.lockedDistance = 3.8;
+        camera.yaw = 0.56;
+        camera.pitch = -0.07;
+        camera.distance = 3.8;
+        camera.snap(player);
+
+        particles.emit('spark', 150, 1.2, 196, 8);
         camera.snap(player);
 
         particles.emit('spark', 150, 1.2, 196, 8);
@@ -485,72 +510,79 @@ class GameApp {
     }
 
     if (this.activeShot === '1') {
-      player.x = 52.5;
-      player.z = -38;
+      player.x = 68.2;
+      player.z = -80;
       player.heading = 3.14;
-      camera.yaw = 3.14;
-      camera.pitch = -0.05;
-      camera.distance = 4.4;
+      player.speed = 2.5;
+      player.animTime = 0.95;
+      camera.yaw = 3.12;
+      camera.pitch = -0.15;
+      camera.distance = 3.8;
     } else if (this.activeShot === '2' && player.vehicle) {
-      player.vehicle.x = -110;
-      player.vehicle.z = 175;
-      player.vehicle.angle = -1.57;
-      player.vehicle.speed = 36;
-      player.vehicle.pitch = 0.035;
-      player.vehicle.roll = -0.04;
+      player.vehicle.x = -96;
+      player.vehicle.z = 178;
+      player.vehicle.angle = -1.88;
+      player.vehicle.speed = 42;
+      player.vehicle.pitch = 0.045;
+      player.vehicle.roll = -0.08;
       player.vehicle.isDrifting = true;
       player.x = player.vehicle.x;
       player.z = player.vehicle.z;
-      camera.yaw = -1.48;
-      camera.pitch = 0.04;
-      camera.distance = 6.8;
+      camera.yaw = -2.32;
+      camera.pitch = 0.08;
+      camera.distance = 5.6;
 
       // Road skid marks from rear tires under drift
       particles.addSkidMark(player.vehicle.x + 1.2, player.vehicle.z - 0.7, player.vehicle.angle, 0.35, 0.65);
       particles.addSkidMark(player.vehicle.x + 1.2, player.vehicle.z + 0.7, player.vehicle.angle, 0.35, 0.65);
     } else if (this.activeShot === '3' && player.vehicle) {
       player.vehicle.x = 0;
-      player.vehicle.z = 34;
+      player.vehicle.z = 48;
       player.vehicle.angle = 0;
-      player.vehicle.speed = 35;
+      player.vehicle.speed = 38;
       player.x = player.vehicle.x;
       player.z = player.vehicle.z;
-      police.setWantedLevel(4);
+      police.setWantedLevel(5);
       if (police.cruisers.length >= 2) {
-        police.cruisers[0].x = -4.2;
-        police.cruisers[0].z = 36.2;
-        police.cruisers[0].speed = 35;
-        police.cruisers[0].angle = 0.10;
-        police.cruisers[1].x = 4.2;
-        police.cruisers[1].z = 36.2;
-        police.cruisers[1].speed = 35;
-        police.cruisers[1].angle = -0.10;
+        police.cruisers[0].x = -3.4;
+        police.cruisers[0].z = 50.2;
+        police.cruisers[0].speed = 38;
+        police.cruisers[0].angle = 0.06;
+        police.cruisers[1].x = 3.4;
+        police.cruisers[1].z = 49.8;
+        police.cruisers[1].speed = 38;
+        police.cruisers[1].angle = -0.06;
       }
       camera.yaw = 0.0;
-      camera.pitch = 0.05;
-      camera.distance = 7.4;
+      camera.pitch = 0.06;
+      camera.distance = 6.2;
 
       // Tire smoke & skid marks under hard high-speed chase
-      particles.addSkidMark(-4.2, 35.0, 0.10, 0.35, 0.55);
-      particles.addSkidMark(4.2, 35.0, -0.10, 0.35, 0.55);
-      particles.addSkidMark(0, 32.5, 0, 0.35, 0.55);
+      particles.addSkidMark(-3.4, 48.5, 0.06, 0.35, 0.55);
+      particles.addSkidMark(3.4, 48.2, -0.06, 0.35, 0.55);
+      particles.addSkidMark(0, 46.5, 0, 0.35, 0.55);
+      particles.emit('smoke', -3.4, 0.3, 47.8, 1, { size: 0.35, up: 0.2 });
+      particles.emit('smoke', 3.4, 0.3, 47.5, 1, { size: 0.35, up: 0.2 });
+      particles.emit('smoke', 0, 0.3, 45.8, 1, { size: 0.35, up: 0.2 });
     } else if (this.activeShot === '4') {
-      player.x = 138;
-      player.z = 186;
-      player.heading = 0.68;
+      player.x = 142;
+      player.z = 191;
+      player.heading = 0.56;
+      player.speed = 2.4;
+      player.animTime = 1.0;
       police.setWantedLevel(4);
       police.officers = [];
       if (police.helicopter) {
-        police.helicopter.x = 154;
-        police.helicopter.y = 7.2;
-        police.helicopter.z = 208;
-        police.helicopter.spotlightX = 150;
-        police.helicopter.spotlightZ = 202;
+        police.helicopter.x = 153;
+        police.helicopter.y = 9.2;
+        police.helicopter.z = 212;
+        police.helicopter.spotlightX = 147;
+        police.helicopter.spotlightZ = 205;
         police.helicopter.rotorAngle += dt * 38;
       }
-      camera.yaw = 0.68;
-      camera.pitch = -0.04;
-      camera.distance = 4.8;
+      camera.yaw = 0.56;
+      camera.pitch = -0.07;
+      camera.distance = 3.8;
     }
 
     // Check story completion ending screen trigger

@@ -36,6 +36,8 @@ export class Camera {
 
     this.lookSensitivity = 0.0024;
     this.lockedYaw = false;
+    this.lockedPitch = null;
+    this.lockedDistance = null;
     this.viewMatrix = new Float32Array(16);
     this.projMatrix = new Float32Array(16);
     this.viewProjMatrix = new Float32Array(16);
@@ -49,7 +51,7 @@ export class Camera {
     this.targetZ = player.z;
 
     const inVehicle = player.inVehicle && player.vehicle;
-    const targetDist = inVehicle ? 7.6 : 5.0;
+    const targetDist = this.lockedDistance || (inVehicle ? 7.6 : 5.0);
     const targetHeight = inVehicle ? 2.5 : 1.4;
     const hDist = targetDist * Math.cos(this.pitch);
     const vDist = targetDist * Math.sin(this.pitch) + targetHeight;
@@ -94,9 +96,12 @@ export class Camera {
     this.yaw -= mouseDelta.dx * this.lookSensitivity;
     this.pitch += mouseDelta.dy * this.lookSensitivity;
     // Clamp pitch between -10 deg and 65 deg
-    this.pitch = Math.max(-0.15, Math.min(1.1, this.pitch));
+    this.pitch = Math.max(-0.25, Math.min(1.1, this.pitch));
+    if (typeof this.lockedPitch === 'number') {
+      this.pitch = this.lockedPitch;
+    }
 
-    let targetDist = 5.0;
+    let targetDist = this.lockedDistance || 5.0;
     let targetHeight = 1.4;
 
     const inVehicleNow = !!(player.inVehicle && player.vehicle);

@@ -137,6 +137,11 @@ class InputManager {
 
     return { dx, dy, lp, rp, wd, left: this.mouse.left, right: this.mouse.right };
   }
+
+  // Returns true if browser pointer lock is currently acquired
+  isLocked() {
+    return document.pointerLockElement === this.targetElement;
+  }
 }
 
 export const input = new InputManager();

@@ -75,6 +75,12 @@ const server = createServer((request, response) => {
     'access-control-allow-origin': '*',
     'x-content-type-options': 'nosniff',
   });
+
+  if (request.method === 'HEAD') {
+    response.end();
+    return;
+  }
+
   createReadStream(file).pipe(response);
 });
 

@@ -102,6 +102,14 @@ A connected 8-mission story arc detailing Rook's struggle against the rival crew
 - Full state saving to browser `localStorage` (position, cash, active mission, health, armor, wanted heat).
 - Title screen menu with "Start New Game", "Continue Career", "Controls", and audio toggles.
 
+### 2.10 Gameplay Photography & Screenshot Gallery
+- Deterministic query-driven capture parameters (`?shot=1..4`) capturing living open-world gameplay:
+  - `1-on-foot-downtown.png`: Rook in mid-stride on stone pavement, rising towers into sunset sky, raking shadows, cruising traffic, pedestrians.
+  - `2-car-drive-promenade.png`: Sports car drifting along Ocean Promenade at 151 MPH, solar corona over ocean waves, palms, boardwalk and marina.
+  - `3-police-pursuit-stars.png`: 5-star police pursuit, emissive red/blue strobes flashing with road reflections, muscle car between two cruisers at 137 MPH, overpass behind.
+  - `4-mission-dock-showdown.png`: Meridian Docks mission showdown, shipping containers, 38m gantry crane, hovering police helicopter with volumetric spotlight, and bay beyond.
+- Automated Pillow quantization pipeline ensuring all PNGs stay strictly under the 262,144 bytes limit while preserving crisp UI and rich color reproduction.
+
 ---
 
 ## 3. Architecture & File Layout

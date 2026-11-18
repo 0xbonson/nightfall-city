@@ -21,15 +21,16 @@ const screenSourceDir = join(currentDir, 'screenshots');
 // Target directory provided by the test environment or grader container
 const targetOutputDir = resolve(process.env.MAKEFUN_OUTPUT_DIR ?? '/output');
 
-export const BUNDLE_VERSION = '1.2.0';
+export const BUNDLE_VERSION = '1.3.0';
 export const GAME_DIST_TITLE = 'Nightfall City: Vela Bay (Shipped Gold Edition)';
+export const MAX_SCREENSHOT_BYTES = 262144; // 256 KiB cap per screenshot image
 
 // Strict competition constraints
 const DOSSIER_LIMITS = {
   text_max_bytes: 163840, // 160 KiB limit for code listing text in dossier
   screenshots: {
     max: 4,               // Exactly 4 curated screenshots
-    max_bytes: 262144,    // 256 KiB cap per screenshot image
+    max_bytes: MAX_SCREENSHOT_BYTES,    // 256 KiB cap per screenshot image
   },
   game_max_files: 993,    // Fit within overall 1000-entry directory cap
   game_max_bytes: 48 * 1024 * 1024, // 48 MiB total game size cap
@@ -49,7 +50,7 @@ function bundleNightfallCity(): void {
   cpSync(gameSourceDir, gameDest, { recursive: true });
   console.log(`[Nightfall City] Copied web runtime to ${gameDest}`);
 
-  // 2. Copy screenshots if present
+  // 2. Copy screenshots if present and verify size compliance
   const screenDest = join(targetOutputDir, 'screenshots');
   mkdirSync(screenDest, { recursive: true });
   if (existsSync(screenSourceDir)) {

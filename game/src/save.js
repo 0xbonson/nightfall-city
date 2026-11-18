@@ -76,4 +76,10 @@ export class SaveManager {
       savedAt: new Date(data.timestamp).toLocaleString(),
     };
   }
+
+  // Returns Unix timestamp of the most recent save game, or null if no save exists
+  static getSaveTimestamp() {
+    const data = this.load();
+    return data?.timestamp ?? null;
+  }
 }

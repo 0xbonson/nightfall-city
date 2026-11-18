@@ -666,6 +666,11 @@ export class MissionManager {
       }
     }
   }
+
+  // Returns true if all campaign story missions have been completed
+  isCampaignCompleted() {
+    return this.storyCompleted || this.currentMissionIndex >= this.missions.length;
+  }
 }
 
 export const missions = new MissionManager();

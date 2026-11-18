@@ -56,6 +56,14 @@ Explore four expansive, handcrafted districts: the soaring glass skyscrapers of 
 | **Change Radio Station** | `R` (in vehicle) |
 | **Tactical Pause Map & Dossier** | `M`, `Esc`, or `P` |
 
+## Curated Gameplay Moments
+
+The four screenshots in `screenshots/` capture real in-game moments from the living world of Vela Bay:
+1. `1-on-foot-downtown.png` — Downtown street seen from behind Rhea "Rook" Solano on the wide stone pavement: soaring skyscrapers rising into a warm sunset sky, cruising traffic, strolling pedestrians, raking shadows, and clear HUD with minimap and mission marker.
+2. `2-car-drive-promenade.png` — Turquoise sports car at speed (151 MPH) drifting along Ocean Promenade: open bay water, low golden sun disc over the sea, palms, boardwalk railing, and marina pier in frame.
+3. `3-police-pursuit-stars.png` — High-intensity police pursuit at its height: five wanted stars glowing in the HUD, red and blue emissive lightbars flashing across the road, player car flanked between two cruisers on a wide boulevard with the Skyway Overpass towering behind.
+4. `4-mission-dock-showdown.png` — Meridian Docks mission showdown: stacked multi-color shipping containers, 38m gantry crane, hovering police helicopter with downward searchlight, syndicate guards, and water beyond.
+
 ## Run it
 
 ```sh

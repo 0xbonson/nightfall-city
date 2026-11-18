@@ -1615,6 +1615,15 @@ export class CityWorld {
       }
     }
   }
+
+  // Identify current geographic district for audio ambiance and HUD indicators
+  getDistrictAt(x, z) {
+    if (x > 20 && z < -20) return 'Downtown';
+    if (x < -20 && z < -20) return 'Old Market';
+    if (x > 20 && z > 20) return 'Meridian Docks';
+    if (x < -20 && z > 20) return 'Ocean Promenade';
+    return 'Central Parkway';
+  }
 }
 
 export const world = new CityWorld();

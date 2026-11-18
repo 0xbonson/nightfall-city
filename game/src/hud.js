@@ -6,6 +6,7 @@ import { CONFIG } from './config.js';
 
 export const HUD_STATUS_BAR_WIDTH = 140;
 export const HUD_STATUS_BAR_HEIGHT = 12;
+export const HUD_VIGNETTE_ALPHA = 0.28; // Subtle cinematic vignette edge falloff
 
 export class HUD {
   render(ctx, player, world, police, traffic, pedestrians, missions, width, height) {
@@ -14,7 +15,7 @@ export class HUD {
     // 0. Screen-wide cinematic vignette & warm sunlit bloom
     const vigGrad = ctx.createRadialGradient(width / 2, height / 2, width * 0.38, width / 2, height / 2, width * 0.75);
     vigGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-    vigGrad.addColorStop(1, 'rgba(18, 12, 8, 0.28)');
+    vigGrad.addColorStop(1, `rgba(18, 12, 8, ${HUD_VIGNETTE_ALPHA})`);
     ctx.fillStyle = vigGrad;
     ctx.fillRect(0, 0, width, height);
 

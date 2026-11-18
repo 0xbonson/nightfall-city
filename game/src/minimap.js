@@ -3,6 +3,7 @@
 
 export const MINIMAP_DEFAULT_SIZE = 175; // Diameter in pixels
 export const MINIMAP_RADAR_ZOOM = 1.35;  // Pixels per world meter
+export const MINIMAP_RADAR_OPACITY = 0.94; // Dark radar background opacity
 
 export class Minimap {
   constructor() {
@@ -25,7 +26,7 @@ export class Minimap {
 
     // Dark radar background
     const bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-    bgGrad.addColorStop(0, 'rgba(15, 23, 36, 0.92)');
+    bgGrad.addColorStop(0, `rgba(15, 23, 36, ${MINIMAP_RADAR_OPACITY})`);
     bgGrad.addColorStop(1, 'rgba(8, 12, 20, 0.98)');
     ctx.fillStyle = bgGrad;
     ctx.fill();

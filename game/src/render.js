@@ -1463,6 +1463,20 @@ export class WebGLRenderer {
     this.pushDynamicQuad([x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1], [1, 0, 0], col);
   }
 
+  // Draw full emissive unlit geometry (zero normal bypasses directional shading)
+  pushEmissiveBox(x, y, z, w, h, d, col) {
+    const x0 = x - w / 2, x1 = x + w / 2;
+    const y0 = y, y1 = y + h;
+    const z0 = z - d / 2, z1 = z + d / 2;
+    const zeroNorm = [0, 0, 0];
+
+    this.pushDynamicQuad([x0, y1, z0], [x0, y1, z1], [x1, y1, z1], [x1, y1, z0], zeroNorm, col);
+    this.pushDynamicQuad([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], zeroNorm, col);
+    this.pushDynamicQuad([x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0], zeroNorm, col);
+    this.pushDynamicQuad([x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0], zeroNorm, col);
+    this.pushDynamicQuad([x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1], zeroNorm, col);
+  }
+
   // Draw soft elongated late-afternoon ground shadow decal
   drawGroundShadow(x, z, width, length, height = 0) {
     const shadowCol = [0.08, 0.09, 0.12, 0.38];
@@ -1660,10 +1674,37 @@ export class WebGLRenderer {
       if (v.isPolice) {
         const flashRed = Math.sin(Date.now() * 0.018 + (v.sirenPhase || 0)) > 0;
         const barY = 0.3 + bh + ch + 0.14;
-        const redPos = toWorld(-0.42, barY, 0);
-        const bluePos = toWorld(0.42, barY, 0);
-        this.pushDynamicBox(redPos[0], redPos[1], redPos[2], 0.44, 0.22, 0.32, flashRed ? [1.0, 0.15, 0.15, 1.0] : [0.25, 0.05, 0.05, 1.0]);
-        this.pushDynamicBox(bluePos[0], bluePos[1], bluePos[2], 0.44, 0.22, 0.32, !flashRed ? [0.15, 0.65, 1.0, 1.0] : [0.05, 0.12, 0.3, 1.0]);
+        const redPos = toWorld(-0.44, barY, 0);
+        const bluePos = toWorld(0.44, barY, 0);
+
+        // Emissive emergency lightbars (pure emissive color, visible in all lighting)
+        const redCol = flashRed ? [1.0, 0.12, 0.12, 1.0] : [0.35, 0.04, 0.04, 1.0];
+        const blueCol = !flashRed ? [0.12, 0.82, 1.0, 1.0] : [0.04, 0.15, 0.38, 1.0];
+        this.pushEmissiveBox(redPos[0], redPos[1], redPos[2], 0.52, 0.28, 0.36, redCol);
+        this.pushEmissiveBox(bluePos[0], bluePos[1], bluePos[2], 0.52, 0.28, 0.36, blueCol);
+
+        // Center chrome siren speaker housing
+        const spkPos = toWorld(0, barY, 0);
+        this.pushDynamicBox(spkPos[0], spkPos[1], spkPos[2], 0.22, 0.18, 0.30, chromeCol);
+
+        // Flashing light strobe halos in the air
+        if (flashRed) {
+          this.pushEmissiveBox(redPos[0], redPos[1], redPos[2], 1.1, 0.55, 0.9, [1.0, 0.18, 0.18, 0.45]);
+        } else {
+          this.pushEmissiveBox(bluePos[0], bluePos[1], bluePos[2], 1.1, 0.55, 0.9, [0.15, 0.85, 1.0, 0.45]);
+        }
+
+        // Flashing ground reflection pool on road
+        const gFlashCol = flashRed ? [1.0, 0.10, 0.10, 0.38] : [0.10, 0.65, 1.0, 0.38];
+        const gCenter = toWorld(0, -0.28, 0);
+        this.pushDynamicQuad(
+          [gCenter[0] - 2.8, 0.05, gCenter[2] - 3.2],
+          [gCenter[0] + 2.8, 0.05, gCenter[2] - 3.2],
+          [gCenter[0] + 2.8, 0.05, gCenter[2] + 3.2],
+          [gCenter[0] - 2.8, 0.05, gCenter[2] + 3.2],
+          [0, 0, 0],
+          gFlashCol
+        );
 
         const bbPos = toWorld(0, 0.6, hl + 0.18);
         this.pushDynamicBox(bbPos[0], bbPos[1], bbPos[2], v.width * 0.82, 0.55, 0.16, [0.15, 0.16, 0.18, 1.0]);
@@ -1860,32 +1901,44 @@ export class WebGLRenderer {
     const p4 = [x - rCos * bladeLen, y + 1.3, z + rSin * bladeLen + 0.35];
     this.pushDynamicQuad(p1, p2, p3, p4, [0, 1, 0], [0.22, 0.22, 0.25, 1.0]);
 
-    // Nose-mounted searchlight housing & illuminated lens
+    // Nose-mounted searchlight housing & illuminated emissive lens
     this.pushDynamicBox(x, y - 0.7, z + 1.8, 0.5, 0.5, 0.6, [0.20, 0.22, 0.25, 1.0]);
-    this.pushDynamicBox(x, y - 0.7, z + 2.12, 0.4, 0.4, 0.08, [1.0, 1.0, 0.85, 1.0]);
+    this.pushEmissiveBox(x, y - 0.7, z + 2.12, 0.45, 0.45, 0.12, [1.0, 1.0, 0.92, 1.0]);
+
+    // Aviation Navigation Strobe Lights (Port Red, Starboard Green, Tail Beacon)
+    this.pushEmissiveBox(x - 1.35, y - 1.1, z, 0.22, 0.22, 0.22, [1.0, 0.12, 0.12, 1.0]);
+    this.pushEmissiveBox(x + 1.35, y - 1.1, z, 0.22, 0.22, 0.22, [0.12, 1.0, 0.35, 1.0]);
+    this.pushEmissiveBox(x, y + 0.9, z - 7.0, 0.24, 0.32, 0.24, [1.0, 1.0, 1.0, 1.0]);
 
     // Volumetric Downward Searchlight Beam Cone & Ground Spotlight Pool
     const spotTargetX = heli.spotlightX ?? x;
     const spotTargetZ = heli.spotlightZ ?? (z - 5);
     const coneRadius = 5.5;
 
-    // Ground spotlight pool
-    this.pushDynamicBox(spotTargetX, 0.08, spotTargetZ, coneRadius * 2, 0.02, coneRadius * 2, [1.0, 0.98, 0.85, 0.45]);
+    // Ground spotlight pool (emissive bright decal on asphalt)
+    this.pushDynamicQuad(
+      [spotTargetX - coneRadius, 0.06, spotTargetZ - coneRadius],
+      [spotTargetX + coneRadius, 0.06, spotTargetZ - coneRadius],
+      [spotTargetX + coneRadius, 0.06, spotTargetZ + coneRadius],
+      [spotTargetX - coneRadius, 0.06, spotTargetZ + coneRadius],
+      [0, 0, 0],
+      [1.0, 0.98, 0.85, 0.48]
+    );
 
-    // Volumetric light beam cone from helicopter nose to ground
+    // Volumetric light beam cone from helicopter nose to ground (emissive unlit triangles)
     const nose = [x, y - 0.7, z + 2.1];
-    const beamCol = [1.0, 0.98, 0.88, 0.14];
-    const beamFade = [1.0, 0.98, 0.88, 0.0];
+    const beamCol = [1.0, 0.98, 0.88, 0.24];
+    const zeroNorm = [0, 0, 0];
 
     const cp1 = [spotTargetX - coneRadius, 0.1, spotTargetZ - coneRadius];
     const cp2 = [spotTargetX + coneRadius, 0.1, spotTargetZ - coneRadius];
     const cp3 = [spotTargetX + coneRadius, 0.1, spotTargetZ + coneRadius];
     const cp4 = [spotTargetX - coneRadius, 0.1, spotTargetZ + coneRadius];
 
-    this.pushDynamicQuad(nose, nose, cp2, cp1, [0, 1, 0], beamCol);
-    this.pushDynamicQuad(nose, nose, cp3, cp2, [0, 1, 0], beamCol);
-    this.pushDynamicQuad(nose, nose, cp4, cp3, [0, 1, 0], beamCol);
-    this.pushDynamicQuad(nose, nose, cp1, cp4, [0, 1, 0], beamCol);
+    this.pushDynamicQuad(nose, nose, cp2, cp1, zeroNorm, beamCol);
+    this.pushDynamicQuad(nose, nose, cp3, cp2, zeroNorm, beamCol);
+    this.pushDynamicQuad(nose, nose, cp4, cp3, zeroNorm, beamCol);
+    this.pushDynamicQuad(nose, nose, cp1, cp4, zeroNorm, beamCol);
   }
 
   drawHarbourBirds(birds) {

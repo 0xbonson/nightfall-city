@@ -45,6 +45,11 @@ export class VehiclePhysics {
     };
   }
 
+  // Returns list of all supported vehicle class identifiers
+  static getVehicleTypes() {
+    return ['sports', 'sedan', 'muscle', 'police', 'taxi', 'truck', 'bus'];
+  }
+
   static updateVehicle(car, dt, inputs = {}) {
     if (car.wrecked) {
       car.speed *= Math.max(0, 1 - 3 * dt);
