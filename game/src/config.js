@@ -397,7 +397,8 @@ export const SHOT_PRESETS = {
     // beside the angled sports coupe just exited; active traffic in motion (taxi, sedan, oncoming hatchback),
     // kerbside parked muscle car, double-parked delivery hauler; pedestrians walking in pairs along sidewalks;
     // responding police cruiser with flashing lightbar in mid/far distance; 2 wanted stars on HUD matching minimap blips.
-    name: '1-city-street.png',
+    name: '3-downtown-street.png',
+    missionTitle: 'WHEELS FOR THE CREW',
     camera: {
       pos: [118.0, 2.15, -91.0],
       target: [120.5, 1.85, -126.0],
@@ -444,6 +445,7 @@ export const SHOT_PRESETS = {
     // Car clearly a car with shaped body, bonnet, cabin, roof, boot, sun catching windscreen.
     // Boulevard with Art Deco buildings, palm trees, wanted level 0 or 1, full HUD with minimap & waypoint.
     name: '2-car-promenade.png',
+    missionTitle: 'COASTAL TIME TRIAL',
     camera: {
       pos: [-106.5, 1.6, 71.0],
       target: [-112.0, 1.35, 112.0],
@@ -473,7 +475,8 @@ export const SHOT_PRESETS = {
     // 5-Star police chase: player muscle car pursued bumper-to-bumper by at least 2 police cars with red and blue lights,
     // lights washing the street and buildings, wanted level showing 5 stars, tactical police chopper overhead, HUD & minimap with police blips.
     // Soft transparent pale amber searchlight beam with feathered ground ellipse, illuminating street without obscuring action.
-    name: '3-police-chase.png',
+    name: '1-police-chase.png',
+    missionTitle: 'FIVE-STAR ESCAPE',
     camera: {
       pos: [46.5, 2.6, -19.0],
       target: [45.0, 1.7, -50.0],
@@ -508,6 +511,7 @@ export const SHOT_PRESETS = {
     // dockside jib crane & 36m gantry crane against sunset sky, white coastal gulls, water basin, and far shore breakwater.
     // HUD: Mission objective, 3 wanted stars, $75,000 cash, minimap with objective marker, health & armor bars, carbine ammo.
     name: '4-dock-heist.png',
+    missionTitle: 'DOCK HEIST AMBUSH',
     camera: {
       pos: [142.2, 2.15, 104.5],
       target: [154.5, 2.25, 126.5],

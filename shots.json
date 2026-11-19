@@ -1,22 +1,22 @@
 [
   {
-    "name": "1-city-street.png",
+    "name": "1-police-chase.png",
     "query": "?shot=1",
-    "description": "Cover shot: city alive in motion and under pressure along Downtown Avenue. Protagonist Rhea 'Rook' Solano in the foreground on foot with a visible weapon, having just stepped out of an angled stolen sports car at the kerb; street active with moving traffic (taxi, sedan, oncoming hatchback), double-parked delivery hauler, and kerbside muscle car; pedestrians walking in pairs along sidewalks; responding police cruiser with flashing emergency lightbar in the mid-distance; warm late-afternoon sun and vibrant facades; complete HUD with minimap, wanted stars, money, health/armor bars, and mission objective banner.",
+    "description": "Cover shot: a five-star Metro Police pursuit on Skyway Boulevard. The player's muscle car is chased bumper-to-bumper by three marked interceptors with red and blue lightbars washing the asphalt, the tactical helicopter is deployed overhead with its amber searchlight beam on the street, pedestrians scatter on the sidewalk, and the full tactical HUD is live: mission dossier panel, wanted stack with cash and health/armor/heat bars, a police response table listing every pursuing unit with its status and range, the weapon rack, the radar minimap with police blips, the radio ticker and the speedometer.",
     "camera": {
-      "pos": [118.0, 2.15, -91.0],
-      "target": [120.5, 1.85, -126.0],
-      "fov": 63
+      "pos": [46.5, 2.6, -19.0],
+      "target": [45.0, 1.7, -50.0],
+      "fov": 68
     },
-    "district": "Downtown Vela",
-    "wantedStars": 2,
-    "cash": 18450,
-    "objective": "DELIVER THE STOLEN VELOCE GT TO SAFEHOUSE (140M)"
+    "district": "Skyway Boulevard Overpass",
+    "wantedStars": 5,
+    "cash": 42500,
+    "objective": "EVADE 5-STAR METRO POLICE PURSUIT"
   },
   {
     "name": "2-car-promenade.png",
     "query": "?shot=2",
-    "description": "High-speed coastal cruise in a sports car along Ocean Promenade: open turquoise bay waters, sun sinking on horizon, swaying palm trees and cypress grove, pedestrians along the promenade curb, full tactical HUD with speedometer showing 151 MPH and mission waypoint diamond on the radar minimap.",
+    "description": "High-speed coastal cruise in a sports car along Ocean Promenade: open turquoise bay waters, the sun sinking on the horizon, swaying palm trees and a cypress grove, pedestrians along the promenade curb, Art Deco facades catching the last warm light, muzzle-ready cruiser far behind, and the full tactical HUD with the speedometer showing 151 MPH, the weapon rack, the radio ticker and the mission waypoint diamond on the radar minimap.",
     "camera": {
       "pos": [-106.5, 1.55, 71.0],
       "target": [-112.0, 1.35, 112.0],
@@ -28,23 +28,23 @@
     "objective": "COASTAL TIME TRIAL: PASS CHECKPOINT 4/6 (0:34)"
   },
   {
-    "name": "3-police-chase.png",
+    "name": "3-downtown-street.png",
     "query": "?shot=3",
-    "description": "Intense 5-star police chase down Skyway Boulevard: player car pursued bumper-to-bumper by police cruisers with blazing red and blue emergency lightbars washing the asphalt and buildings, tactical police chopper overhead with soft transparent amber searchlight beam, elevated expressway structure, and full HUD showing 5 wanted stars and flashing radar blips.",
+    "description": "Downtown Avenue on foot: Rhea 'Rook' Solano in the foreground on foot with a visible weapon, having just stepped out of an angled stolen sports car at the kerb; the street alive with moving traffic (taxi, sedan, oncoming hatchback), a double-parked delivery hauler and a kerbside muscle car; pedestrians walking in pairs along both sidewalks; a responding police cruiser in the mid-distance; and the tactical HUD complete with the mission dossier panel, the wanted stack, the police response table, the weapon rack, the radar minimap and the radio ticker.",
     "camera": {
-      "pos": [46.5, 2.6, -19.0],
-      "target": [45.0, 1.7, -50.0],
-      "fov": 68
+      "pos": [118.0, 2.15, -91.0],
+      "target": [120.5, 1.85, -126.0],
+      "fov": 63
     },
-    "district": "Skyway Boulevard",
-    "wantedStars": 5,
-    "cash": 42500,
-    "objective": "EVADE 5-STAR METRO POLICE PURSUIT"
+    "district": "Downtown Vela",
+    "wantedStars": 2,
+    "cash": 18450,
+    "objective": "DELIVER THE STOLEN VELOCE GT TO SAFEHOUSE (140M)"
   },
   {
     "name": "4-dock-heist.png",
     "query": "?shot=4",
-    "description": "Heist in progress at Meridian Cargo Docks Pier 7: protagonist in foreground visibly armed with a tactical carbine in two-handed ready stance; mid ground features contraband loot crates on wooden pallets with glowing cargo and hovering 3D golden objective beacon, target heist van with rear doors wide open, bollards along the quay lip, and a moored cargo barge in the water; background shows warehouse with roll-up shutter door, colourful multi-tier container stacks, dockside jib crane and 36m gantry crane against the sunset sky, gulls over the water basin, and far shore breakwater; complete HUD with mission banner, wanted stars, minimap, cash, and ammo.",
+    "description": "Heist in progress at Meridian Cargo Docks Pier 7: the protagonist in the foreground visibly armed with a tactical carbine in a two-handed ready stance; mid-ground contraband crates on a pallet with a glowing golden objective beacon, the target heist hauler with its rear doors wide open, and armed dock guards closing in; the background shows the warehouse wall, colourful stacked shipping containers, the dockside jib crane and the 36 m gantry crane against the sunset sky; the tactical HUD shows the mission dossier, three wanted stars, the police response table, the weapon rack, the radar minimap and $75,000 in cash.",
     "camera": {
       "pos": [142.2, 2.15, 104.5],
       "target": [154.5, 2.25, 126.5],

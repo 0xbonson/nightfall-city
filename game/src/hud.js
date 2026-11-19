@@ -1,13 +1,14 @@
 /**
  * Nightfall City: Vela Bay - Heads-Up Display (HUD) System
- * Crisp GTA-style interface: Health/Armor bars, Cash readout, 5 Wanted Stars,
- * Weapon ammo counters, mission objective banner with distance readout,
- * radio station notification, district entrance banner, safehouse garage prompts,
- * and high-speed speedometer gauge.
+ * Dense tactical interface: mission dossier panel, wanted/status stack,
+ * police response table, district readout, weapon rack, minimap HUD trim,
+ * radio ticker and speedometer, all drawn on the 2D overlay canvas.
  * Authored for make.fun open-world crime entry (Vela Bay edition).
  */
 
 import { WEAPONS } from './config.js';
+
+const INK = '#05070c';
 
 export class HUD {
   constructor() {
@@ -25,7 +26,43 @@ export class HUD {
     this.damageFlashTimer = 0.35;
   }
 
-  render(player, missions, police, activeCar, shotPreset, radio, districts, garage) {
+  // ---------------------------------------------------------------
+  // Primitives
+  // ---------------------------------------------------------------
+  panel(ctx, x, y, w, h, accent = '#ffaa00', alpha = 0.82) {
+    ctx.fillStyle = `rgba(6, 9, 15, ${alpha})`;
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, 5);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.10)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = accent;
+    ctx.fillRect(x, y, 3, h);
+  }
+
+  label(ctx, text, x, y, color = 'rgba(255,255,255,0.62)', size = 10, align = 'left') {
+    ctx.font = `800 ${size}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+    ctx.textAlign = align;
+    ctx.fillStyle = color;
+    ctx.fillText(text.toUpperCase(), x, y);
+  }
+
+  bar(ctx, x, y, w, h, pct, color, bg = 'rgba(255,255,255,0.10)') {
+    ctx.fillStyle = bg;
+    ctx.fillRect(x, y, w, h);
+    const p = Math.max(0, Math.min(1, pct));
+    const g = ctx.createLinearGradient(x, 0, x + w, 0);
+    g.addColorStop(0, color[0]);
+    g.addColorStop(1, color[1]);
+    ctx.fillStyle = g;
+    ctx.fillRect(x, y, w * p, h);
+  }
+
+  // ---------------------------------------------------------------
+  // Main
+  // ---------------------------------------------------------------
+  render(player, missions, police, activeCar, shotPreset, radio, districts, garage, vehicles) {
     if (!this.ctx) return;
     const ctx = this.ctx;
     const w = this.canvas.width;
@@ -33,43 +70,31 @@ export class HUD {
 
     ctx.clearRect(0, 0, w, h);
 
-    // Damage flash vignette
     if (this.damageFlashTimer > 0) {
       this.damageFlashTimer -= 0.016;
       ctx.fillStyle = `rgba(220, 20, 20, ${Math.min(0.35, this.damageFlashTimer)})`;
       ctx.fillRect(0, 0, w, h);
     }
 
-    // 1. Top-Right: Cash, Wanted Stars, Weapon & Ammo
-    this.renderTopRight(ctx, w, player, police, shotPreset);
+    this.renderMissionPanel(ctx, w, missions, player, shotPreset);
+    this.renderStatusPanel(ctx, w, player, police, districts, shotPreset);
+    this.renderPolicePanel(ctx, w, h, police, vehicles, player);
+    this.renderDistrictPanel(ctx, w, h, districts, shotPreset);
+    this.renderWeaponRack(ctx, w, h, player, shotPreset);
+    this.renderRadioTicker(ctx, w, h, radio);
 
-    // 2. Top-Left: Health & Armor Bars
-    this.renderHealthAndArmor(ctx, player);
-
-    // 3. Center-Top: Mission Objective Banner with distance readout
-    this.renderObjectiveBanner(ctx, w, missions, player, shotPreset);
-
-    // 4. District toast banner (under objective)
     if (districts && districts.bannerTimer > 0) {
       this.renderDistrictBanner(ctx, w, districts);
     }
-
-    // 5. Radio station toast (top right below weapon)
     if (radio && radio.bannerTimer > 0) {
       this.renderRadioBanner(ctx, w, radio);
     }
-
-    // 6. Bottom-Right: Vehicle Speedometer Gauge
     if (activeCar || (shotPreset && shotPreset.player && shotPreset.player.inVehicle)) {
       this.renderSpeedometer(ctx, w, h, activeCar, shotPreset);
     }
-
-    // 7. Center Banner (Mission complete / start / failed)
     if (!shotPreset && missions && missions.bannerTimer > 0) {
       this.renderMissionBanner(ctx, w, h, missions);
     }
-
-    // 8. Safehouse Garage prompt
     if (garage && garage.promptTimer > 0) {
       this.renderGaragePrompt(ctx, w, h, garage.promptText || garage.promptMessage);
     } else {
@@ -77,84 +102,287 @@ export class HUD {
     }
   }
 
-  renderTopRight(ctx, w, player, police, shotPreset) {
-    const rightMargin = w - 35;
-    let topY = 32;
+  // ---------------------------------------------------------------
+  // Top-left: mission dossier
+  // ---------------------------------------------------------------
+  renderMissionPanel(ctx, w, missions, player, shotPreset) {
+    const pw = 372;
+    const ph = 92;
+    const x = 26;
+    const y = 22;
 
-    // --- Cash Readout ---
-    const cashVal = shotPreset && shotPreset.cash !== undefined ? shotPreset.cash : player.cash;
-    ctx.textAlign = 'right';
-    ctx.font = '900 28px "Arial Black", "Impact", sans-serif';
+    const mission = missions && missions.getCurrentMission ? missions.getCurrentMission() : null;
+    const presetTitle = shotPreset && shotPreset.missionTitle ? shotPreset.missionTitle : null;
+    const accent = shotPreset && shotPreset.accent ? shotPreset.accent : '#ff9a2e';
+    this.panel(ctx, x, y, pw, ph, accent);
 
-    // Bold drop shadow
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
-    ctx.fillText(`$${cashVal.toLocaleString()}`, rightMargin + 2, topY + 2);
-
-    // Cash Green Gradient
-    const cashGrad = ctx.createLinearGradient(0, topY - 22, 0, topY);
-    cashGrad.addColorStop(0, '#66ff88');
-    cashGrad.addColorStop(1, '#1bc43b');
-    ctx.fillStyle = cashGrad;
-    ctx.fillText(`$${cashVal.toLocaleString()}`, rightMargin, topY);
-
-    // --- Wanted Stars ---
-    topY += 34;
-    const wantedStars = shotPreset && shotPreset.wantedStars !== undefined ? shotPreset.wantedStars : police.wantedStars;
-    const starCount = 5;
-    const starSize = 22;
-    const starGap = 8;
-    const totalStarsW = starCount * starSize + (starCount - 1) * starGap;
-    let starStartX = rightMargin - totalStarsW;
-
-    const isEvading = police.isEvading;
-    const flashState = Math.floor(performance.now() * 0.006) % 2 === 0;
-
-    for (let i = 0; i < starCount; i++) {
-      const sx = starStartX + i * (starSize + starGap);
-      const isFilled = i < wantedStars;
-
-      ctx.save();
-      ctx.translate(sx + starSize * 0.5, topY + starSize * 0.5);
-
-      if (isFilled) {
-        if (isEvading && flashState) {
-          ctx.fillStyle = '#ffffff';
-        } else {
-          ctx.fillStyle = '#ffcc00';
-        }
-        ctx.strokeStyle = '#221100';
-        ctx.lineWidth = 2;
-      } else {
-        ctx.fillStyle = 'rgba(25, 25, 30, 0.65)';
-        ctx.strokeStyle = 'rgba(120, 120, 130, 0.45)';
-        ctx.lineWidth = 1.5;
+    if (mission) {
+      const head = presetTitle ? `Chapter ${mission.id} · Operation` : `Chapter ${mission.id} · Syndicate Ops`;
+      this.label(ctx, head, x + 14, y + 20, accent, 10);
+      ctx.font = '900 21px "Arial Black", "Impact", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText((presetTitle || mission.title).toUpperCase(), x + 14, y + 42);
+      if (mission.giver && !presetTitle) {
+        this.label(ctx, `Handler: ${mission.giver}`, x + 14, y + 58, 'rgba(255,255,255,0.55)', 10);
       }
+    } else {
+      this.label(ctx, 'Vela Bay · Free Roam', x + 14, y + 22, accent, 11);
+    }
 
+    let objective = shotPreset && shotPreset.objective ? shotPreset.objective : (missions ? missions.getObjectiveText() : 'EXPLORE VELA BAY');
+    let dist = 0;
+    if (!shotPreset && missions) {
+      dist = missions.getDistanceToTarget(player.x, player.z);
+      if (dist > 0) objective += `  ·  ${Math.round(dist)} M`;
+    }
+    ctx.font = '800 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#ffe9b0';
+    ctx.fillText(this.ellipsize(ctx, objective.toUpperCase(), pw - 28), x + 14, y + 76);
+
+    // Stage pips: chapter progress across the 8 syndicate operations
+    const pipY = y + ph - 12;
+    const pipW = 40;
+    const activeIdx = shotPreset && shotPreset.stage ? shotPreset.stage - 1 : (mission ? mission.id - 1 : 0);
+    for (let i = 0; i < 8; i++) {
+      const px = x + 14 + i * (pipW + 5);
+      const done = i < activeIdx;
+      const active = i === activeIdx;
+      ctx.fillStyle = active ? accent : done ? 'rgba(255,255,255,0.42)' : 'rgba(255,255,255,0.13)';
+      ctx.fillRect(px, pipY, pipW, 4);
+      if (active) {
+        ctx.fillStyle = 'rgba(255,255,255,0.95)';
+        ctx.fillRect(px, pipY - 3, pipW, 2);
+      }
+    }
+  }
+
+  ellipsize(ctx, text, maxWidth) {
+    if (ctx.measureText(text).width <= maxWidth) return text;
+    let t = text;
+    while (t.length > 4 && ctx.measureText(t + '...').width > maxWidth) {
+      t = t.slice(0, -1);
+    }
+    return t + '...';
+  }
+
+  // ---------------------------------------------------------------
+  // Top-right: wanted, cash, vitals, weapon
+  // ---------------------------------------------------------------
+  renderStatusPanel(ctx, w, player, police, districts, shotPreset) {
+    const pw = 232;
+    const ph = 152;
+    const x = w - pw - 26;
+    const y = 22;
+
+    this.panel(ctx, x, y, pw, ph, '#ffcc00', 0.80);
+
+    // Wanted header + stars
+    const wantedStars = shotPreset && shotPreset.wantedStars !== undefined ? shotPreset.wantedStars : police.wantedStars;
+    this.label(ctx, 'Wanted', x + 14, y + 20, '#ffcc00', 11);
+    const evading = police.isEvading;
+    const flash = Math.floor(performance.now() * 0.006) % 2 === 0;
+    const starSize = 17;
+    const gap = 5;
+    let sx = x + pw - 14 - (5 * starSize + 4 * gap);
+    for (let i = 0; i < 5; i++) {
+      const cx = sx + starSize * 0.5 + i * (starSize + gap);
+      ctx.save();
+      ctx.translate(cx, y + 14);
+      const on = i < wantedStars;
+      ctx.fillStyle = on ? (evading && flash ? '#ffffff' : '#ffcc00') : 'rgba(255,255,255,0.12)';
+      ctx.strokeStyle = on ? 'rgba(40,25,0,0.8)' : 'rgba(255,255,255,0.25)';
+      ctx.lineWidth = 1.2;
       this.drawStar(ctx, 0, 0, 5, starSize * 0.5, starSize * 0.22);
       ctx.fill();
       ctx.stroke();
       ctx.restore();
     }
+    if (evading) {
+      this.label(ctx, 'Evading', x + 14, y + 32, '#66ff88', 9);
+    }
 
-    // --- Weapon & Ammo Readout ---
-    topY += 36;
+    // Cash
+    const cashVal = shotPreset && shotPreset.cash !== undefined ? shotPreset.cash : player.cash;
+    ctx.textAlign = 'right';
+    ctx.font = '900 30px "Arial Black", "Impact", sans-serif';
+    const g = ctx.createLinearGradient(0, y + 36, 0, y + 64);
+    g.addColorStop(0, '#7dffa0');
+    g.addColorStop(1, '#16b93a');
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillText(`$${cashVal.toLocaleString()}`, x + pw - 11, y + 64);
+    ctx.fillStyle = g;
+    ctx.fillText(`$${cashVal.toLocaleString()}`, x + pw - 14, y + 61);
+
+    // Vitals
+    const rows = [
+      { name: 'Health', pct: player.health / 100, c: ['#18c94a', '#68ff8e'] },
+      { name: 'Armor', pct: player.armor / 100, c: ['#0a7dff', '#3ce0ff'] },
+      { name: 'Heat', pct: Math.min(1, (police.heat || 0) / 5), c: ['#ff5a2e', '#ffc14d'] },
+    ];
+    let by = y + 78;
+    for (const r of rows) {
+      this.label(ctx, r.name, x + 14, by + 8, 'rgba(255,255,255,0.72)', 9);
+      this.bar(ctx, x + 62, by, pw - 78, 9, r.pct, r.c);
+      by += 16;
+    }
+
+    // Weapon + ammo
     const wepKey = player.currentWeapon;
     const wep = WEAPONS[wepKey] || WEAPONS.carbine;
-    const ammoState = player.ammo[wepKey] || { clip: 30, reserve: 150 };
-
+    const ammo = player.ammo[wepKey] || { clip: 30, reserve: 150 };
+    this.label(ctx, wep.name, x + 14, y + ph - 12, '#00e5ff', 10);
     ctx.textAlign = 'right';
-    ctx.font = '800 15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-    ctx.fillStyle = '#00e5ff';
-    ctx.fillText(wep.name.toUpperCase(), rightMargin, topY);
-
-    topY += 22;
-    ctx.font = '900 24px "Arial Black", sans-serif';
+    ctx.font = '900 17px "Arial Black", sans-serif';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(`${ammoState.clip}`, rightMargin - 44, topY);
+    ctx.fillText(`${ammo.clip}`, x + pw - 42, y + ph - 8);
+    ctx.font = '700 12px sans-serif';
+    ctx.fillStyle = 'rgba(200,210,225,0.7)';
+    ctx.fillText(`/${ammo.reserve}`, x + pw - 14, y + ph - 8);
+    ctx.textAlign = 'left';
+  }
 
-    ctx.font = '700 16px sans-serif';
-    ctx.fillStyle = 'rgba(200, 210, 225, 0.75)';
-    ctx.fillText(`/${ammoState.reserve}`, rightMargin, topY);
+  // ---------------------------------------------------------------
+  // Right: police response table
+  // ---------------------------------------------------------------
+  renderPolicePanel(ctx, w, h, police, vehicles, player) {
+    const units = [];
+    if (vehicles && vehicles.length) {
+      for (const v of vehicles) {
+        if (!v.isPolice) continue;
+        const dx = (v.x || 0) - (player ? player.x : 0);
+        const dz = (v.z || 0) - (player ? player.z : 0);
+        units.push({ name: 'CRUISER', d: Math.hypot(dx, dz), status: v.sirenActive ? 'PURSUIT' : 'RESPONDING' });
+      }
+    }
+    if (police && police.helicopter && police.helicopter.active) {
+      const hx = police.helicopter.x - (player ? player.x : 0);
+      const hz = police.helicopter.z - (player ? player.z : 0);
+      units.push({ name: 'AIR UNIT', d: Math.hypot(hx, hz), status: 'DEPLOYED', heli: true });
+    }
+    units.sort((a, b) => a.d - b.d);
+    const shown = units.slice(0, 5);
+
+    const pw = 250;
+    const ph = 34 + Math.max(1, shown.length) * 20;
+    const x = w - pw - 26;
+    const y = 190;
+
+    const accent = shown.length ? '#ff4d4d' : '#5ad0ff';
+    this.panel(ctx, x, y, pw, ph, accent, 0.78);
+    this.label(ctx, 'Police Response', x + 14, y + 20, accent, 11);
+    this.label(ctx, shown.length ? `${shown.length} units` : 'clear', x + pw - 14, y + 20, 'rgba(255,255,255,0.45)', 10, 'right');
+
+    if (!shown.length) {
+      this.label(ctx, 'No active pursuit', x + 14, y + 40, 'rgba(255,255,255,0.45)', 11);
+      return;
+    }
+    let ry = y + 38;
+    for (const u of shown) {
+      ctx.font = '800 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(u.name, x + 14, ry);
+      const st = u.status;
+      ctx.fillStyle = st === 'PURSUIT' ? '#ff5c5c' : st === 'DEPLOYED' ? '#ffc14d' : st === 'RESPONDING' ? '#ff9a2e' : '#7fe3ff';
+      ctx.fillText(st, x + 96, ry);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = 'rgba(220,230,245,0.75)';
+      ctx.fillText(`${Math.round(u.d)} m`, x + pw - 14, ry);
+      ry += 20;
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // Bottom-left above the minimap: district readout
+  // ---------------------------------------------------------------
+  renderDistrictPanel(ctx, w, h, districts, shotPreset) {
+    const d = (districts && districts.currentDistrict) || null;
+    const name = shotPreset && shotPreset.district ? shotPreset.district : (d ? d.name : 'Vela Bay');
+    const tagline = shotPreset && shotPreset.district ? 'Metro Precinct Jurisdiction' : (d ? d.tagline : 'Mediterranean Coast Metropolis');
+    const accent = d && d.hudColor ? d.hudColor : '#00e5ff';
+
+    const pw = 252;
+    const ph = 56;
+    const x = 26;
+    const y = h - 300;
+
+    this.panel(ctx, x, y, pw, ph, accent, 0.74);
+    ctx.font = '900 15px "Arial Black", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = accent;
+    ctx.fillText(this.ellipsize(ctx, name.toUpperCase(), pw - 92), x + 14, y + 22);
+    this.label(ctx, this.ellipsize(ctx, tagline, pw - 28), x + 14, y + 38, 'rgba(255,255,255,0.55)', 9);
+    if (d && d.crimeRisk) {
+      const risk = d.crimeRisk.toUpperCase();
+      ctx.textAlign = 'right';
+      this.label(ctx, `Crime ${risk}`, x + pw - 14, y + 22, risk === 'HIGH' ? '#ff6b6b' : risk === 'MEDIUM' ? '#ffc14d' : '#66ff88', 9, 'right');
+    }
+    ctx.textAlign = 'left';
+  }
+
+  // ---------------------------------------------------------------
+  // Bottom-right: weapon rack
+  // ---------------------------------------------------------------
+  renderWeaponRack(ctx, w, h, player, shotPreset) {
+    const keys = Object.keys(WEAPONS).slice(0, 6);
+    const slotW = 56;
+    const gap = 6;
+    const pw = keys.length * (slotW + gap) + 14;
+    const ph = 52;
+    const x = w - pw - 26;
+    const y = h - 250;
+
+    this.panel(ctx, x, y, pw, ph, '#00e5ff', 0.70);
+    let sx = x + 10;
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      const wep = WEAPONS[k];
+      const active = k === player.currentWeapon;
+      const ammo = (shotPreset && shotPreset.ammo && shotPreset.ammo[k]) || player.ammo[k] || { clip: 0, reserve: 0 };
+      ctx.fillStyle = active ? 'rgba(0,229,255,0.20)' : 'rgba(255,255,255,0.06)';
+      ctx.fillRect(sx, y + 9, slotW, 34);
+      if (active) {
+        ctx.strokeStyle = '#00e5ff';
+        ctx.lineWidth = 1.2;
+        ctx.strokeRect(sx + 0.5, y + 9.5, slotW - 1, 33);
+      }
+      ctx.font = '800 9px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = active ? '#ffffff' : 'rgba(255,255,255,0.62)';
+      const nm = (wep.name || k).toUpperCase().split(' ')[0];
+      ctx.fillText(nm.slice(0, 8), sx + slotW * 0.5, y + 22);
+      ctx.font = '900 12px "Arial Black", sans-serif';
+      ctx.fillStyle = ammo.clip > 0 ? '#ffe066' : '#ff6b6b';
+      ctx.fillText(`${ammo.clip}`, sx + slotW * 0.5, y + 38);
+      sx += slotW + gap;
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // Bottom centre: radio ticker
+  // ---------------------------------------------------------------
+  renderRadioTicker(ctx, w, h, radio) {
+    if (!radio) return;
+    const st = radio.getCurrentStation ? radio.getCurrentStation() : null;
+    if (!st) return;
+    const text = `RADIO ${st.name.toUpperCase()}  ·  ${st.genre}`;
+    ctx.textAlign = 'center';
+    ctx.font = '800 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    const tw = ctx.measureText(text).width + 26;
+    const x = w * 0.5 - tw * 0.5;
+    const y = h - 58;
+    ctx.fillStyle = 'rgba(6, 9, 15, 0.72)';
+    ctx.beginPath();
+    ctx.roundRect(x, y, tw, 22, 4);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,170,0,0.55)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = '#ffbb44';
+    ctx.fillText(text, w * 0.5, y + 15);
+    ctx.textAlign = 'left';
   }
 
   drawStar(ctx, cx, cy, spikes, outerRadius, innerRadius) {
@@ -170,7 +398,6 @@ export class HUD {
       y = cy + Math.sin(rot) * outerRadius;
       ctx.lineTo(x, y);
       rot += step;
-
       x = cx + Math.cos(rot) * innerRadius;
       y = cy + Math.sin(rot) * innerRadius;
       ctx.lineTo(x, y);
@@ -180,80 +407,11 @@ export class HUD {
     ctx.closePath();
   }
 
-  renderHealthAndArmor(ctx, player) {
-    const leftMargin = 35;
-    const topY = 32;
-    const barW = 160;
-    const barH = 12;
-
-    // --- Health Bar ---
-    ctx.fillStyle = 'rgba(12, 14, 20, 0.85)';
-    ctx.fillRect(leftMargin, topY, barW, barH);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(leftMargin, topY, barW, barH);
-
-    const hpPct = Math.max(0, Math.min(1, player.health / 100));
-    const hpGrad = ctx.createLinearGradient(leftMargin, 0, leftMargin + barW, 0);
-    hpGrad.addColorStop(0, '#22cc44');
-    hpGrad.addColorStop(1, '#55ff77');
-    ctx.fillStyle = hpGrad;
-    ctx.fillRect(leftMargin + 1, topY + 1, (barW - 2) * hpPct, barH - 2);
-
-    ctx.font = '800 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-    ctx.fillStyle = '#ffffff';
-    ctx.textAlign = 'left';
-    ctx.fillText('HEALTH', leftMargin, topY - 4);
-
-    // --- Armor Bar ---
-    const armorY = topY + 26;
-    ctx.fillStyle = 'rgba(12, 14, 20, 0.85)';
-    ctx.fillRect(leftMargin, armorY, barW, barH);
-    ctx.strokeRect(leftMargin, armorY, barW, barH);
-
-    const armPct = Math.max(0, Math.min(1, player.armor / 100));
-    const armGrad = ctx.createLinearGradient(leftMargin, 0, leftMargin + barW, 0);
-    armGrad.addColorStop(0, '#0088ff');
-    armGrad.addColorStop(1, '#00d2ff');
-    ctx.fillStyle = armGrad;
-    ctx.fillRect(leftMargin + 1, armorY + 1, (barW - 2) * armPct, barH - 2);
-
-    ctx.fillText('ARMOR', leftMargin, armorY - 4);
-  }
-
-  renderObjectiveBanner(ctx, w, missions, player, shotPreset) {
-    const bannerW = Math.min(680, w - 120);
-    const bannerH = 46;
-    const bannerX = (w - bannerW) * 0.5;
-    const bannerY = 24;
-
-    ctx.fillStyle = 'rgba(8, 10, 16, 0.82)';
-    ctx.beginPath();
-    ctx.roundRect(bannerX, bannerY, bannerW, bannerH, 6);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 170, 0, 0.65)';
-    ctx.lineWidth = 1.8;
-    ctx.stroke();
-
-    let text = shotPreset && shotPreset.objective ? shotPreset.objective : (missions ? missions.getObjectiveText() : 'EXPLORE VELA BAY');
-    if (!shotPreset && missions) {
-      const dist = missions.getDistanceToTarget(player.x, player.z);
-      if (dist > 0) {
-        text += ` (${dist}M)`;
-      }
-    }
-
-    ctx.textAlign = 'center';
-    ctx.font = '800 15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(text.toUpperCase(), w * 0.5, bannerY + 28);
-  }
-
   renderDistrictBanner(ctx, w, districts) {
     const bannerW = 340;
     const bannerH = 34;
     const bannerX = (w - bannerW) * 0.5;
-    const bannerY = 76;
+    const bannerY = 122;
 
     ctx.fillStyle = 'rgba(12, 18, 28, 0.88)';
     ctx.beginPath();
@@ -271,18 +429,18 @@ export class HUD {
 
   renderRadioBanner(ctx, w, radio) {
     const rightMargin = w - 35;
-    const bannerY = 148;
+    const bannerY = 186;
 
     ctx.textAlign = 'right';
     ctx.font = '700 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
     ctx.fillStyle = '#ffaa00';
-    ctx.fillText(`📻 ${radio.bannerText.toUpperCase()}`, rightMargin, bannerY);
+    ctx.fillText(`RADIO ${radio.bannerText.toUpperCase()}`, rightMargin, bannerY);
   }
 
   renderSpeedometer(ctx, w, h, activeCar, shotPreset) {
-    const cx = w - 90;
-    const cy = h - 90;
-    const r = 62;
+    const cx = w - 108;
+    const cy = h - 96;
+    const r = 60;
 
     const speed = shotPreset && shotPreset.player && shotPreset.player.speedMph ? shotPreset.player.speedMph : (activeCar ? activeCar.getSpeedMph() : 0);
     const gear = activeCar ? activeCar.gear : 4;
@@ -291,7 +449,7 @@ export class HUD {
 
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(8, 10, 16, 0.85)';
+    ctx.fillStyle = 'rgba(8, 10, 16, 0.88)';
     ctx.fill();
     ctx.strokeStyle = 'rgba(80, 100, 130, 0.55)';
     ctx.lineWidth = 3;
@@ -353,7 +511,7 @@ export class HUD {
     ctx.textAlign = 'center';
     ctx.font = '800 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
     ctx.fillStyle = '#22ff66';
-    ctx.fillText(`🔧 ${text}`, w * 0.5, h - 25);
+    ctx.fillText(text, w * 0.5, h - 25);
   }
 
   renderInteractionPrompts(ctx, w, h, player, activeCar) {

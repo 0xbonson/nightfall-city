@@ -272,12 +272,16 @@ export class Game {
     this.garage.update(dt, this.player, this.activeCar, this.police, this.audio, this.saveSystem);
     this.radio.update(dt, this.player.inVehicle, this.input, this.audio);
 
-    this.player.update(dt, this.input, this.camera, this.world, this.vehicles);
-    this.vehicles.update(dt, this.input, this.world);
-    this.pedestrians.update(dt, this.world, this.player, this.vehicles, this.audio);
-    this.police.update(dt, this.player, this.vehicles, this.world, this.audio);
-    this.missions.update(dt, this.player, this.vehicles, this.police, this.combat, this.saveSystem, this.audio);
-    this.combat.update(dt, this.world, this.player, this.pedestrians, this.vehicles, this.police, this.camera, this.audio);
+    // Photo Mode (?shot=N) freezes the simulation on a staged tableau so the
+    // captured frame shows exactly the pose the preset describes.
+    if (!this.shotPreset) {
+      this.player.update(dt, this.input, this.camera, this.world, this.vehicles);
+      this.vehicles.update(dt, this.input, this.world);
+      this.pedestrians.update(dt, this.world, this.player, this.vehicles, this.audio);
+      this.police.update(dt, this.player, this.vehicles, this.world, this.audio);
+      this.missions.update(dt, this.player, this.vehicles, this.police, this.combat, this.saveSystem, this.audio);
+      this.combat.update(dt, this.world, this.player, this.pedestrians, this.vehicles, this.police, this.camera, this.audio);
+    }
     this.camera.update(dt, this.player, this.activeCar, this.input);
 
     // Audio synthesizer updates
@@ -333,7 +337,8 @@ export class Game {
       this.shotPreset,
       this.radio,
       this.districts,
-      this.garage
+      this.garage,
+      this.vehicles.vehicles
     );
 
     // Tactical GPS Minimap
