@@ -400,13 +400,13 @@ export const SHOT_PRESETS = {
     name: '3-downtown-street.png',
     missionTitle: 'WHEELS FOR THE CREW',
     camera: {
-      pos: [118.0, 2.15, -91.0],
-      target: [120.5, 1.85, -126.0],
+      pos: [119.6, 2.05, -127.0],
+      target: [120.6, 1.9, -93.0],
       fov: 63,
     },
     player: {
-      pos: [119.5, 0.24, -95.5],
-      rot: Math.PI * 0.96,
+      pos: [119.2, 0.24, -121.5],
+      rot: 0.12,
       inVehicle: false,
       weapon: 'smg',
     },
@@ -416,28 +416,27 @@ export const SHOT_PRESETS = {
     objective: 'DELIVER THE STOLEN VELOCE GT TO SAFEHOUSE (140M)',
     traffic: [
       // Stolen sports coupe parked at an angle at the kerb right beside player
-      { type: 'sports', pos: [123.0, 0, -96.5], rot: Math.PI * 0.88, speedMph: 0 },
-      // Northbound lane moving traffic
-      { type: 'taxi', pos: [120.2, 0, -112.0], rot: Math.PI, speedMph: 28 },
-      { type: 'sedan', pos: [119.8, 0, -128.0], rot: Math.PI, speedMph: 32 },
-      // Southbound lane oncoming traffic
-      { type: 'hatchback', pos: [110.5, 0, -118.0], rot: 0, speedMph: 25 },
+      { type: 'sports', pos: [123.0, 0, -118.5], rot: 0.26, speedMph: 0 },
+      // Traffic rolling away down the avenue into the low sun
+      { type: 'taxi', pos: [120.4, 0, -107.0], rot: 0, speedMph: 28 },
+      { type: 'sedan', pos: [119.4, 0, -99.5], rot: 0, speedMph: 32 },
+      // Oncoming lane, headlights toward the camera
+      { type: 'hatchback', pos: [110.6, 0, -103.0], rot: Math.PI, speedMph: 25 },
+      { type: 'muscle', pos: [124.2, 0, -110.0], rot: 0, speedMph: 0 },
       // Double-parked delivery hauler with hazard lights
-      { type: 'truck', pos: [121.2, 0, -138.0], rot: Math.PI, speedMph: 0 },
-      // Parked muscle car at east kerb
-      { type: 'muscle', pos: [124.2, 0, -104.0], rot: Math.PI, speedMph: 0 },
-      // Responding police interceptor with flashing sirens heading south toward player
-      { type: 'police', pos: [111.0, 0, -132.0], rot: 0, speedMph: 35, sirenActive: true },
+      { type: 'truck', pos: [121.4, 0, -95.0], rot: 0, speedMph: 0 },
+      // Responding police interceptor with flashing sirens closing in
+      { type: 'police', pos: [112.4, 0, -86.0], rot: Math.PI, speedMph: 35, sirenActive: true },
     ],
     pedestrians: [
       // East sidewalk walking pairs and pedestrians
-      { pos: [126.8, 0.24, -102.0], rot: Math.PI, walkCycle: 1.2 },
-      { pos: [127.6, 0.24, -103.5], rot: Math.PI, walkCycle: 2.5 },
-      { pos: [127.2, 0.24, -118.0], rot: 0, walkCycle: 0.8 },
+      { pos: [126.8, 0.24, -114.0], rot: 0, walkCycle: 1.2 },
+      { pos: [127.6, 0.24, -112.5], rot: 0, walkCycle: 2.5 },
+      { pos: [127.2, 0.24, -99.0], rot: 0, walkCycle: 0.8 },
       // West sidewalk pedestrians
-      { pos: [102.5, 0.24, -106.0], rot: Math.PI, walkCycle: 1.9 },
-      { pos: [103.2, 0.24, -107.2], rot: Math.PI, walkCycle: 3.1 },
-      { pos: [102.8, 0.24, -124.0], rot: 0, walkCycle: 0.4 },
+      { pos: [102.5, 0.24, -109.0], rot: 0, walkCycle: 1.9 },
+      { pos: [103.2, 0.24, -107.8], rot: 0, walkCycle: 3.1 },
+      { pos: [102.8, 0.24, -96.0], rot: 0, walkCycle: 0.4 },
     ],
   },
   2: {
@@ -478,13 +477,13 @@ export const SHOT_PRESETS = {
     name: '1-police-chase.png',
     missionTitle: 'FIVE-STAR ESCAPE',
     camera: {
-      pos: [46.5, 2.6, -19.0],
-      target: [45.0, 1.7, -50.0],
+      pos: [44.4, 2.45, -54.0],
+      target: [45.2, 1.8, -21.5],
       fov: 68,
     },
     player: {
-      pos: [45.0, 0, -32.0],
-      rot: Math.PI,
+      pos: [45.0, 0, -47.0],
+      rot: 0,
       inVehicle: true,
       vehicleType: 'muscle',
       speedMph: 128,
@@ -494,11 +493,11 @@ export const SHOT_PRESETS = {
     cash: 42500,
     objective: 'EVADE 5-STAR METRO POLICE PURSUIT',
     hasHeli: true,
-    heliPos: [45.0, 22.0, -48.0],
+    heliPos: [45.0, 22.0, -26.0],
     cruisers: [
-      { pos: [40.8, 0, -30.5], rot: Math.PI, sirenPhase: 0 },
-      { pos: [49.2, 0, -30.5], rot: Math.PI, sirenPhase: Math.PI },
-      { pos: [45.0, 0, -22.0], rot: Math.PI, sirenPhase: Math.PI * 0.5 },
+      { pos: [40.6, 0, -36.0], rot: Math.PI, sirenPhase: 0 },
+      { pos: [49.4, 0, -36.5], rot: Math.PI, sirenPhase: Math.PI },
+      { pos: [44.6, 0, -26.5], rot: Math.PI, sirenPhase: Math.PI * 0.5 },
     ],
   },
   4: {
