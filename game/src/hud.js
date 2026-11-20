@@ -81,6 +81,7 @@ export class HUD {
     this.renderPolicePanel(ctx, w, h, police, vehicles, player);
     this.renderDistrictPanel(ctx, w, h, districts, shotPreset);
     this.renderWeaponRack(ctx, w, h, player, shotPreset);
+    this.renderDialogue(ctx, w, h, missions, shotPreset);
     this.renderRadioTicker(ctx, w, h, radio);
 
     if (districts && districts.bannerTimer > 0) {
@@ -383,6 +384,135 @@ export class HUD {
     ctx.fillStyle = '#ffbb44';
     ctx.fillText(text, w * 0.5, y + 15);
     ctx.textAlign = 'left';
+  }
+
+
+  // ---------------------------------------------------------------
+  // Bottom centre: character briefing box with portrait
+  // ---------------------------------------------------------------
+  renderDialogue(ctx, w, h, missions, shotPreset) {
+    const mission = missions && missions.getCurrentMission ? missions.getCurrentMission() : null;
+    if (!mission) return;
+    const speaker = shotPreset && shotPreset.speaker ? shotPreset.speaker : (mission.giver || 'Vela Bay Dispatch');
+    const text = shotPreset && shotPreset.dialogue ? shotPreset.dialogue : (mission.dialogue || '');
+    if (!text) return;
+
+    const pw = 660;
+    const ph = 78;
+    const x = (w - pw) * 0.5;
+    const y = h - 152;
+
+    ctx.fillStyle = 'rgba(6, 9, 15, 0.86)';
+    ctx.beginPath();
+    ctx.roundRect(x, y, pw, ph, 4);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0, 229, 255, 0.45)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // Speaker portrait
+    this.drawPortrait(ctx, x + 6, y + 6, 66, speaker);
+
+    // Speaker name plate
+    ctx.font = '900 12px "Arial Black", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#00e5ff';
+    ctx.fillText(speaker.toUpperCase(), x + 82, y + 22);
+    const nameW = ctx.measureText(speaker.toUpperCase()).width;
+    ctx.fillStyle = 'rgba(255,170,0,0.85)';
+    ctx.font = '800 10px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillText('· MISSION BRIEFING', x + 88 + nameW * 1.35, y + 22);
+
+    // Dialogue body, wrapped
+    ctx.font = '600 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillStyle = 'rgba(233, 240, 250, 0.92)';
+    const lines = this.wrapText(ctx, text, pw - 100);
+    let ly = y + 41;
+    for (const line of lines.slice(0, 3)) {
+      ctx.fillText(line, x + 82, ly);
+      ly += 16;
+    }
+  }
+
+  wrapText(ctx, text, maxWidth) {
+    const words = String(text).split(' ');
+    const lines = [];
+    let line = '';
+    for (const word of words) {
+      const test = line ? line + ' ' + word : word;
+      if (ctx.measureText(test).width > maxWidth && line) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  // A flat, stylised bust that matches the game's low-poly cast.
+  drawPortrait(ctx, x, y, size, name) {
+    let seed = 0;
+    for (let i = 0; i < name.length; i++) seed = (seed * 31 + name.charCodeAt(i)) >>> 0;
+    const skin = ['#e8b98d', '#c98e63', '#f2cfa6', '#a9714b'][seed % 4];
+    const hair = ['#2b1b12', '#4a2c19', '#c0392b', '#1c1c22'][seed % 4];
+    const shirt = ['#2b6cb0', '#7b3f9d', '#2f855a', '#b7791f'][(seed >> 3) % 4];
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, size, size);
+    ctx.clip();
+
+    // Backdrop
+    const g = ctx.createLinearGradient(x, y, x, y + size);
+    g.addColorStop(0, '#1b2a44');
+    g.addColorStop(1, '#0b1220');
+    ctx.fillStyle = g;
+    ctx.fillRect(x, y, size, size);
+
+    const cx = x + size * 0.5;
+    // Shoulders
+    ctx.fillStyle = shirt;
+    ctx.beginPath();
+    ctx.moveTo(x + size * 0.08, y + size);
+    ctx.lineTo(x + size * 0.24, y + size * 0.62);
+    ctx.lineTo(x + size * 0.76, y + size * 0.62);
+    ctx.lineTo(x + size * 0.92, y + size);
+    ctx.closePath();
+    ctx.fill();
+    // Collar
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath();
+    ctx.moveTo(cx - size * 0.16, y + size * 0.63);
+    ctx.lineTo(cx, y + size * 0.82);
+    ctx.lineTo(cx + size * 0.16, y + size * 0.63);
+    ctx.closePath();
+    ctx.fill();
+    // Head
+    ctx.fillStyle = skin;
+    ctx.beginPath();
+    ctx.ellipse(cx, y + size * 0.40, size * 0.225, size * 0.265, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Hair
+    ctx.fillStyle = hair;
+    ctx.beginPath();
+    ctx.ellipse(cx, y + size * 0.25, size * 0.235, size * 0.17, 0, Math.PI, Math.PI * 2);
+    ctx.fill();
+    ctx.fillRect(cx - size * 0.235, y + size * 0.25, size * 0.085, size * 0.19);
+    ctx.fillRect(cx + size * 0.15, y + size * 0.25, size * 0.085, size * 0.19);
+    // Eyes
+    ctx.fillStyle = '#1a1410';
+    ctx.fillRect(cx - size * 0.115, y + size * 0.37, size * 0.065, size * 0.042);
+    ctx.fillRect(cx + size * 0.05, y + size * 0.37, size * 0.065, size * 0.042);
+    // Mouth
+    ctx.fillStyle = 'rgba(90,30,30,0.75)';
+    ctx.fillRect(cx - size * 0.06, y + size * 0.505, size * 0.12, size * 0.026);
+    // Rim light
+    ctx.strokeStyle = 'rgba(255,190,120,0.35)';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(x + 0.75, y + 0.75, size - 1.5, size - 1.5);
+    ctx.restore();
   }
 
   drawStar(ctx, cx, cy, spikes, outerRadius, innerRadius) {

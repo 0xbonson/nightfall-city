@@ -398,6 +398,8 @@ export const SHOT_PRESETS = {
     // kerbside parked muscle car, double-parked delivery hauler; pedestrians walking in pairs along sidewalks;
     // responding police cruiser with flashing lightbar in mid/far distance; 2 wanted stars on HUD matching minimap blips.
     name: '3-downtown-street.png',
+    speaker: 'Silvio Moreno',
+    dialogue: 'A pristine Veloce GT is parked down at the Ocean Promenade valet. Boost it across the bridge and bring it back without wrecking the chassis.',
     missionTitle: 'WHEELS FOR THE CREW',
     camera: {
       pos: [119.6, 2.05, -127.0],
@@ -444,6 +446,8 @@ export const SHOT_PRESETS = {
     // Car clearly a car with shaped body, bonnet, cabin, roof, boot, sun catching windscreen.
     // Boulevard with Art Deco buildings, palm trees, wanted level 0 or 1, full HUD with minimap & waypoint.
     name: '2-car-promenade.png',
+    speaker: 'Silvio Moreno',
+    dialogue: 'A pristine Veloce GT is parked down at the Ocean Promenade hotel valet. Boost it and bring it back without wrecking the chassis.',
     missionTitle: 'COASTAL TIME TRIAL',
     camera: {
       pos: [-106.5, 1.6, 71.0],
@@ -475,6 +479,8 @@ export const SHOT_PRESETS = {
     // lights washing the street and buildings, wanted level showing 5 stars, tactical police chopper overhead, HUD & minimap with police blips.
     // Soft transparent pale amber searchlight beam with feathered ground ellipse, illuminating street without obscuring action.
     name: '1-police-chase.png',
+    speaker: 'Elena Rossi',
+    dialogue: 'Metro Police set up a dragnet across the northern avenues. Punch through their perimeter and cross the Vela Bay Suspension Bridge before the lockdown closes.',
     missionTitle: 'FIVE-STAR ESCAPE',
     camera: {
       pos: [44.4, 2.45, -54.0],
@@ -510,10 +516,12 @@ export const SHOT_PRESETS = {
     // dockside jib crane & 36m gantry crane against sunset sky, white coastal gulls, water basin, and far shore breakwater.
     // HUD: Mission objective, 3 wanted stars, $75,000 cash, minimap with objective marker, health & armor bars, carbine ammo.
     name: '4-dock-heist.png',
+    speaker: 'Elena Rossi',
+    dialogue: 'A shipment of high-caliber military hardware is being offloaded at Meridian Cargo Docks Pier 7. Ambush the crew, seize the contraband crates and load the getaway van.',
     missionTitle: 'DOCK HEIST AMBUSH',
     camera: {
-      pos: [142.2, 2.15, 104.5],
-      target: [154.5, 2.25, 126.5],
+      pos: [140.5, 1.75, 106.0],
+      target: [153.5, 4.2, 123.5],
       fov: 62,
     },
     player: {
